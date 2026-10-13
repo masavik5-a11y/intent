@@ -1,0 +1,30 @@
+name: Check
+
+# Runs the same gate as `npm run check` on every push and pull request, plus a
+# production build so a broken bundle or service worker is caught here too.
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      # No backend is needed to build: the Convex URL is only read in the browser.
+      - run: npx vite build
