@@ -490,11 +490,38 @@ Rule: a bug in time or lane logic gets a failing unit test first, then the fix.
 ## 14. Environments and deployment
 
 - **Dev:** `npm run dev` runs Vite and `convex dev` against a personal dev deployment.
+  Until a Convex account is linked this is a local deployment on this PC
+  (`CONVEX_DEPLOYMENT=anonymous:…` in `.env.local`): fine for building, but the phone
+  cannot reach it.
 - **Prod:** Convex production deployment + Vercel project. Vercel's build command is
   `npx convex deploy --cmd 'npm run build'` with `CONVEX_DEPLOY_KEY` set, so backend and
-  frontend deploy together from `main`.
-- **CI:** a GitHub Actions workflow runs `npm ci` and `npm run check` on every push.
+  frontend deploy together from `main`. The command, the fallback of every address to
+  `index.html` and the no-cache rule for `sw.js` are in `vercel.json`.
+- **CI:** a GitHub Actions workflow (`.github/workflows/check.yml`) runs `npm ci`,
+  `npm run check` and a production build on every push.
 - **Backups:** Convex dashboard export on demand; JSON export from the app in M9.
+
+### First-time production setup
+
+Done once, in this order. Steps marked (you) need a browser sign-in.
+
+1. (you) Create an empty private repository on GitHub. Then
+   `git remote add origin <url>` and `git push -u origin main`. The Check workflow runs.
+2. (you) `npx convex login`. Then `npx convex dev --configure=new --dev-deployment cloud`
+   creates the Convex project and moves development from the local deployment to a cloud
+   one. Give that dev deployment its settings: `npx @convex-dev/auth` (keys and
+   `SITE_URL=http://localhost:5173`) and
+   `npx convex env set ALLOWED_EMAILS <your email>`.
+3. (you) In the Convex dashboard, production deployment, Settings: generate a production
+   deploy key.
+4. (you) In Vercel, import the GitHub repository and add the environment variable
+   `CONVEX_DEPLOY_KEY` (Production) with that key. Deploy. Note the site's URL.
+5. Give the production deployment its settings:
+   `npx @convex-dev/auth --prod --web-server-url <site URL>` and
+   `npx convex env set ALLOWED_EMAILS <your email> --prod`.
+6. (you) Open the site on the PC, choose "Create the account", then install it from the
+   browser's address bar. On the phone open it in Chrome, sign in, "Install app".
+7. Check that sign-up with any other email answers "Sign-up is closed for this address."
 
 ## 15. Verify first
 
