@@ -481,7 +481,7 @@ Things assumed here that must be confirmed in the milestone that depends on them
 
 | Milestone | Check |
 | --- | --- |
-| M0 | `convex/` can import from `shared/` (bundling). If not, move shared code to `convex/shared/` and import it from `src/` there. |
+| M0 | `convex/` can import from `shared/` (bundling). **Confirmed 2026-10-13:** a Convex function importing `../shared/time` bundles and runs. `convex/` uses relative imports; `src/` uses the `@shared/*` alias. |
 | M0 | Current scaffold command and template for Vite + Convex + Convex Auth; current TanStack Router and Tailwind v4 setup with Vite. |
 | M0 | How to restrict sign-up in Convex Auth's password provider (callback or profile hook). |
 | M4 | `Intl.DateTimeFormat` with a `timeZone` works in Convex's default runtime. If not, do the conversion in the Node action or store the device's UTC offset. |
