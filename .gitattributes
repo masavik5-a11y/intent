@@ -1,0 +1,5 @@
+# Keep LF line endings on every machine, so Prettier and Git agree on Windows.
+* text=auto eol=lf
+*.png binary
+*.ico binary
+*.woff2 binary
