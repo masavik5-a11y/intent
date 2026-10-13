@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Full-bleed background; the mark sits inside the maskable safe zone. -->
+  <rect width="512" height="512" fill="#7c3aed" />
+  <g transform="translate(256 256) scale(0.8) translate(-256 -256)">
+    <rect x="148" y="116" width="92" height="280" rx="26" fill="#ffffff" />
+    <rect x="272" y="116" width="92" height="172" rx="26" fill="#ffffff" fill-opacity="0.6" />
+    <rect x="112" y="280" width="288" height="18" rx="9" fill="#fbbf24" />
+  </g>
+</svg>

@@ -75,7 +75,7 @@ how to restrict sign-up in Convex Auth.
       table-driven tests. First real domain code.
 - [x] Auth: sign-in screen, password provider, sign-up limited to `ALLOWED_EMAILS`,
       `requireUser(ctx)`, protected routes, sign out.
-- [ ] PWA: manifest, icons, service worker that precaches the shell. No push yet.
+- [x] PWA: manifest, icons, service worker that precaches the shell. No push yet.
 - [ ] Private GitHub repository and an Actions workflow that runs `npm run check`.
 - [ ] Production: Convex production deployment and Vercel project, deploying from `main`.
 

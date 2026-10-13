@@ -438,6 +438,13 @@ Cost is about 44,000 small function calls a month, far inside the free allowance
 ## 11. Offline and PWA
 
 - The service worker precaches the app shell, so the app opens without a connection.
+  It is hand-written (`src/sw.ts`, vite-plugin-pwa `injectManifest`) and exists only in
+  production builds; `npm run preview` serves one locally. Every in-app address is
+  answered with the cached `index.html`. Of the fonts only the Latin subsets are
+  precached.
+- Updates: a new version installs in the background, takes over at once and reloads the
+  page a single time (`registerType: "autoUpdate"`). If a reload ever interrupts typing,
+  switch to a "new version ready" prompt.
 - `lib/offlineSnapshot.ts` writes the latest result of today's queries (blocks,
   activities, categories, day record) to `localStorage` whenever they change.
 - When the Convex client is not connected, the day screen renders the snapshot read-only

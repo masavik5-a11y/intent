@@ -33,5 +33,7 @@
       "@shared/*": ["./shared/*"]
     }
   },
-  "include": ["src"]
+  "include": ["src"],
+  /* The service worker has its own project, tsconfig.sw.json. */
+  "exclude": ["src/sw.ts"]
 }

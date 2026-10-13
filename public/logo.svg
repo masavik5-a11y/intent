@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!--
+    The day in two lanes, plan and actual, with the now line across both.
+
+    The PNG icons and favicon.ico next to this file are generated from it:
+      npx @vite-pwa/assets-generator --preset minimal-2023 public/logo.svg
+    The maskable icon is generated from logo-maskable.svg instead (maskable preset,
+    512 px, padding 0, background #7c3aed), so that it fills the whole shape Android
+    cuts out. Regenerate both after changing the mark.
+  -->
+  <rect width="512" height="512" rx="112" fill="#7c3aed" />
+  <rect x="148" y="116" width="92" height="280" rx="26" fill="#ffffff" />
+  <rect x="272" y="116" width="92" height="172" rx="26" fill="#ffffff" fill-opacity="0.6" />
+  <rect x="112" y="280" width="288" height="18" rx="9" fill="#fbbf24" />
+</svg>

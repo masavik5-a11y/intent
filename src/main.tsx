@@ -3,8 +3,12 @@ import { createRoot } from "react-dom/client";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
 import { RouterProvider } from "@tanstack/react-router";
+import { registerSW } from "virtual:pwa-register";
 import "./index.css";
 import { router } from "./router";
+
+// Production builds only; in development the plugin makes this a no-op.
+registerSW({ immediate: true });
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL);
 

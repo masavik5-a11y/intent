@@ -41,6 +41,7 @@ npm run lint       # eslint, then prettier --check
 npm run format     # prettier --write
 npm run test       # vitest run (npm run test:watch to watch)
 npm run build      # typecheck, then the production build
+npm run preview    # serve the production build on http://localhost:4173 (service worker active)
 ```
 
 `tsc` is the native TypeScript 7 compiler (`@typescript/native`). The `typescript`
