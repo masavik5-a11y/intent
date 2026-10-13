@@ -62,7 +62,7 @@ how to restrict sign-up in Convex Auth.
       `docs/` untouched.
 - [x] Run `npx convex ai-files install` so Convex's own guidance is added to `CLAUDE.md`.
 - [x] TypeScript strict settings; path aliases for `src/` and `shared/`.
-- [ ] ESLint (typescript-eslint, Convex plugin, import restrictions from ARCHITECTURE.md
+- [x] ESLint (typescript-eslint, Convex plugin, import restrictions from ARCHITECTURE.md
       section 3) and Prettier.
 - [ ] Vitest running one real test in `shared/`; convex-test running one real test.
 - [ ] npm scripts: `dev`, `check`, `typecheck`, `lint`, `test`, `build`. Update the

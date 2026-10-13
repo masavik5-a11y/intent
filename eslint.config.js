@@ -1,4 +1,4 @@
-import { defineConfig } from "eslint/config";
+import { defineConfig, globalIgnores } from "eslint/config";
 import js from "@eslint/js";
 import globals from "globals";
 import reactHooks from "eslint-plugin-react-hooks";
@@ -6,36 +6,67 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 import convexPlugin from "@convex-dev/eslint-plugin";
 
-export default defineConfig([
+// Import boundaries from docs/ARCHITECTURE.md, section 3:
+//   shared/  imports nothing from src/ or convex/, and no React or Convex packages.
+//   src/     may import from shared/ and from convex/_generated/ only.
+//   convex/  may import from shared/, never from src/.
+const noSrcImports = {
+  group: ["@/*", "**/src/**"],
+  message: "Only src/ may import from src/.",
+};
+
+// The wall clock is read only at the edges (docs/ARCHITECTURE.md, section 4).
+const noWallClock = [
   {
-    ignores: [
-      "dist",
-      "eslint.config.js",
-      "convex/_generated",
-      "postcss.config.js",
-      "tailwind.config.js",
-      "vite.config.ts",
-    ],
+    selector:
+      "CallExpression[callee.object.name='Date'][callee.property.name='now']",
+    message: "shared/ is pure: take the current time as an argument.",
   },
   {
-    extends: [
-      js.configs.recommended,
-      ...tseslint.configs.recommendedTypeChecked,
-    ],
+    selector: "NewExpression[callee.name='Date'][arguments.length=0]",
+    message: "shared/ is pure: take the current time as an argument.",
+  },
+];
+
+export default defineConfig([
+  globalIgnores([
+    "dist",
+    "dev-dist",
+    "convex/_generated",
+    ".claude",
+    ".agents",
+  ]),
+  {
     files: ["**/*.{ts,tsx}"],
+    extends: [js.configs.recommended, tseslint.configs.recommendedTypeChecked],
     languageOptions: {
-      ecmaVersion: 2020,
-      globals: {
-        ...globals.browser,
-        ...globals.node,
-      },
+      ecmaVersion: 2023,
       parserOptions: {
-        project: [
-          "./tsconfig.node.json",
-          "./tsconfig.app.json",
-          "./convex/tsconfig.json",
-        ],
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
       },
+    },
+    linterOptions: {
+      reportUnusedDisableDirectives: "error",
+    },
+    rules: {
+      // CLAUDE.md rule 8: no `any`, no `@ts-ignore`, no unexplained non-null `!`.
+      "@typescript-eslint/no-explicit-any": "error",
+      "@typescript-eslint/ban-ts-comment": "error",
+      "@typescript-eslint/no-non-null-assertion": "error",
+      "@typescript-eslint/consistent-type-imports": "error",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { varsIgnorePattern: "^_", argsIgnorePattern: "^_" },
+      ],
+      // Convex handlers are async by convention even when they do not await.
+      "@typescript-eslint/require-await": "off",
+    },
+  },
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    languageOptions: {
+      globals: globals.browser,
     },
     plugins: {
       "react-hooks": reactHooks,
@@ -44,36 +75,51 @@ export default defineConfig([
     rules: {
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": [
-        "warn",
+        "error",
         { allowConstantExport: true },
       ],
-      // All of these overrides ease getting into
-      // TypeScript, and can be removed for stricter
-      // linting down the line.
-
-      // Only warn on unused variables, and ignore variables starting with `_`
-      "@typescript-eslint/no-unused-vars": [
-        "warn",
-        { varsIgnorePattern: "^_", argsIgnorePattern: "^_" },
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              // A relative path into convex/ that is not convex/_generated/.
+              // The `convex` npm package ("convex/react") is not relative, so it passes.
+              regex: "^(?:\\.{1,2}/)+convex/(?!_generated/)",
+              message:
+                "src/ may import only convex/_generated/ from the backend. Move shared logic to shared/.",
+            },
+          ],
+        },
       ],
-
-      // Allow escaping the compiler
-      "@typescript-eslint/ban-ts-comment": "error",
-
-      // Allow explicit `any`s
-      "@typescript-eslint/no-explicit-any": "off",
-
-      // START: Allow implicit `any`s
-      "@typescript-eslint/no-unsafe-argument": "off",
-      "@typescript-eslint/no-unsafe-assignment": "off",
-      "@typescript-eslint/no-unsafe-call": "off",
-      "@typescript-eslint/no-unsafe-member-access": "off",
-      "@typescript-eslint/no-unsafe-return": "off",
-      // END: Allow implicit `any`s
-
-      // Allow async functions without await
-      // for consistency (esp. Convex `handler`s)
-      "@typescript-eslint/require-await": "off",
+    },
+  },
+  {
+    files: ["shared/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            noSrcImports,
+            {
+              group: ["**/convex/**", "convex", "convex/*", "@convex-dev/*"],
+              message: "shared/ is pure: no Convex imports.",
+            },
+            {
+              group: ["react", "react/*", "react-dom", "react-dom/*"],
+              message: "shared/ is pure: no React imports.",
+            },
+          ],
+        },
+      ],
+      "no-restricted-syntax": ["error", ...noWallClock],
+    },
+  },
+  {
+    files: ["convex/**/*.ts"],
+    rules: {
+      "no-restricted-imports": ["error", { patterns: [noSrcImports] }],
     },
   },
   ...convexPlugin.configs.recommended,

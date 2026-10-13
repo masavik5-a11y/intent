@@ -1,4 +1,14 @@
-.agents/skills/
-.claude/skills/
-convex/_generated/
-example/convex/_generated/
+# Build output and generated code
+dist
+dev-dist
+convex/_generated
+src/routeTree.gen.ts
+package-lock.json
+
+# Managed by `npx convex ai-files install`
+.agents
+.claude/skills
+skills-lock.json
+
+# Docs are written and wrapped by hand
+*.md
