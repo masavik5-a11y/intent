@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ScreenPlaceholder } from "@/features/shell/ScreenPlaceholder";
+import { SettingsScreen } from "@/features/settings/SettingsScreen";
 
 export const Route = createFileRoute("/_app/settings")({
-  component: () => <ScreenPlaceholder title="Settings" milestone="M4" />,
+  component: SettingsScreen,
 });

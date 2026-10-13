@@ -73,7 +73,7 @@ how to restrict sign-up in Convex Auth.
       for the other screens. App shell with nav rail (desktop) and bottom bar (phone).
 - [x] `shared/time.ts`: `DateKey`, minute helpers, parsing, formatting, `addDays`, with
       table-driven tests. First real domain code.
-- [ ] Auth: sign-in screen, password provider, sign-up limited to `ALLOWED_EMAILS`,
+- [x] Auth: sign-in screen, password provider, sign-up limited to `ALLOWED_EMAILS`,
       `requireUser(ctx)`, protected routes, sign out.
 - [ ] PWA: manifest, icons, service worker that precaches the shell. No push yet.
 - [ ] Private GitHub repository and an Actions workflow that runs `npm run check`.

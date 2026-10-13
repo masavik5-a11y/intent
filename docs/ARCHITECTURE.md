@@ -375,7 +375,13 @@ functions to validate and to apply. One implementation, two callers.
   wiring) and presentational components that take props. Presentational components are
   easy to test and to preview.
 - **Errors**: a mutation failure shows a toast with a mapped message and rolls back. A
-  route-level error boundary catches render errors and offers a reload.
+  route-level error boundary catches render errors and offers a reload. Error codes live
+  in `shared/errors.ts`; `src/lib/errors.ts` reads the code from a failed call.
+- **Signed-in screens** are children of the `_app` layout route. It renders them only
+  while there is a session (`useConvexAuth`), so a screen's queries never run signed
+  out, and it sends a signed-out visit to `/signin?redirect=<where it was headed>`.
+- **Backend imports** in `src/` go through `src/lib/api.ts`, which re-exports `api` and
+  the `Doc` and `Id` types from `convex/_generated/`.
 
 ## 9. Notifications
 
@@ -444,7 +450,15 @@ Cost is about 44,000 small function calls a month, far inside the free allowance
 ## 12. Auth and security
 
 - Convex Auth with the password provider. Sign-up is accepted only for emails in the
-  `ALLOWED_EMAILS` environment variable; everyone else is rejected server-side.
+  `ALLOWED_EMAILS` environment variable (comma-separated); everyone else is rejected
+  server-side, in the provider's `profile` hook in `convex/auth.ts`, before anything is
+  stored. An unset or empty list allows nobody. Emails are trimmed and lower-cased, so
+  one address is one account whatever its case. A new password needs at least 10
+  characters. `convex/auth.test.ts` drives the real sign-in action to hold all of this.
+- A failed sign-in never says which part was wrong. Convex Auth also rate-limits failed
+  attempts per account.
+- Environment variables are declared in `convex/convex.config.ts` and read as the typed
+  `env` from `convex/_generated/server`, not from `process.env`.
 - Every document has `userId`; every read and write is checked against the session user.
   The app is single-user, but the code is written as if it were not.
 - Secrets live in Convex environment variables: `VAPID_PRIVATE_KEY`, `VAPID_PUBLIC_KEY`,
@@ -482,8 +496,8 @@ Things assumed here that must be confirmed in the milestone that depends on them
 | Milestone | Check |
 | --- | --- |
 | M0 | `convex/` can import from `shared/` (bundling). **Confirmed 2026-10-13:** a Convex function importing `../shared/time` bundles and runs. `convex/` uses relative imports; `src/` uses the `@shared/*` alias. |
-| M0 | Current scaffold command and template for Vite + Convex + Convex Auth; current TanStack Router and Tailwind v4 setup with Vite. |
-| M0 | How to restrict sign-up in Convex Auth's password provider (callback or profile hook). |
+| M0 | Current scaffold command and template for Vite + Convex + Convex Auth; current TanStack Router and Tailwind v4 setup with Vite. **Confirmed 2026-10-13:** `npm create convex@latest <dir> -- -t react-vite-convexauth`; Tailwind v4 through `@tailwindcss/vite`; TanStack Router file-based routes through `@tanstack/router-plugin/vite` (the generated `src/routeTree.gen.ts` is committed). |
+| M0 | How to restrict sign-up in Convex Auth's password provider (callback or profile hook). **Confirmed 2026-10-13:** the provider's `profile` hook runs on every flow before any account is read or written; throwing there on `flow === "signUp"` stores nothing. See section 12. |
 | M4 | `Intl.DateTimeFormat` with a `timeZone` works in Convex's default runtime. If not, do the conversion in the Node action or store the device's UTC offset. |
 | M4 | Minute-interval crons are allowed on the free plan and their real cost in function calls. |
 | M4 | Web Push delivery on the actual Android phone with the PWA installed and battery optimisation on; and on desktop with the browser closed. |

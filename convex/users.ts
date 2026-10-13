@@ -1,14 +1,12 @@
-import { getAuthUserId } from "@convex-dev/auth/server";
 import { query } from "./_generated/server";
+import { requireUser } from "./lib/auth";
 
-// The signed-in user, or null when there is no session.
+/** The signed-in user's account details. */
 export const viewer = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (userId === null) return null;
+    const userId = await requireUser(ctx);
     const user = await ctx.db.get("users", userId);
-    if (user === null) return null;
-    return { email: user.email ?? null };
+    return { email: user?.email ?? null };
   },
 });
