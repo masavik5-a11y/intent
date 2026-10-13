@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "node:path";
@@ -17,5 +17,26 @@ export default defineConfig({
     // Convex Auth's SITE_URL points at this port, so do not drift to another one.
     port: 5173,
     strictPort: true,
+  },
+  test: {
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "shared",
+          include: ["shared/**/*.test.ts"],
+          environment: "node",
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "convex",
+          include: ["convex/**/*.test.ts"],
+          // Convex functions run in a V8 isolate, not in Node.
+          environment: "edge-runtime",
+        },
+      },
+    ],
   },
 });
