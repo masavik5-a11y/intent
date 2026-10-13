@@ -69,7 +69,7 @@ how to restrict sign-up in Convex Auth.
       Commands section of `CLAUDE.md` to match.
 - [x] Tailwind v4, shadcn/ui, `src/styles/theme.css` with the colour keys from DESIGN.md
       section 5 for light and dark, the type scale, and the serif voice font.
-- [ ] TanStack Router: `/` redirects to `/day/<today>`, `/signin`, and placeholder routes
+- [x] TanStack Router: `/` redirects to `/day/<today>`, `/signin`, and placeholder routes
       for the other screens. App shell with nav rail (desktop) and bottom bar (phone).
 - [x] `shared/time.ts`: `DateKey`, minute helpers, parsing, formatting, `addDays`, with
       table-driven tests. First real domain code.

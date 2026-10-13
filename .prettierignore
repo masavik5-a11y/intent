@@ -12,3 +12,6 @@ skills-lock.json
 
 # Docs are written and wrapped by hand
 *.md
+
+# shadcn/ui primitives stay exactly as its CLI writes them
+src/components/ui

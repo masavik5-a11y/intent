@@ -16,15 +16,15 @@ const noSrcImports = {
 };
 
 // The wall clock is read only at the edges (docs/ARCHITECTURE.md, section 4).
-const noWallClock = [
+const noWallClock = (message) => [
   {
     selector:
       "CallExpression[callee.object.name='Date'][callee.property.name='now']",
-    message: "shared/ is pure: take the current time as an argument.",
+    message,
   },
   {
     selector: "NewExpression[callee.name='Date'][arguments.length=0]",
-    message: "shared/ is pure: take the current time as an argument.",
+    message,
   },
 ];
 
@@ -33,6 +33,7 @@ export default defineConfig([
     "dist",
     "dev-dist",
     "convex/_generated",
+    "src/routeTree.gen.ts",
     ".claude",
     ".agents",
   ]),
@@ -78,6 +79,12 @@ export default defineConfig([
         "error",
         { allowConstantExport: true },
       ],
+      "no-restricted-syntax": [
+        "error",
+        ...noWallClock(
+          "Read the clock through src/lib/now.ts (readNow, later useNow), nowhere else.",
+        ),
+      ],
       "no-restricted-imports": [
         "error",
         {
@@ -88,6 +95,38 @@ export default defineConfig([
               regex: "^(?:\\.{1,2}/)+convex/(?!_generated/)",
               message:
                 "src/ may import only convex/_generated/ from the backend. Move shared logic to shared/.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // The one place in src/ that may read the clock.
+    files: ["src/lib/now.ts"],
+    rules: {
+      "no-restricted-syntax": "off",
+    },
+  },
+  {
+    // TanStack Router route files export `Route` and keep their components local;
+    // the router plugin handles their hot reload. `throw redirect()` is its API.
+    files: ["src/routes/**/*.tsx"],
+    rules: {
+      "react-refresh/only-export-components": "off",
+      "@typescript-eslint/only-throw-error": [
+        "error",
+        {
+          allow: [
+            {
+              from: "package",
+              package: "@tanstack/router-core",
+              name: "Redirect",
+            },
+            {
+              from: "package",
+              package: "@tanstack/router-core",
+              name: "NotFoundError",
             },
           ],
         },
@@ -121,7 +160,12 @@ export default defineConfig([
           ],
         },
       ],
-      "no-restricted-syntax": ["error", ...noWallClock],
+      "no-restricted-syntax": [
+        "error",
+        ...noWallClock(
+          "shared/ is pure: take the current time as an argument.",
+        ),
+      ],
     },
   },
   {

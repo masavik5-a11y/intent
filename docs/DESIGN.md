@@ -76,6 +76,11 @@ Nav rail stays. The side panel becomes a sheet that slides over the grid from th
 
 Block detail and the review open as full-height sheets. Tap targets are at least 44 px.
 
+The bottom bar holds Today, Week, quick add (from M1) and Insights, plus **More**, which
+opens a bottom sheet with the screens that have no room on the bar: Month, Activities,
+Compass, Settings. (Decided 2026-10-13 while building the shell: the sketch above left
+those four unreachable on a phone. Change it here if daily use suggests another split.)
+
 ## 3. The time grid
 
 | Aspect | Spec |
