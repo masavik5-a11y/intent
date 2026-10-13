@@ -71,7 +71,7 @@ how to restrict sign-up in Convex Auth.
       section 5 for light and dark, the type scale, and the serif voice font.
 - [ ] TanStack Router: `/` redirects to `/day/<today>`, `/signin`, and placeholder routes
       for the other screens. App shell with nav rail (desktop) and bottom bar (phone).
-- [ ] `shared/time.ts`: `DateKey`, minute helpers, parsing, formatting, `addDays`, with
+- [x] `shared/time.ts`: `DateKey`, minute helpers, parsing, formatting, `addDays`, with
       table-driven tests. First real domain code.
 - [ ] Auth: sign-in screen, password provider, sign-up limited to `ALLOWED_EMAILS`,
       `requireUser(ctx)`, protected routes, sign out.
