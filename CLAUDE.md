@@ -31,16 +31,20 @@ Convex, Convex Auth, TanStack Router or vite-plugin-pwa APIs. Do not write them 
 
 ## Commands
 
-These scripts are created in milestone M0. Keep this section in sync with `package.json`.
+Keep this section in sync with `package.json`.
 
 ```bash
-npm run dev        # Vite dev server + `convex dev` together
+npm run dev        # `convex dev` and the Vite dev server together (http://localhost:5173)
 npm run check      # typecheck + lint + tests. Must pass before any task is called done.
-npm run typecheck  # tsc for the app and for convex/
-npm run lint       # eslint
-npm run test       # vitest run
-npm run build      # production build
+npm run typecheck  # tsc for src/, shared/, the Vite config, and convex/
+npm run lint       # eslint, then prettier --check
+npm run format     # prettier --write
+npm run test       # vitest run (npm run test:watch to watch)
+npm run build      # typecheck, then the production build
 ```
+
+`tsc` is the native TypeScript 7 compiler (`@typescript/native`). The `typescript`
+package is pinned to TypeScript 6 because typescript-eslint does not support 7 yet.
 
 ## Repository layout
 

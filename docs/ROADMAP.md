@@ -65,7 +65,7 @@ how to restrict sign-up in Convex Auth.
 - [x] ESLint (typescript-eslint, Convex plugin, import restrictions from ARCHITECTURE.md
       section 3) and Prettier.
 - [x] Vitest running one real test in `shared/`; convex-test running one real test.
-- [ ] npm scripts: `dev`, `check`, `typecheck`, `lint`, `test`, `build`. Update the
+- [x] npm scripts: `dev`, `check`, `typecheck`, `lint`, `test`, `build`. Update the
       Commands section of `CLAUDE.md` to match.
 - [ ] Tailwind v4, shadcn/ui, `src/styles/theme.css` with the colour keys from DESIGN.md
       section 5 for light and dark, the type scale, and the serif voice font.
