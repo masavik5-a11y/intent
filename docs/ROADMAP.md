@@ -57,7 +57,7 @@ how to restrict sign-up in Convex Auth.
 **Slices:**
 
 - [x] `git init`, `.gitignore`, first commit containing `CLAUDE.md` and `docs/`.
-- [ ] Scaffold Vite + React + TypeScript + Convex + Convex Auth. The folder is not empty,
+- [x] Scaffold Vite + React + TypeScript + Convex + Convex Auth. The folder is not empty,
       so scaffold into a temporary folder and move the files in, keeping `CLAUDE.md` and
       `docs/` untouched.
 - [ ] Run `npx convex ai-files install` so Convex's own guidance is added to `CLAUDE.md`.
