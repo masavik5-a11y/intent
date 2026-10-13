@@ -3,7 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
     <title>Intent</title>
+    <script>
+      // Follow the system theme before first paint, so there is no flash.
+      // The manual switch (PRD S5) is added in M1.
+      (function () {
+        var query = window.matchMedia("(prefers-color-scheme: dark)");
+        function apply() {
+          document.documentElement.classList.toggle("dark", query.matches);
+        }
+        apply();
+        query.addEventListener("change", apply);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

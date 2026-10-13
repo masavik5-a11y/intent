@@ -67,7 +67,7 @@ how to restrict sign-up in Convex Auth.
 - [x] Vitest running one real test in `shared/`; convex-test running one real test.
 - [x] npm scripts: `dev`, `check`, `typecheck`, `lint`, `test`, `build`. Update the
       Commands section of `CLAUDE.md` to match.
-- [ ] Tailwind v4, shadcn/ui, `src/styles/theme.css` with the colour keys from DESIGN.md
+- [x] Tailwind v4, shadcn/ui, `src/styles/theme.css` with the colour keys from DESIGN.md
       section 5 for light and dark, the type scale, and the serif voice font.
 - [ ] TanStack Router: `/` redirects to `/day/<today>`, `/signin`, and placeholder routes
       for the other screens. App shell with nav rail (desktop) and bottom bar (phone).

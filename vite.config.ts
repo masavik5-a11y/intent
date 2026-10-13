@@ -31,6 +31,17 @@ export default defineConfig({
       {
         extends: true,
         test: {
+          name: "app",
+          include: ["src/**/*.test.{ts,tsx}"],
+          // Switch to jsdom when the first component test is written.
+          environment: "node",
+          // Vitest blanks CSS imports by default; theme.test.ts reads theme.css?raw.
+          css: { include: [/src\/styles\/theme\.css/] },
+        },
+      },
+      {
+        extends: true,
+        test: {
           name: "convex",
           include: ["convex/**/*.test.ts"],
           // Convex functions run in a V8 isolate, not in Node.

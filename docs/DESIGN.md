@@ -198,12 +198,24 @@ Each colour key defines three tokens for light and for dark theme: `tint` (block
 once in the theme file; components use the key, never a hex value. Every `ink` on `tint`
 pair must meet WCAG AA contrast in both themes.
 
+In code (`src/styles/theme.css`): an element takes a key with `data-color="violet"` and
+uses the utilities `bg-key-tint`, `text-key-ink`, `bg-key-solid`, `text-key-solid` and
+`text-on-solid` (white text on a solid). `src/styles/theme.test.ts` checks, for every key
+in both themes, that ink on tint and white on solid reach 4.5:1 and that the solid reaches
+3:1 against its tint and the page. A colour change that breaks this fails `npm run check`.
+
 ## 6. Typography, shape, motion
 
 - **Type.** One sans family for the interface. The **why** text is set in a serif face,
-  slightly larger: it should read like your own voice, not like a form field.
-- **Scale.** 12 / 13 / 14 / 16 / 20 / 28 px. Two weights: regular and medium.
-- **Shape.** 8 px radius on blocks and controls, 14 px on panels and sheets.
+  slightly larger: it should read like your own voice, not like a form field. The faces
+  are Geist (interface, `font-sans`) and Source Serif 4 (voice, `font-voice`), both
+  self-hosted so the installed app looks the same on PC and phone and works offline.
+- **Scale.** 12 / 13 / 14 / 16 / 20 / 28 px. Two weights: regular and medium. In Tailwind
+  these are `text-xs`, `text-sm`, `text-base` (the interface default), `text-lg` (the why),
+  `text-xl` and `text-2xl`; no other size exists. `font-semibold` and `font-bold` resolve
+  to medium.
+- **Shape.** 8 px radius on blocks and controls (`rounded-block`), 14 px on panels and
+  sheets (`rounded-panel`).
 - **Motion.** 150–200 ms, ease-out. Used for: check-off (the block settles and a check
   draws in), a block appearing in the actual lane, panel mode changes, the now line.
   Respect `prefers-reduced-motion`: replace movement with a fade.

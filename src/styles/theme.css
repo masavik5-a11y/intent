@@ -1,0 +1,264 @@
+/*
+ * Design tokens. See docs/DESIGN.md, sections 5 and 6.
+ *
+ * Everything visual that has a name lives here: the category colour keys, the type
+ * scale, the fonts, the radii, and the neutral surface tokens that shadcn/ui components
+ * read. Components use these names and never a literal colour.
+ */
+
+/* ---------------------------------------------------------------------------
+ * Type, shape, motion
+ * ------------------------------------------------------------------------ */
+
+@theme {
+  /* One sans for the interface, one serif for the user's own words (the why,
+   * the vision and anti-vision). */
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-voice: "Source Serif 4 Variable", ui-serif, Georgia, serif;
+
+  /* The whole type scale: 12 / 13 / 14 / 16 / 20 / 28 px, in rem so the system font
+   * size is respected. Nothing else exists. */
+  --text-*: initial;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1rem;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.125rem;
+  --text-base: 0.875rem;
+  --text-base--line-height: 1.25rem;
+  --text-lg: 1rem;
+  --text-lg--line-height: 1.5rem;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.75rem;
+  --text-2xl--line-height: 2.125rem;
+
+  /* Two weights: regular and medium. Heavier names resolve to medium so that
+   * shadcn/ui components follow the rule without being edited. */
+  --font-weight-*: initial;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 500;
+  --font-weight-bold: 500;
+
+  /* 8 px on blocks and controls, 14 px on panels and sheets. */
+  --radius-block: 0.5rem;
+  --radius-panel: 0.875rem;
+
+  /* 150 to 200 ms, ease-out. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --default-transition-duration: 150ms;
+  --default-transition-timing-function: var(--ease-out);
+}
+
+/* ---------------------------------------------------------------------------
+ * Category colour keys
+ *
+ * Each key has three tokens per theme:
+ *   tint   block fill
+ *   ink    text on the tint
+ *   solid  the current block's fill (with white text) and icons
+ *
+ * Contrast is checked by src/styles/theme.test.ts: ink on tint and white on solid
+ * meet WCAG AA for text (4.5:1); solid meets 3:1 against the tint and the page.
+ * Keep these as six-digit hex so the test can read them.
+ * ------------------------------------------------------------------------ */
+
+:root {
+  --violet-tint: #ede9fe;
+  --violet-ink: #4c1d95;
+  --violet-solid: #7c3aed;
+
+  --teal-tint: #ccfbf1;
+  --teal-ink: #134e4a;
+  --teal-solid: #0f766e;
+
+  --coral-tint: #ffe4dc;
+  --coral-ink: #7a2613;
+  --coral-solid: #cf4426;
+
+  --pink-tint: #fce7f3;
+  --pink-ink: #831843;
+  --pink-solid: #cf2472;
+
+  --amber-tint: #fef3c7;
+  --amber-ink: #78350f;
+  --amber-solid: #b45309;
+
+  --gray-tint: #e7e5e4;
+  --gray-ink: #292524;
+  --gray-solid: #57534e;
+
+  --slate-tint: #e2e8f0;
+  --slate-ink: #1e293b;
+  --slate-solid: #475569;
+
+  --red-tint: #fee2e2;
+  --red-ink: #7f1d1d;
+  --red-solid: #dc2626;
+
+  /* Text on any solid. */
+  --on-solid: #ffffff;
+}
+
+.dark {
+  --violet-tint: #27184f;
+  --violet-ink: #ddd6fe;
+  --violet-solid: #7c4dee;
+
+  --teal-tint: #0a2e2b;
+  --teal-ink: #99f6e4;
+  --teal-solid: #0e8177;
+
+  --coral-tint: #451a10;
+  --coral-ink: #fecdbf;
+  --coral-solid: #cc4628;
+
+  --pink-tint: #48102c;
+  --pink-ink: #fbcfe8;
+  --pink-solid: #d0307a;
+
+  --amber-tint: #3a2008;
+  --amber-ink: #fde68a;
+  --amber-solid: #b8590c;
+
+  --gray-tint: #2a2826;
+  --gray-ink: #e7e5e4;
+  --gray-solid: #78716c;
+
+  --slate-tint: #1e2939;
+  --slate-ink: #cbd5e1;
+  --slate-solid: #64748b;
+
+  --red-tint: #471414;
+  --red-ink: #fecaca;
+  --red-solid: #dc2f2f;
+}
+
+/*
+ * How a component takes a key: put data-color="violet" on the element (the value is
+ * a category's colorKey) and use the utilities bg-key-tint, text-key-ink, bg-key-solid,
+ * text-key-solid and text-on-solid inside it.
+ */
+[data-color="violet"] {
+  --key-tint: var(--violet-tint);
+  --key-ink: var(--violet-ink);
+  --key-solid: var(--violet-solid);
+}
+[data-color="teal"] {
+  --key-tint: var(--teal-tint);
+  --key-ink: var(--teal-ink);
+  --key-solid: var(--teal-solid);
+}
+[data-color="coral"] {
+  --key-tint: var(--coral-tint);
+  --key-ink: var(--coral-ink);
+  --key-solid: var(--coral-solid);
+}
+[data-color="pink"] {
+  --key-tint: var(--pink-tint);
+  --key-ink: var(--pink-ink);
+  --key-solid: var(--pink-solid);
+}
+[data-color="amber"] {
+  --key-tint: var(--amber-tint);
+  --key-ink: var(--amber-ink);
+  --key-solid: var(--amber-solid);
+}
+[data-color="gray"] {
+  --key-tint: var(--gray-tint);
+  --key-ink: var(--gray-ink);
+  --key-solid: var(--gray-solid);
+}
+[data-color="slate"] {
+  --key-tint: var(--slate-tint);
+  --key-ink: var(--slate-ink);
+  --key-solid: var(--slate-solid);
+}
+[data-color="red"] {
+  --key-tint: var(--red-tint);
+  --key-ink: var(--red-ink);
+  --key-solid: var(--red-solid);
+}
+
+@theme inline {
+  --color-key-tint: var(--key-tint);
+  --color-key-ink: var(--key-ink);
+  --color-key-solid: var(--key-solid);
+  --color-on-solid: var(--on-solid);
+}
+
+/* ---------------------------------------------------------------------------
+ * Neutral surfaces, read by shadcn/ui components
+ * ------------------------------------------------------------------------ */
+
+:root {
+  /* Must stay equal to the hex the contrast test uses for the page. */
+  --background: #ffffff;
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.48 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: #0a0a0a;
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* shadcn/ui's radius steps, derived from --radius (8 px). */
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+}

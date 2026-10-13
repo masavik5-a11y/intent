@@ -4,5 +4,12 @@
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.shared.json" },
     { "path": "./tsconfig.node.json" }
-  ]
+  ],
+  /* Only read by tools that look for aliases here (the shadcn CLI). */
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"],
+      "@shared/*": ["./shared/*"]
+    }
+  }
 }
