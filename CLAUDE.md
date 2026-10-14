@@ -107,6 +107,11 @@ docs/       Product and technical docs. Update them when a decision changes.
 - If a requirement is ambiguous or a doc contradicts the code, stop and ask rather than
   guessing. If a decision changes, update the doc in the same change.
 - ROADMAP.md lists "Verify first" risks per milestone. Check those before building on them.
+- ARCHITECTURE.md section 14 lists the real environments (GitHub, Convex dev and prod,
+  Vercel); section 17 lists implementation gotchas found so far. Read 17 before writing
+  code, and add to it when you hit a new one.
+- The Convex CLI on this PC is logged in and reaches production with `--prod`. Never run
+  a command against production without Filip's say-so in that session.
 
 <!-- `npx convex ai-files install` (milestone M0) adds a managed Convex section below
      this line. Do not edit inside its markers; rerun the command to refresh it. -->

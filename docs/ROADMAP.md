@@ -2,7 +2,8 @@
 
 Build order, one milestone at a time. Requirement IDs refer to [PRD.md](PRD.md).
 
-**Current milestone: M0 (in progress).** Update this line when a milestone is finished.
+**Current milestone: M0 (in progress: only deployment and installing are left, see the
+two open M0 slices).** Update this line when a milestone is finished.
 
 ## How to work
 
@@ -77,7 +78,25 @@ how to restrict sign-up in Convex Auth.
       `requireUser(ctx)`, protected routes, sign out.
 - [x] PWA: manifest, icons, service worker that precaches the shell. No push yet.
 - [ ] Private GitHub repository and an Actions workflow that runs `npm run check`.
+      *Status 2026-10-14:* repository created and `main` pushed
+      (github.com/masavik5-a11y/intent, private); the workflow is
+      `.github/workflows/check.yml`, and the same steps pass on a fresh local clone.
+      **Left:** confirm the first "Check" run on GitHub is green (Actions tab).
 - [ ] Production: Convex production deployment and Vercel project, deploying from `main`.
+      *Status 2026-10-14:* Convex project `intent` exists; the production deployment
+      `diligent-hawk-428` has `JWT_PRIVATE_KEY`, `JWKS` and `ALLOWED_EMAILS`. Vercel has
+      imported the repository, but after the push the production deployment still had no
+      functions, so the Vercel build has not deployed to it. **Left, in order:**
+      1. In Vercel, project settings, Environment Variables: `CONVEX_DEPLOY_KEY` must be
+         the **production** deploy key (Convex dashboard, production deployment, Settings,
+         "Generate production deploy key"; it starts with `prod:`). A key starting with
+         `dev:` makes `convex deploy` push to the development backend instead. Redeploy.
+      2. Check: the Vercel build log ends without errors, and `npx convex data --prod`
+         lists the auth tables.
+      3. Record the site address in ARCHITECTURE.md section 14, then
+         `npx convex env set SITE_URL https://<site address> --prod`.
+      4. Filip opens the site, creates the account, installs it on the PC and the phone.
+         Another email must get "Sign-up is closed for this address."
 
 **Done when:** you are signed in to the deployed app on the PC and on the phone, it is
 installed as an app on both, a second email cannot sign up, and `npm run check` is green

@@ -178,7 +178,7 @@ export default defineSchema({
     lastEveningNudgeDate: v.optional(v.string()),
     // M9
     birthDate: v.optional(v.string()),
-  }).index("by_user", ["userId"]),
+  }).index("by_userId", ["userId"]),
 
   // M1: one row per user. The vision and anti-vision texts.
   compass: defineTable({
@@ -186,7 +186,7 @@ export default defineSchema({
     vision: v.optional(v.string()),
     antiVision: v.optional(v.string()),
     updatedAt: v.number(),
-  }).index("by_user", ["userId"]),
+  }).index("by_userId", ["userId"]),
 
   // M1
   categories: defineTable({
@@ -198,7 +198,7 @@ export default defineSchema({
     sortOrder: v.number(),
     archived: v.boolean(),
     weeklyTargetMin: v.optional(v.number()), // M5
-  }).index("by_user", ["userId"]),
+  }).index("by_userId", ["userId"]),
 
   // M1
   activities: defineTable({
@@ -212,7 +212,7 @@ export default defineSchema({
     archived: v.boolean(),
     goalId: v.optional(v.id("goals")), // M5
     ...intentFields,
-  }).index("by_user", ["userId"]),
+  }).index("by_userId", ["userId"]),
 
   // M1 (plan fields), M2 (status and actual fields)
   blocks: defineTable({
@@ -239,7 +239,7 @@ export default defineSchema({
     detached: v.optional(v.boolean()), // M3: edited by hand, leave it alone
     notifiedAt: v.optional(v.number()), // M4: start notification sent
     endingNotifiedAt: v.optional(v.number()), // M4: ten-minutes-left sent
-  }).index("by_user_date", ["userId", "date"]),
+  }).index("by_userId_and_date", ["userId", "date"]),
 
   // M3
   days: defineTable({
@@ -252,7 +252,7 @@ export default defineSchema({
     rating: v.optional(v.number()),
     energy: v.optional(v.number()),
     reviewedAt: v.optional(v.number()),
-  }).index("by_user_date", ["userId", "date"]),
+  }).index("by_userId_and_date", ["userId", "date"]),
 
   // M3
   recurrences: defineTable({
@@ -267,7 +267,7 @@ export default defineSchema({
     startDate: v.string(),
     endDate: v.optional(v.string()),
     materializedThrough: v.optional(v.string()),
-  }).index("by_user", ["userId"]),
+  }).index("by_userId", ["userId"]),
 
   // M4
   pushSubscriptions: defineTable({
@@ -278,7 +278,7 @@ export default defineSchema({
     deviceLabel: v.string(),
     lastSeenAt: v.number(),
   })
-    .index("by_user", ["userId"])
+    .index("by_userId", ["userId"])
     .index("by_endpoint", ["endpoint"]),
 
   // M5
@@ -289,7 +289,7 @@ export default defineSchema({
     dueDate: v.optional(v.string()), // DateKey
     status: v.union(v.literal("active"), v.literal("done"), v.literal("dropped")),
     sortOrder: v.number(),
-  }).index("by_user", ["userId"]),
+  }).index("by_userId", ["userId"]),
 
   // M7: inboxItems. Designed when that milestone starts.
 });
@@ -355,7 +355,7 @@ functions to validate and to apply. One implementation, two callers.
 - `requireUser(ctx)` throws `ConvexError({ code: "UNAUTHENTICATED" })` when there is no
   session. Every model function that loads a document by id checks `doc.userId === userId`
   and throws `NOT_FOUND` otherwise.
-- Queries use indexes with explicit ranges. A day is `by_user_date` with `eq(userId)` and
+- Queries use indexes with explicit ranges. A day is `by_userId_and_date` with `eq(userId)` and
   `eq(date)`; a range uses `gte`/`lte` on `date`. Ranges are capped (e.g. 62 days).
 - Internal work (cron handlers, push) uses `internalMutation` / `internalAction` and is
   never exposed publicly.
@@ -392,7 +392,7 @@ subscription through a mutation (upsert by `endpoint`).
 **Dispatch.** A cron runs an internal mutation every minute:
 
 1. For each user's settings, compute the local `{ date, minute }` from `timeZone`.
-2. Load today's blocks (`by_user_date`). Select blocks with status `planned`, a plan start
+2. Load today's blocks (`by_userId_and_date`). Select blocks with status `planned`, a plan start
    in `(minute − 3, minute]`, no `notifiedAt`, and whose activity has `notify` on.
 3. Set `notifiedAt` on them (inside the mutation, so a block is never sent twice).
 4. Ten-minutes-left (U3): select blocks that are still `planned`, whose activity has
@@ -489,10 +489,9 @@ Rule: a bug in time or lane logic gets a failing unit test first, then the fix.
 
 ## 14. Environments and deployment
 
-- **Dev:** `npm run dev` runs Vite and `convex dev` against a personal dev deployment.
-  Until a Convex account is linked this is a local deployment on this PC
-  (`CONVEX_DEPLOYMENT=anonymous:…` in `.env.local`): fine for building, but the phone
-  cannot reach it.
+- **Dev:** `npm run dev` runs Vite and `convex dev` against the personal cloud dev
+  deployment named in `.env.local` (see the table below). Until 2026-10-14 development
+  ran on a local deployment on this PC; that one is no longer used.
 - **Prod:** Convex production deployment + Vercel project. Vercel's build command is
   `npx convex deploy --cmd 'npm run build'` with `CONVEX_DEPLOY_KEY` set, so backend and
   frontend deploy together from `main`. The command, the fallback of every address to
@@ -500,6 +499,22 @@ Rule: a bug in time or lane logic gets a failing unit test first, then the fix.
 - **CI:** a GitHub Actions workflow (`.github/workflows/check.yml`) runs `npm ci`,
   `npm run check` and a production build on every push.
 - **Backups:** Convex dashboard export on demand; JSON export from the app in M9.
+
+### Environments
+
+As set up on 2026-10-14. Secrets are never written here.
+
+| What | Where | Settings |
+| --- | --- | --- |
+| Code | github.com/masavik5-a11y/intent (private), branch `main` | CI: `.github/workflows/check.yml` |
+| Convex project | team `masavik`, project `intent`, region eu-west-1. Dashboard: https://dashboard.convex.dev/t/masavik/intent | |
+| Convex dev | deployment `befitting-trout-81`, selected in `.env.local` with `npx convex deployment select befitting-trout-81` | `SITE_URL=http://localhost:5173`, `JWT_PRIVATE_KEY`, `JWKS`, `ALLOWED_EMAILS` = the dev test address from `.env.example` and Filip's address |
+| Convex prod | deployment `diligent-hawk-428` (`--prod` in CLI commands) | `JWT_PRIVATE_KEY`, `JWKS`, `ALLOWED_EMAILS` = Filip's address. `SITE_URL`: not set yet, needs the site address |
+| Frontend | Vercel project imported from the repository. Site address: **not recorded yet** | `CONVEX_DEPLOY_KEY` = the production deploy key |
+
+The Convex CLI on this PC is logged in, so commands reach both deployments without a
+deploy key. Check which deployment a command targets before running it; production
+changes need Filip's say-so.
 
 ### First-time production setup
 
@@ -509,7 +524,8 @@ Done once, in this order. Steps marked (you) need a browser sign-in.
    `git remote add origin <url>` and `git push -u origin main`. The Check workflow runs.
 2. (you) `npx convex login`. Then `npx convex dev --configure=new --dev-deployment cloud`
    creates the Convex project and moves development from the local deployment to a cloud
-   one. Give that dev deployment its settings: `npx @convex-dev/auth` (keys and
+   one. (What actually happened: the project was created in the dashboard, and
+   `npx convex deployment select <dev deployment name>` pointed `.env.local` at it.) Give that dev deployment its settings: `npx @convex-dev/auth` (keys and
    `SITE_URL=http://localhost:5173`) and
    `npx convex env set ALLOWED_EMAILS <your email>`.
 3. (you) In the Convex dashboard, production deployment, Settings: generate a production
@@ -554,3 +570,74 @@ Things assumed here that must be confirmed in the milestone that depends on them
 | 2026-10-13 | Weekly targets live on categories, in minutes. | "Deep work 15h" spans several activities; one number per category keeps pace readable. |
 | 2026-10-13 | Countdown, pace and days-left are computed, never stored. | They are functions of blocks and the clock; storing them would only create stale data. |
 | 2026-10-13 | Vision and anti-vision are plain user text in one `compass` row; shown only on request. | They are personal writing, not settings, and must never be pushed at the user. |
+| 2026-10-13 | Sign-up allow-list enforced in the Password provider's `profile` hook; a new password needs 10 characters. | Rejects before anything is stored; one public login guards personal writing. |
+| 2026-10-13 | Phone bottom bar: Today, Week, quick add, Insights, More. | The other four screens need a way in on the phone (DESIGN.md section 2). |
+| 2026-10-13 | A new app version reloads the page once by itself (`autoUpdate`). | Simplest; switch to a prompt if a reload ever interrupts typing. |
+| 2026-10-14 | Index names list every field: `by_userId`, `by_userId_and_date`. | Convex's guidelines (`convex/_generated/ai/guidelines.md`) require it; the draft schema above was renamed before any table exists. |
+
+## 17. Implementation notes
+
+Things learned while building that are easy to get wrong. Add to this list when you hit
+one; delete an entry when it stops being true.
+
+**Convex**
+
+- Read `convex/_generated/ai/guidelines.md` before writing Convex code. Current API
+  shapes: `ctx.db.get("users", id)`, `ctx.db.patch("blocks", id, fields)`,
+  `ctx.db.replace(table, id, doc)` (the table name comes first).
+- Environment variables are declared in `convex/convex.config.ts` and read through the
+  typed `env` from `./_generated/server`. Set them with `npx convex env set`
+  (add `--prod` for production).
+- `ConvexError` data must be a `type` alias, not an `interface` (see `AppErrorData` in
+  `shared/errors.ts`). Throw app errors with `appError(code)` from
+  `convex/lib/errors.ts`; add new codes to `shared/errors.ts`.
+- Tests: `convexTest(schema, modules)` with `import.meta.glob("./**/*.ts")` and
+  `/// <reference types="vite/client" />` at the top of the test file. A signed-in caller
+  is `t.withIdentity({ subject: userId + "|session" })`: Convex Auth reads the user id
+  from the part before `|`. `convex/auth.test.ts` shows how to drive the real sign-in
+  action. Files with two dots (`x.test.ts`) are never pushed to Convex.
+- On this PC the Convex CLI often ends with
+  `Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)` and exit code 127 after it has
+  succeeded. Read its output, not its exit code.
+- The `date` field could use a typed validator so documents carry `DateKey` instead of
+  `string` (for example `v.string() as VString<DateKey>`). Not tried yet; decide in M1
+  when the `blocks` schema is written.
+
+**Frontend**
+
+- shadcn/ui here is the "nova" preset on Base UI, not Radix. Composition uses the
+  `render` prop, not `asChild`. A link that looks like a button is
+  `<Link className={buttonVariants()}>`; `<Button render={<Link />}>` gives the link
+  `role="button"`.
+- Add primitives with `npx shadcn@4.21.4 add <name>`. Files in `src/components/ui` stay
+  exactly as generated (Prettier ignores them, a lint rule is relaxed for them). If the
+  CLI asks to overwrite an existing primitive, it is safe to pass `--overwrite`.
+- TanStack Router: route files only export `Route`. `src/routeTree.gen.ts` is generated
+  by the Vite plugin while `npm run dev` or a build runs, and is committed; after adding a
+  route file, run one of them before `npm run typecheck`. Redirect in `beforeLoad` with
+  `throw redirect(...)`. Never render `<Navigate>` with a `search` object built during
+  render: it navigates again on every re-render and loops (see `src/routes/_app.tsx` and
+  `signInSearchFor` in `src/features/auth/redirect.ts`).
+- `/day/$date` validates the date in `beforeLoad` and hands it to the screen as a
+  `DateKey` through route context: `Route.useRouteContext().date`.
+- The clock is read only in `src/lib/now.ts` (`readNow`); ESLint rejects `Date.now()` and
+  `new Date()` anywhere else in `src/` and in `shared/`. The `useNow()` hook planned for
+  M1 belongs in that file.
+- Signed-in screens render only while there is a session, so their queries may call
+  `requireUser` freely. Import the backend API from `@/lib/api`.
+- Colour: an element takes a category colour with `data-color={colorKey}` and the
+  utilities `bg-key-tint`, `text-key-ink`, `bg-key-solid`, `text-on-solid` (DESIGN.md
+  section 5). The voice font is `font-voice`.
+- Vitest has three projects: `shared` (Node), `app` (Node, for `src/`) and `convex`
+  (edge-runtime). Vitest blanks CSS imports unless they are listed in `css.include`. The
+  first component test needs jsdom (a new dependency) and the `app` project switched to
+  it.
+
+**Tooling on this PC**
+
+- The Bash tool is Git Bash and keeps its working directory between calls: use absolute
+  paths. Setting `TZ` there does not reach Node; use PowerShell (`$env:TZ = "..."`) to
+  run tests in another time zone. The machine itself is set to America/Los_Angeles.
+- npm warns that esbuild's install script is not approved. Everything works without it.
+- Check `npm run check`'s own exit code before committing; a pipe such as `| tail` hides
+  a failure.
