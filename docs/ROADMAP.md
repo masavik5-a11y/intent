@@ -128,7 +128,7 @@ Covers T1–T7 (plan lane), I1–I4, U1, U2, V1, P4, S1, S5.
 - [x] Day screen: header with date navigation, hour grid, plan lane with block cards, an
       empty actual lane, now line, `useNow()`. The date is in the URL.
 - [x] Quick add (button, `N`, click on an empty slot, the phone's +).
-- [ ] Block detail panel: edit, delete, inherited intent shown as inherited, per-block
+- [x] Block detail panel: edit, delete, inherited intent shown as inherited, per-block
       overrides, focus, done-when.
 - [ ] Blocks that cross midnight: creation, and the tail at the top of the next day.
 - [ ] Now panel: current block by plan, done-when, why (serif), how, if-then, minimum,
@@ -285,6 +285,8 @@ today's plan read-only.
 - [ ] Zoom levels and compressed sleep.
 - [ ] Motion pass: check-off, blocks entering the actual lane, panel changes; reduced
       motion respected.
+- [ ] Optimistic updates for quick add and block edits (ARCHITECTURE.md section 8), so
+      a new block appears before the server answers.
 - [ ] Phone pass: collapsible now card, bottom bar, sheets, 44 px targets.
 - [ ] Accessibility pass: focus order, names, contrast in both themes.
 - [ ] Playwright smoke test: sign in, create a block, mark it done, see it in the actual

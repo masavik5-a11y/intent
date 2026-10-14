@@ -1,13 +1,7 @@
 import { describe, expect, test } from "vitest";
 import type { DateKey } from "@shared/time";
 import type { Doc, Id } from "@/lib/api";
-import {
-  collidingBlock,
-  matchActivities,
-  momentOnGrid,
-  overlapMessage,
-  suggestedStart,
-} from "./quickAddRules";
+import { matchActivities, momentOnGrid, suggestedStart } from "./quickAddRules";
 
 const TUE = "2026-10-13" as DateKey;
 const WED = "2026-10-14" as DateKey;
@@ -154,26 +148,5 @@ describe("suggestedStart", () => {
         now: { date: TUE, minute: 1438 },
       }),
     ).toEqual({ date: WED, minute: 0 });
-  });
-});
-
-describe("collidingBlock and overlapMessage", () => {
-  const blocks = [block("Lunch", TUE, 720, 60)];
-
-  test("names the block in the way", () => {
-    const hit = collidingBlock(
-      { date: TUE, startMin: 750, durationMin: 60 },
-      blocks,
-    );
-    expect(hit?.title).toBe("Lunch");
-    expect(hit && overlapMessage(hit)).toBe(
-      "That overlaps Lunch (12:00–13:00). Pick another time or a shorter length.",
-    );
-  });
-
-  test("nothing in the way: undefined", () => {
-    expect(
-      collidingBlock({ date: TUE, startMin: 780, durationMin: 60 }, blocks),
-    ).toBeUndefined();
   });
 });

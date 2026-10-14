@@ -19,6 +19,8 @@ interface BlockCardProps {
   height: number;
   /** The block runs now: solid fill (DESIGN.md section 4). */
   current: boolean;
+  /** Its detail is open. */
+  selected: boolean;
   /** Cut at the grid's top or bottom edge because it crosses into another day's grid. */
   cutTop: boolean;
   cutBottom: boolean;
@@ -36,6 +38,7 @@ export function BlockCard({
   top,
   height,
   current,
+  selected,
   cutTop,
   cutBottom,
   onOpen,
@@ -58,6 +61,8 @@ export function BlockCard({
       className={cn(
         "absolute inset-x-1 overflow-hidden rounded-block px-2 text-left outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
         current ? "bg-key-solid text-on-solid" : "bg-key-tint text-key-ink",
+        selected &&
+          "ring-2 ring-foreground ring-offset-1 ring-offset-background",
         cutTop && "rounded-t-none",
         cutBottom && "rounded-b-none",
       )}

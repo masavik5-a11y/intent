@@ -1,8 +1,7 @@
 import { planEntry } from "@shared/blocks";
 import { momentAt } from "@shared/grid";
-import { findOverlap, firstFreeSpan, type LaneSpan } from "@shared/lanes";
+import { firstFreeSpan } from "@shared/lanes";
 import {
-  formatTimeRange,
   MINUTE_STEP,
   MINUTES_PER_DAY,
   type DateKey,
@@ -102,24 +101,4 @@ function roundUpToStep(now: LocalMoment): LocalMoment {
   return minute < MINUTES_PER_DAY
     ? { date: now.date, minute }
     : momentAt(now.date, 0, minute);
-}
-
-/** The block a new span would collide with, among blocks loaded for the day. */
-export function collidingBlock(
-  span: LaneSpan,
-  blocks: readonly Doc<"blocks">[],
-): Doc<"blocks"> | undefined {
-  const hit = findOverlap(span, blocks.map(planEntry));
-  return hit === null
-    ? undefined
-    : blocks.find((block) => block._id === hit.id);
-}
-
-/** "That overlaps Lunch (12:00–13:00)." */
-export function overlapMessage(block: Doc<"blocks">): string {
-  const range = formatTimeRange(
-    block.plannedStartMin,
-    block.plannedDurationMin,
-  );
-  return `That overlaps ${block.title} (${range}). Pick another time or a shorter length.`;
 }

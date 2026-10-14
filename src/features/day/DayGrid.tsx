@@ -28,6 +28,8 @@ export interface GridCard {
   top: number;
   height: number;
   current: boolean;
+  /** Its detail is open. */
+  selected: boolean;
   cutTop: boolean;
   cutBottom: boolean;
 }
@@ -181,6 +183,7 @@ export function DayGrid({
                     top={box.top}
                     height={box.height}
                     current={card.current}
+                    selected={card.selected}
                     cutTop={card.cutTop}
                     cutBottom={card.cutBottom}
                     onOpen={

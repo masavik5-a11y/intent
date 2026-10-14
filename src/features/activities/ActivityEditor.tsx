@@ -3,13 +3,15 @@ import type { IntentField } from "@shared/blocks";
 import { ICON_NAMES, type IconName } from "@shared/icons";
 import { MAX_INTENT_LENGTH, MAX_TITLE_LENGTH } from "@shared/text";
 import { AppIcon } from "@/components/AppIcon";
+import { CategoryPicker } from "@/components/CategoryPicker";
 import { DurationInput } from "@/components/DurationInput";
+import { Field } from "@/components/Field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import type { Doc } from "@/lib/api";
+import { COST_OF_SKIPPING_HINT, INTENT_PROMPTS } from "@/lib/intentPrompts";
 import { cn } from "@/lib/utils";
 import {
   draftProblem,
@@ -17,14 +19,10 @@ import {
   type ActivityDraft,
 } from "./activityDraft";
 
-/** The prompts from PRD section 4, "Intent fields". */
-const INTENT_PROMPTS: Record<IntentField, string> = {
-  why: "Why this matters to me",
-  how: "How I do it",
+// On an activity, "done when" is the default for its blocks.
+const PROMPTS: Record<IntentField, string> = {
+  ...INTENT_PROMPTS,
   doneWhen: "A block of it is done when…",
-  ifThen: "If I don't feel like it, then…",
-  minimumVersion: "The smallest version that still counts",
-  costOfSkipping: "If I keep skipping this, in a year…",
 };
 
 interface ActivityEditorProps {
@@ -81,9 +79,6 @@ export function ActivityEditor({
   }
 
   const category = categories.find((item) => item._id === draft.categoryId);
-  const choosable = categories.filter(
-    (item) => !item.archived || item._id === draft.categoryId,
-  );
 
   return (
     <form
@@ -105,30 +100,11 @@ export function ActivityEditor({
           />
         </Field>
 
-        <fieldset className="flex flex-col gap-2">
-          <legend className="mb-2 text-sm font-medium">Category</legend>
-          <div role="radiogroup" className="flex flex-wrap gap-1.5">
-            {choosable.map((item) => (
-              <button
-                key={item._id}
-                type="button"
-                role="radio"
-                aria-checked={item._id === draft.categoryId}
-                data-color={item.colorKey}
-                onClick={() => chooseCategory(item)}
-                className={cn(
-                  "flex h-9 items-center gap-1.5 rounded-full border-2 bg-key-tint px-3 text-sm text-key-ink outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
-                  item._id === draft.categoryId
-                    ? "border-key-solid"
-                    : "border-transparent",
-                )}
-              >
-                <AppIcon name={item.icon} className="size-4" />
-                {item.name}
-              </button>
-            ))}
-          </div>
-        </fieldset>
+        <CategoryPicker
+          categories={categories}
+          value={draft.categoryId}
+          onChange={chooseCategory}
+        />
 
         <IconPicker
           value={draft.icon}
@@ -190,7 +166,7 @@ export function ActivityEditor({
             id={`${ids}-cost`}
             field="costOfSkipping"
             value={draft.costOfSkipping}
-            hint="Shown only when you press “Not feeling it”, never in a notification."
+            hint={COST_OF_SKIPPING_HINT}
             onChange={(text) => set("costOfSkipping", text)}
           />
         </Group>
@@ -249,30 +225,6 @@ export function ActivityEditor({
   );
 }
 
-function Field({
-  id,
-  label,
-  hint,
-  children,
-}: {
-  id: string;
-  label: string;
-  hint?: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <Label htmlFor={id}>{label}</Label>
-      {children}
-      {hint !== undefined && (
-        <p id={`${id}-hint`} className="text-sm text-muted-foreground">
-          {hint}
-        </p>
-      )}
-    </div>
-  );
-}
-
 function Group({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="flex flex-col gap-4">
@@ -299,7 +251,7 @@ function IntentArea({
   onChange: (text: string) => void;
 }) {
   return (
-    <Field id={id} label={INTENT_PROMPTS[field]} hint={hint}>
+    <Field id={id} label={PROMPTS[field]} hint={hint}>
       <Textarea
         id={id}
         value={value}

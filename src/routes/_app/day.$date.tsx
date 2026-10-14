@@ -11,6 +11,8 @@ import { DayScreen, type AddRequest } from "@/features/day/DayScreen";
 interface DaySearch {
   /** Quick add is open: "now" for a suggested time, or the clicked grid position. */
   add?: "now" | number;
+  /** The block whose detail is open. */
+  block?: string;
 }
 
 export const Route = createFileRoute("/_app/day/$date")({
@@ -21,7 +23,8 @@ export const Route = createFileRoute("/_app/day/$date")({
     return { date };
   },
   validateSearch: (search: Record<string, unknown>): DaySearch => {
-    const { add } = search;
+    const { add, block } = search;
+    if (typeof block === "string") return { block };
     if (add === "now") return { add };
     if (typeof add === "number" && add >= 0 && add < MINUTES_PER_DAY) {
       return { add };
@@ -38,7 +41,7 @@ function addRequest(add: DaySearch["add"]): AddRequest | undefined {
 
 function DayRoute() {
   const { date } = Route.useRouteContext();
-  const { add } = Route.useSearch();
+  const { add, block } = Route.useSearch();
   const navigate = Route.useNavigate();
   const router = useRouter();
   const canGoBack = useCanGoBack();
@@ -47,6 +50,17 @@ function DayRoute() {
     (position: number | null) =>
       void navigate({ search: { add: position ?? "now" } }),
     [navigate],
+  );
+
+  // Choosing another block while one is open replaces it, so closing goes straight
+  // back to the plain day.
+  const openBlock = useCallback(
+    (blockId: string) =>
+      void navigate({
+        search: { block: blockId },
+        replace: block !== undefined,
+      }),
+    [navigate, block],
   );
 
   // Opening pushed a history entry; closing pops it, as the back gesture would.
@@ -62,6 +76,8 @@ function DayRoute() {
       date={date}
       add={addRequest(add)}
       onOpenAdd={openAdd}
+      selectedBlockId={block}
+      onSelectBlock={openBlock}
       onCloseOverlay={closeOverlay}
     />
   );

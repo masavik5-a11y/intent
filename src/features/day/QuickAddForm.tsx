@@ -9,6 +9,7 @@ import {
   type LocalMoment,
 } from "@shared/time";
 import { AppIcon } from "@/components/AppIcon";
+import { CategoryPicker } from "@/components/CategoryPicker";
 import { DurationInput } from "@/components/DurationInput";
 import { TimeInput } from "@/components/TimeInput";
 import { Button } from "@/components/ui/button";
@@ -16,12 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Doc, Id } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import {
-  collidingBlock,
-  matchActivities,
-  momentOnGrid,
-  overlapMessage,
-} from "./quickAddRules";
+import { collidingBlock, overlapMessage } from "@/lib/blockOverlap";
+import { matchActivities, momentOnGrid } from "./quickAddRules";
 
 /** A new block's length until an activity says otherwise. */
 export const DEFAULT_DURATION_MIN = 60;
@@ -257,32 +254,11 @@ export function QuickAddForm({
       </div>
 
       {activity === null && text.trim() !== "" && (
-        <fieldset className="flex flex-col gap-2">
-          <legend className="mb-2 text-sm font-medium">Category</legend>
-          <div role="radiogroup" className="flex flex-wrap gap-1.5">
-            {categories
-              .filter((item) => !item.archived)
-              .map((item) => (
-                <button
-                  key={item._id}
-                  type="button"
-                  role="radio"
-                  aria-checked={item._id === categoryId}
-                  data-color={item.colorKey}
-                  onClick={() => setCategoryId(item._id)}
-                  className={cn(
-                    "flex h-9 items-center gap-1.5 rounded-full border-2 bg-key-tint px-3 text-sm text-key-ink outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-                    item._id === categoryId
-                      ? "border-key-solid"
-                      : "border-transparent",
-                  )}
-                >
-                  <AppIcon name={item.icon} className="size-4" />
-                  {item.name}
-                </button>
-              ))}
-          </div>
-        </fieldset>
+        <CategoryPicker
+          categories={categories}
+          value={categoryId}
+          onChange={(item) => setCategoryId(item._id)}
+        />
       )}
 
       <div className="grid grid-cols-[auto_1fr] items-start gap-x-4 gap-y-1.5">

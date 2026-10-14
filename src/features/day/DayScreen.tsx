@@ -9,10 +9,12 @@ import {
 } from "@shared/grid";
 import { DEFAULT_SETTINGS } from "@shared/settings";
 import type { DateKey } from "@shared/time";
+import { BlockDetailPanel } from "@/features/block-detail/BlockDetailPanel";
+import type { BlockChanges } from "@/features/block-detail/BlockDetail";
 import { api, type Doc, type Id } from "@/lib/api";
 import { saveErrorMessage } from "@/lib/errorMessages";
 import { useNow } from "@/lib/now";
-import { useIsPhone } from "@/lib/useMediaQuery";
+import { useIsPhone, useMediaQuery } from "@/lib/useMediaQuery";
 import { DayGrid, type GridCard } from "./DayGrid";
 import { DayHeader } from "./DayHeader";
 import { dayTense, itemAt, planLane } from "./dayView";
@@ -28,6 +30,9 @@ interface DayScreenProps {
   /** Quick add is open (it lives in the URL, so the back gesture closes it). */
   add: AddRequest | undefined;
   onOpenAdd: (position: number | null) => void;
+  /** The block whose detail is open, also from the URL. */
+  selectedBlockId: string | undefined;
+  onSelectBlock: (blockId: Id<"blocks">) => void;
   /** Closes quick add or the block detail. */
   onCloseOverlay: () => void;
 }
@@ -37,6 +42,8 @@ export function DayScreen({
   date,
   add,
   onOpenAdd,
+  selectedBlockId,
+  onSelectBlock,
   onCloseOverlay,
 }: DayScreenProps) {
   const settings = useQuery(api.settings.get);
@@ -44,8 +51,11 @@ export function DayScreen({
   const categories = useQuery(api.categories.list);
   const activities = useQuery(api.activities.list);
   const createBlock = useMutation(api.blocks.create);
+  const updateBlock = useMutation(api.blocks.update);
+  const removeBlock = useMutation(api.blocks.remove);
   const now = useNow();
   const isPhone = useIsPhone();
+  const isWide = useMediaQuery("(min-width: 1024px)");
 
   // N opens quick add (DESIGN.md section 8), except while typing or in a dialog.
   useEffect(() => {
@@ -92,20 +102,27 @@ export function DayScreen({
       top: segment.top,
       height: segment.height,
       current: current?.block._id === block._id,
+      selected: block._id === selectedBlockId,
       cutTop: segment.startsBefore,
       cutBottom: segment.endsAfter,
     };
   });
 
-  async function saveBlock(args: NewBlockArgs): Promise<string | null> {
+  /** Runs a change and closes the open panel; a failure becomes its message. */
+  async function attempt(
+    change: () => Promise<unknown>,
+  ): Promise<string | null> {
     try {
-      await createBlock(args);
+      await change();
       onCloseOverlay();
       return null;
     } catch (error) {
       return saveErrorMessage(error);
     }
   }
+  const saveBlock = (args: NewBlockArgs) => attempt(() => createBlock(args));
+
+  const selected = blocks?.find((block) => block._id === selectedBlockId);
 
   const ready =
     blocks !== undefined &&
@@ -129,30 +146,53 @@ export function DayScreen({
         : momentAt(date, gridStartMin, slotStart(add.position, CLICK_SNAP_MIN));
 
   return (
-    <div className="flex h-full flex-col">
-      <DayHeader date={date} today={today} onAdd={() => onOpenAdd(null)} />
-      {blocks !== undefined && items.length === 0 && (
-        <p className="border-b px-4 py-2 text-sm text-muted-foreground">
-          {tense === "past"
-            ? "Nothing was planned for this day."
-            : "Nothing planned yet. Start with one block."}
-        </p>
-      )}
-      <DayGrid
-        dayKey={date}
-        gridStartMin={gridStartMin}
-        wakeMin={wakeMin}
-        sleepMin={sleepMin}
-        isPhone={isPhone}
-        cards={cards}
-        nowPosition={nowPosition}
-        futureFrom={
-          tense === "future" ? 0 : tense === "today" ? nowPosition : null
-        }
-        onEmptySlot={(position) =>
-          onOpenAdd(slotStart(position, CLICK_SNAP_MIN))
-        }
-      />
+    <div className="flex h-full">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <DayHeader date={date} today={today} onAdd={() => onOpenAdd(null)} />
+        {blocks !== undefined && items.length === 0 && (
+          <p className="border-b px-4 py-2 text-sm text-muted-foreground">
+            {tense === "past"
+              ? "Nothing was planned for this day."
+              : "Nothing planned yet. Start with one block."}
+          </p>
+        )}
+        <DayGrid
+          dayKey={date}
+          gridStartMin={gridStartMin}
+          wakeMin={wakeMin}
+          sleepMin={sleepMin}
+          isPhone={isPhone}
+          cards={cards}
+          nowPosition={nowPosition}
+          futureFrom={
+            tense === "future" ? 0 : tense === "today" ? nowPosition : null
+          }
+          onEmptySlot={(position) =>
+            onOpenAdd(slotStart(position, CLICK_SNAP_MIN))
+          }
+          onOpenCard={(key) => onSelectBlock(key as Id<"blocks">)}
+        />
+      </div>
+      {selected !== undefined &&
+        activities !== undefined &&
+        categories !== undefined &&
+        blocks !== undefined && (
+          <BlockDetailPanel
+            wide={isWide}
+            block={selected}
+            viewedDay={date}
+            activities={activities}
+            categories={categories}
+            blocks={blocks}
+            onSave={(changes: BlockChanges) =>
+              attempt(() => updateBlock(changes))
+            }
+            onDelete={() =>
+              attempt(() => removeBlock({ blockId: selected._id }))
+            }
+            onCancel={onCloseOverlay}
+          />
+        )}
       {ready && (
         <QuickAdd
           open={addStart !== null}

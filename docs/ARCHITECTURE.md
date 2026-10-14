@@ -687,9 +687,13 @@ one; delete an entry when it stops being true.
   sheet's title (`tabIndex={-1}`) when the sheet shows something rather than asks for
   typing; see `ActivitiesScreen`. Closing such a sheet goes back in history when it
   can (`useCanGoBack`), so the Android back gesture and Cancel agree.
-- Shared form pieces: `src/components/DurationInput.tsx` (typed or preset lengths,
-  snapped to 5 minutes) and `AppIcon` (an icon by its stored name). Save failures read
-  through `saveErrorMessage` in `src/lib/errorMessages.ts`.
+- Shared form pieces in `src/components/`: `DurationInput` (typed or preset lengths,
+  snapped to 5 minutes), `TimeInput` (24-hour), `CategoryPicker`, `Field` and `AppIcon`
+  (an icon by its stored name). Save failures read through `saveErrorMessage` in
+  `src/lib/errorMessages.ts`; an overlap is named before saving with `collidingBlock`
+  and `overlapMessage` in `src/lib/blockOverlap.ts`.
+- Quick add and block detail wait for the server before closing; neither has an
+  optimistic update yet (section 8 asks for one on quick add). Listed for M6.
 - Colour: an element takes a category colour with `data-color={colorKey}` and the
   utilities `bg-key-tint`, `text-key-ink`, `bg-key-solid`, `text-on-solid` (DESIGN.md
   section 5). The voice font is `font-voice`.
