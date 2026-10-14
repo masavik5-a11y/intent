@@ -231,7 +231,12 @@ These rules are the heart of the product. They are implemented once, as pure fun
    started or ended changes its actual times. On past days the plan is frozen unless the
    user explicitly chooses "edit plan". On future days there is only a plan.
 5. Marking Done sets actual = plan, except that the actual start is pushed later if the
-   previous actual entry ran over it (no overlaps in the actual lane).
+   previous actual entry ran over it (no overlaps in the actual lane). Pushed, it keeps
+   the planned end, so the block gets shorter; if another entry begins inside the
+   plan, the actual ends there. Done on a block that is still running ends it now (at
+   the 5-minute mark below, at least 5 minutes long). Decided by Filip 2026-10-14.
+   Done and Partly can be marked once a block has started; Skip at any time. Partly
+   records the minutes given, starting where Done would start.
 6. Within one lane, blocks do not overlap. One thing at a time is the point. An edit that
    would create an overlap is rejected with a clear message.
 7. Times snap to 5 minutes. Minimum duration is 5 minutes.

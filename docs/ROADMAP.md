@@ -166,8 +166,9 @@ recurrence, notifications.
 - [x] Schema: status, actual times, `skipReason`, `note`, `minimumChosen`. Plan times
       are optional (unplanned entries); every write runs `blockShapeProblem` and checks
       both lanes.
-- [ ] `shared/`: `applyStatus`, `defaultActual`, `editTarget`, `untrackedGaps`,
-      `summarizeDay`, each with tests for the rules in PRD section 7.
+- [x] `shared/`: `applyStatus`, `defaultActual`, `editTarget`, `untrackedGaps`,
+      `summarizeDay`, each with tests for the rules in PRD section 7. Also
+      `liveActual`/`liveActualLane` (the growing bar) and `partlyChoices`.
 - [ ] Done, Partly, Skip and Undo from the now panel and block detail, with optimistic
       updates. Partly offers quick choices; Skip offers optional reasons.
 - [ ] Actual lane: done and partly blocks at their actual times, the current block as a

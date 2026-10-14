@@ -1,16 +1,21 @@
 import { describe, expect, test } from "vitest";
 import {
+  actualStartFor,
+  defaultActual,
   entriesAfter,
   entryAt,
   findOverlap,
   firstFreeSpan,
+  liveActual,
+  minuteFrom,
   overlapWindow,
   spanBounds,
   spansOverlap,
+  untrackedGaps,
   type LaneEntry,
   type LaneSpan,
 } from "./lanes";
-import { parseDateKey, type DateKey } from "./time";
+import { parseDateKey, type DateKey, type LocalMoment } from "./time";
 
 function key(value: string): DateKey {
   const parsed = parseDateKey(value);
@@ -281,5 +286,233 @@ describe("entryAt and entriesAfter", () => {
 
   test("nothing after the last one", () => {
     expect(entriesAfter(lane, { date: WED, minute: 480 }, 2)).toEqual([]);
+  });
+});
+
+/** Test shorthand: the moment "HH:MM" on `date`. */
+function at(date: DateKey, time: string): LocalMoment {
+  const [hours = 0, mins = 0] = time.split(":").map(Number);
+  return { date, minute: hours * 60 + mins };
+}
+
+describe("minuteFrom", () => {
+  test.each([
+    [TUE, at(TUE, "09:30"), 570],
+    [TUE, at(WED, "00:10"), 1450],
+    [TUE, at(MON, "23:00"), -60],
+  ])("from %s, %o is minute %d", (origin, moment, minute) => {
+    expect(minuteFrom(origin, moment)).toBe(minute);
+  });
+});
+
+describe("defaultActual (PRD section 7, rule 5)", () => {
+  const write = span(TUE, "13:00", 60); // 13:00–14:00
+  const evening = at(TUE, "18:00");
+
+  test.each<[string, LaneSpan[], LaneSpan | null]>([
+    ["with nothing in the way, the plan", [], span(TUE, "13:00", 60)],
+    [
+      "after an overrun, a late start and the planned end",
+      [span(TUE, "12:00", 75)], // lunch until 13:15
+      span(TUE, "13:15", 45),
+    ],
+    [
+      "after a chain of overruns, past each one",
+      [span(TUE, "12:00", 75), span(TUE, "13:15", 15)],
+      span(TUE, "13:30", 30),
+    ],
+    [
+      "with an entry starting inside, ending where it begins",
+      [span(TUE, "13:30", 15)],
+      span(TUE, "13:00", 30),
+    ],
+    [
+      "with five minutes left, those five minutes",
+      [span(TUE, "12:00", 115)],
+      span(TUE, "13:55", 5),
+    ],
+    [
+      "when the lane covers the whole plan, null",
+      [span(TUE, "12:00", 150)],
+      null,
+    ],
+    [
+      "entries before and after it change nothing",
+      [span(TUE, "11:00", 60), span(TUE, "14:00", 60)],
+      span(TUE, "13:00", 60),
+    ],
+  ])("%s", (_, lane, expected) => {
+    expect(defaultActual(write, lane, evening)).toEqual(expected);
+  });
+
+  test.each<[string, string, LaneSpan[], LaneSpan]>([
+    ["a running block ends now", "13:40", [], span(TUE, "13:00", 40)],
+    ["…at the 5-minute mark below now", "13:42", [], span(TUE, "13:00", 40)],
+    ["…and lasts at least 5 minutes", "13:02", [], span(TUE, "13:00", 5)],
+    [
+      "a running block after an overrun starts late and ends now",
+      "13:20",
+      [span(TUE, "12:00", 75)],
+      span(TUE, "13:15", 5),
+    ],
+    [
+      "…at least 5 minutes from its late start",
+      "13:16",
+      [span(TUE, "12:00", 75)],
+      span(TUE, "13:15", 5),
+    ],
+    [
+      "a block marked at its end is the plan",
+      "14:00",
+      [],
+      span(TUE, "13:00", 60),
+    ],
+  ])("%s (%s)", (_, time, lane, expected) => {
+    expect(defaultActual(write, lane, at(TUE, time))).toEqual(expected);
+  });
+
+  test("Gym 11:00–12:30 marked at 11:50 records 11:00–11:50", () => {
+    expect(defaultActual(span(TUE, "11:00", 90), [], at(TUE, "11:50"))).toEqual(
+      span(TUE, "11:00", 50),
+    );
+  });
+
+  test("a block planned before midnight can begin after it", () => {
+    const late = span(MON, "23:30", 60); // to Tue 00:30
+    const overran = span(MON, "22:00", 130); // to Tue 00:10
+    expect(defaultActual(late, [overran], at(TUE, "08:00"))).toEqual({
+      date: MON,
+      startMin: 1450,
+      durationMin: 20,
+    });
+  });
+
+  test("an entry after midnight ends a block that crosses it", () => {
+    const sleep = span(MON, "23:00", 480); // to Tue 07:00
+    expect(
+      defaultActual(sleep, [span(TUE, "03:00", 30)], at(TUE, "09:00")),
+    ).toEqual({ date: MON, startMin: 1380, durationMin: 240 });
+  });
+
+  test("last night's sleep that ran long pushes the morning block", () => {
+    const sleep = span(MON, "23:00", 510); // to Tue 07:30
+    expect(
+      defaultActual(span(TUE, "07:00", 60), [sleep], at(TUE, "09:00")),
+    ).toEqual(span(TUE, "07:30", 30));
+  });
+
+  test("Done never creates an overlap, whatever is in the lane", () => {
+    const lanes: LaneSpan[][] = [
+      [span(TUE, "12:00", 70), span(TUE, "13:20", 10), span(TUE, "13:50", 30)],
+      [span(TUE, "12:55", 10), span(TUE, "13:40", 5)],
+      [span(TUE, "13:05", 50)],
+      [span(MON, "23:00", 900)], // to Tue 14:00
+      [span(TUE, "13:00", 5), span(TUE, "13:10", 5), span(TUE, "13:20", 5)],
+    ];
+    for (const lane of lanes) {
+      for (const time of ["13:03", "13:27", "13:58", "18:00"]) {
+        const actual = defaultActual(write, lane, at(TUE, time));
+        if (actual === null) continue;
+        expect(actual.durationMin).toBeGreaterThanOrEqual(5);
+        for (const entry of lane) {
+          expect(
+            spansOverlap(actual, entry),
+            JSON.stringify({ lane, time }),
+          ).toBe(false);
+        }
+      }
+    }
+  });
+});
+
+describe("actualStartFor", () => {
+  test("the planned start, pushed past an overrun", () => {
+    const write = span(TUE, "13:00", 60);
+    expect(actualStartFor(write, [])).toBe(780);
+    expect(actualStartFor(write, [span(TUE, "12:00", 75)])).toBe(795);
+    expect(actualStartFor(write, [span(TUE, "12:00", 120)])).toBeNull();
+  });
+});
+
+describe("liveActual", () => {
+  const write = span(TUE, "13:00", 60);
+
+  test("grows minute by minute, not rounded", () => {
+    expect(liveActual(write, [], at(TUE, "13:42"))).toEqual(
+      span(TUE, "13:00", 42),
+    );
+    expect(liveActual(write, [], at(TUE, "13:43"))).toEqual(
+      span(TUE, "13:00", 43),
+    );
+  });
+
+  test("is nothing at the first minute, or before an overrun has ended", () => {
+    expect(liveActual(write, [], at(TUE, "13:00"))).toBeNull();
+    expect(
+      liveActual(write, [span(TUE, "12:00", 75)], at(TUE, "13:10")),
+    ).toBeNull();
+  });
+
+  test("starts where an overrun ended", () => {
+    expect(
+      liveActual(write, [span(TUE, "12:00", 75)], at(TUE, "13:20")),
+    ).toEqual(span(TUE, "13:15", 5));
+  });
+});
+
+describe("untrackedGaps (PRD section 7, rule 8)", () => {
+  const morning = span(TUE, "05:00", 600); // 05:00–15:00
+
+  test("the stretches no entry covers", () => {
+    expect(
+      untrackedGaps([span(TUE, "09:00", 60), span(TUE, "07:00", 60)], morning),
+    ).toEqual([
+      span(TUE, "05:00", 120),
+      span(TUE, "08:00", 60),
+      span(TUE, "10:00", 300),
+    ]);
+  });
+
+  test("only those at least minLength long", () => {
+    expect(
+      untrackedGaps(
+        [span(TUE, "07:00", 60), span(TUE, "09:00", 60)],
+        morning,
+        90,
+      ),
+    ).toEqual([span(TUE, "05:00", 120), span(TUE, "10:00", 300)]);
+  });
+
+  test("last night's sleep covers the morning; entries past the end are cut", () => {
+    expect(
+      untrackedGaps(
+        [span(MON, "23:00", 480), span(TUE, "14:30", 120)],
+        morning,
+      ),
+    ).toEqual([span(TUE, "07:00", 450)]);
+  });
+
+  test("after midnight the minutes run on from 1440", () => {
+    const grid = span(TUE, "05:00", 1440); // to Wed 05:00
+    expect(
+      untrackedGaps([span(TUE, "05:00", 1140), span(WED, "01:00", 60)], grid),
+    ).toEqual([
+      { date: TUE, startMin: 1440, durationMin: 60 },
+      { date: TUE, startMin: 1560, durationMin: 180 },
+    ]);
+  });
+
+  test("a window up to a minute that is not on the 5-minute step", () => {
+    expect(
+      untrackedGaps([span(TUE, "05:00", 60)], {
+        date: TUE,
+        startMin: 300,
+        durationMin: 73,
+      }),
+    ).toEqual([{ date: TUE, startMin: 360, durationMin: 13 }]);
+  });
+
+  test("an empty window has no gaps", () => {
+    expect(untrackedGaps([], span(TUE, "05:00", 0))).toEqual([]);
   });
 });
