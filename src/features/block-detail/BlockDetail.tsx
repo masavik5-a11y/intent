@@ -1,5 +1,9 @@
 import { useId, useState, type FormEvent } from "react";
-import type { IntentField } from "@shared/blocks";
+import {
+  hasStarted,
+  type IntentField,
+  type StatusAction,
+} from "@shared/blocks";
 import {
   MAX_FOCUS_LENGTH,
   MAX_INTENT_LENGTH,
@@ -10,6 +14,7 @@ import {
   formatTimeRange,
   isValidDuration,
   type DateKey,
+  type LocalMoment,
 } from "@shared/time";
 import { CategoryPicker } from "@/components/CategoryPicker";
 import { DurationInput } from "@/components/DurationInput";
@@ -22,6 +27,8 @@ import type { Doc, PlannedBlockDoc } from "@/lib/api";
 import { collidingBlock, overlapMessage } from "@/lib/blockOverlap";
 import { COST_OF_SKIPPING_HINT, INTENT_PROMPTS } from "@/lib/intentPrompts";
 import { cn } from "@/lib/utils";
+import { StatusActions } from "@/features/status/StatusActions";
+import { StatusSummary } from "@/features/status/StatusSummary";
 import {
   draftOf,
   draftProblem,
@@ -45,6 +52,12 @@ interface BlockDetailProps {
   onSave: (changes: BlockChanges) => Promise<string | null>;
   onDelete: () => Promise<string | null>;
   onCancel: () => void;
+  /** The device's minute: whether the block has started, so Done can be offered. */
+  now: LocalMoment;
+  /** Done, Partly, Skip, Undo: saved at once, apart from the form. */
+  onAction: (action: StatusAction) => void;
+  /** Why the last of those did not save. */
+  statusError: string | null;
 }
 
 /**
@@ -61,6 +74,9 @@ export function BlockDetail({
   onSave,
   onDelete,
   onCancel,
+  now,
+  onAction,
+  statusError,
 }: BlockDetailProps) {
   const ids = useId();
   const [draft, setDraft] = useState(() => draftOf(block));
@@ -179,6 +195,31 @@ export function BlockDetail({
       noValidate
     >
       <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-4 pb-6 sm:px-5">
+        <section
+          aria-label="What happened"
+          className="flex flex-col gap-2 rounded-block bg-muted/60 px-3 py-2"
+        >
+          {block.status === "planned" ? (
+            <>
+              <p className="text-sm">
+                {hasStarted(block, now) ? "Not marked yet" : "Still ahead"}
+              </p>
+              <StatusActions
+                plannedDurationMin={block.plannedDurationMin}
+                started={hasStarted(block, now)}
+                onAction={onAction}
+              />
+            </>
+          ) : (
+            <StatusSummary block={block} onAction={onAction} />
+          )}
+          {statusError !== null && (
+            <p role="alert" className="text-sm text-destructive">
+              {statusError}
+            </p>
+          )}
+        </section>
+
         <Field id={`${ids}-title`} label="What">
           <Input
             id={`${ids}-title`}

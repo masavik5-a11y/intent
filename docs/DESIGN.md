@@ -140,13 +140,23 @@ Order, top to bottom. Items appear only when they have content.
    "Deep work 9 of 15h · 3 days left · behind by 1h 30m". Plain text, normal colour.
 10. **Up next**: the following two blocks.
 
-Built in M1: items 1–6 (without the goal chip) and 10. The actions and "Not feeling it"
-arrive in M2, the totals in M2, the pace and the goal chip in M5. On the phone the card
-shows the status, bar, title, done when and the why in two lines; "More" opens the rest.
+Built in M1: items 1–6 (without the goal chip) and 10. M2 adds the actions, "Not
+feeling it" and the totals; the pace and the goal chip come in M5. On the phone the card
+shows the status, bar, title, done when, the why in two lines and the actions; "More"
+opens the rest.
+
+The actions: Done is one tap. Partly opens a few lengths (a quarter, half and three
+quarters of the plan, and the time so far) and "Other length". Skip records at once;
+then the panel shows "Skipped" with Undo and "Why? (optional)" with the five reasons.
+After any mark the panel keeps a small "Gym · Done · 11:00–11:50 · Undo" box at the top
+for ten minutes. A block marked early stops being the current block.
 
 Blocks without pressure (sleep, meditation, rest, meals) show item 1 as text only, and no
 bar. Between blocks the panel shows "Free until 14:00", the next block, the totals, and a
-"Log what I'm doing" action; the untracked counter keeps running.
+"Log what I'm doing" action; the untracked counter keeps running. If the block that
+ended last is not marked yet ("Lunch ended at 13:00", or in the morning last night's
+sleep), it waits there with Done, Partly and Skip, so marking stays one tap (added in
+M2).
 
 In the actual lane, untracked time is drawn as a hatch that extends with the now line,
 so drifting is visible while it is happening.
@@ -241,7 +251,7 @@ in both themes, that ink on tint and white on solid reach 4.5:1 and that the sol
 | Screen | Purpose | Notes |
 | --- | --- | --- |
 | **Today / Day** | The main screen. `/day/2026-10-13`; `/` redirects to today. | Section 2. |
-| **Block detail** | Edit everything about a block. | Fields: activity, title, focus, done when, start, duration, category, repeat, intent fields (showing inherited text greyed until overridden), status, actual times, note. Opens from a block card (`?block=<id>`): the 340 px side panel from 1024 px, a sheet below that. An inherited field shows the activity's text greyed with "From Gym"; typing makes it this block's own, and "Use Gym's" hands it back. Choosing an activity moves the block to the activity's category. Delete asks once. |
+| **Block detail** | Edit everything about a block. | Fields: activity, title, focus, done when, start, duration, category, repeat, intent fields (showing inherited text greyed until overridden), status, actual times, note. The status sits first, in a "What happened" box: "Not marked yet" with Done, Partly, Skip (only Skip while the block is still ahead), or the status line with Undo; it saves at once, apart from the form. Opens from a block card (`?block=<id>`): the 340 px side panel from 1024 px, a sheet below that. An inherited field shows the activity's text greyed with "From Gym"; typing makes it this block's own, and "Use Gym's" hands it back. Choosing an activity moves the block to the activity's category. Delete asks once. |
 | **Quick add** | Create a block in a few keystrokes. | Activity picker with search, start time, duration. Enter saves. Opens from `N`, the + button, or clicking an empty slot (time prefilled). A dialog on desktop, a bottom sheet on phone. Typing part of a name and pressing Enter takes the first match and saves it; a title that matches nothing asks for a category. Without a click the start is suggested: the next 5-minute mark on today, the wake time on other days, moved to where the block's length fits. A time before the grid's start lands on the next calendar day, at the bottom. An overlap is named before saving ("That overlaps Lunch (12:00–13:00)."). Times are typed 24-hour ("930", "21:30"). |
 | **Log unplanned** | Add an actual-lane entry. | Title, category chips (Drift first), start, duration. Defaults to "from the end of the last entry until now". |
 | **Evening review** | Close the day (R1, R2). | Side panel on desktop, sheet on phone. Four steps with a progress indicator; each step can be skipped. Ends with "Day closed" and the totals. |

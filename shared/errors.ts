@@ -22,6 +22,10 @@ export const ERROR_CODES = [
   "OVERLAP",
   /** A start or duration off the 5-minute step or out of range (ARCHITECTURE section 4). */
   "INVALID_TIME",
+  /** Done or Partly on a block that has not begun yet (PRD section 7, rule 5). */
+  "NOT_STARTED",
+  /** Done or Partly finds the block's time already taken in the actual lane. */
+  "NO_ROOM",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

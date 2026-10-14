@@ -589,6 +589,13 @@ so only pushed work is there.
   the Trusted allowlist, so no `npm run dev`, no pushing functions to the dev deployment
   and no `npx convex data`. There is no Browser pane either. convex-test covers the
   backend; checking the screens moves to Filip, after the merge or on a preview.
+- **Screens without a backend:** the VM has headless Chromium and Playwright
+  (`/opt/node-tools/node_modules/playwright`). A throwaway page that renders a
+  feature's presentational components with mock documents, served by `npx vite` and
+  screenshotted at 1280 and 390 px, catches layout mistakes before Filip sees them. Keep
+  it out of the repository (an untracked folder listed in `.git/info/exclude`, deleted
+  before `npm run check`, which would lint it). It does not replace the check on the
+  live app.
 - **Branches:** a cloud session pushes its own branch and opens a pull request. Filip
   merges; a merge to `main` is a production deploy (Vercel deploys the functions to
   `diligent-hawk-428`, then the site).
@@ -666,6 +673,7 @@ Things assumed here that must be confirmed in the milestone that depends on them
 | 2026-10-14 | An actual start may run to 2880 (the end of the next day); a plan start stays below 1440. | A block planned at 23:30 can begin at 00:10. Keeping every span of a block dated D inside D and D+1 keeps the three-day read window. |
 | 2026-10-14 | Skip reasons are a fixed union in the schema, not free text. | PRD A1 lists five; a typed value can be counted in insights (R4, R7). Free words go in the note. |
 | 2026-10-14 | Done on a running block ends it now; Done after an overrun keeps the planned end (Filip's choice). | Nothing is recorded in the future, and a late start never pushes into the next block. PRD section 7, rule 5. |
+| 2026-10-14 | `blocks.setStatus` takes the device's local day and minute as `now`. | Done ends a running block "now", and the device's clock is the one on screen; the optimistic update uses the same value, so screen and server agree. The server never needs the time zone for this. |
 | 2026-10-14 | The running block's growing bar is exactly what Done would record at that minute. | One rule (`freeStretch` in `shared/lanes.ts`) for the bar, the totals and the tap, so they never disagree. |
 
 ## 17. Implementation notes
@@ -764,6 +772,14 @@ one; delete an entry when it stops being true.
   and `overlapMessage` in `src/lib/blockOverlap.ts`.
 - Quick add and block detail wait for the server before closing; neither has an
   optimistic update yet (section 8 asks for one on quick add). Listed for M6.
+- Status changes are optimistic: `useSetStatus` in `src/lib/blockStatus.ts` runs the
+  shared `applyStatus` on every loaded `blocks.listForDay` (`setStatusLocally`), and
+  Convex rolls it back if the server refuses. Errors come back as a message, shown by
+  the container (`DayScreen`), because the button that was pressed is usually gone by
+  then (the block stopped being current).
+- `StatusActions` sits inside block detail's `<form>`, so it must not render a form of
+  its own (nested forms are invalid); its typed length saves on Enter by handling
+  `keydown` instead.
 - Colour: an element takes a category colour with `data-color={colorKey}` and the
   utilities `bg-key-tint`, `text-key-ink`, `bg-key-solid`, `text-on-solid` (DESIGN.md
   section 5). The voice font is `font-voice`.

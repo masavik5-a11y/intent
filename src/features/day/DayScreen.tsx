@@ -1,6 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { hasPlan } from "@shared/blocks";
+import { hasPlan, type StatusAction } from "@shared/blocks";
 import {
   CLICK_SNAP_MIN,
   gridDayOf,
@@ -8,11 +8,13 @@ import {
   momentAt,
   slotStart,
 } from "@shared/grid";
+import { minuteFrom } from "@shared/lanes";
 import { DEFAULT_SETTINGS } from "@shared/settings";
-import type { DateKey } from "@shared/time";
+import type { DateKey, LocalMoment } from "@shared/time";
 import { BlockDetailPanel } from "@/features/block-detail/BlockDetailPanel";
 import type { BlockChanges } from "@/features/block-detail/BlockDetail";
 import { api, type Doc, type Id } from "@/lib/api";
+import { useSetStatus } from "@/lib/blockStatus";
 import { saveErrorMessage } from "@/lib/errorMessages";
 import { useNow } from "@/lib/now";
 import { useIsPhone, useMediaQuery } from "@/lib/useMediaQuery";
@@ -24,6 +26,9 @@ import { cardName, cardTime, dayTense, itemAt, planLane } from "./dayView";
 import { QuickAdd } from "./QuickAdd";
 import { DEFAULT_DURATION_MIN, type NewBlockArgs } from "./QuickAddForm";
 import { suggestedStart } from "./quickAddRules";
+
+/** How long the now panel keeps the last marked block in view, with Undo. */
+const MARKED_SHOWN_MIN = 10;
 
 /** What quick add was opened for: a clicked grid position, or nothing in particular. */
 export type AddRequest = { position: number | null };
@@ -56,7 +61,13 @@ export function DayScreen({
   const createBlock = useMutation(api.blocks.create);
   const updateBlock = useMutation(api.blocks.update);
   const removeBlock = useMutation(api.blocks.remove);
+  const setStatus = useSetStatus();
   const now = useNow();
+  const [marked, setMarked] = useState<{
+    id: Id<"blocks">;
+    at: LocalMoment;
+  } | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
   const isPhone = useIsPhone();
   const isWide = useMediaQuery("(min-width: 1024px)");
 
@@ -125,6 +136,18 @@ export function DayScreen({
   }
   const saveBlock = (args: NewBlockArgs) => attempt(() => createBlock(args));
 
+  /** Done, Partly, Skip or Undo. The screen changes at once; a refusal is shown. */
+  function mark(blockId: Id<"blocks">, action: StatusAction) {
+    setStatusError(null);
+    if (action.type !== "undo") setMarked({ id: blockId, at: now });
+    void setStatus(blockId, action).then(setStatusError);
+  }
+  const lastMarked =
+    marked !== null &&
+    minuteFrom(marked.at.date, now) - marked.at.minute < MARKED_SHOWN_MIN
+      ? blocks?.find((block) => block._id === marked.id)
+      : undefined;
+
   const selected = blocks
     ?.filter(hasPlan)
     .find((block) => block._id === selectedBlockId);
@@ -164,7 +187,13 @@ export function DayScreen({
         <DayHeader date={date} today={today} onAdd={() => onOpenAdd(null)} />
         {!isWide && nowPanel !== null && (
           <div className="border-b">
-            <NowPanel view={nowPanel} compact />
+            <NowPanel
+              view={nowPanel}
+              compact
+              lastMarked={lastMarked}
+              error={statusError}
+              onAction={mark}
+            />
           </div>
         )}
         {blocks !== undefined && items.length === 0 && (
@@ -194,7 +223,13 @@ export function DayScreen({
       </div>
       {isWide && selected === undefined && nowPanel !== null && (
         <aside className="w-[340px] shrink-0 overflow-y-auto border-l">
-          <NowPanel view={nowPanel} compact={false} />
+          <NowPanel
+            view={nowPanel}
+            compact={false}
+            lastMarked={lastMarked}
+            error={statusError}
+            onAction={mark}
+          />
         </aside>
       )}
       {selected !== undefined &&
@@ -214,6 +249,9 @@ export function DayScreen({
             onDelete={() =>
               attempt(() => removeBlock({ blockId: selected._id }))
             }
+            now={now}
+            statusError={statusError}
+            onAction={(action) => mark(selected._id, action)}
             onCancel={onCloseOverlay}
           />
         )}

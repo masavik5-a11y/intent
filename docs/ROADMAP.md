@@ -169,8 +169,9 @@ recurrence, notifications.
 - [x] `shared/`: `applyStatus`, `defaultActual`, `editTarget`, `untrackedGaps`,
       `summarizeDay`, each with tests for the rules in PRD section 7. Also
       `liveActual`/`liveActualLane` (the growing bar) and `partlyChoices`.
-- [ ] Done, Partly, Skip and Undo from the now panel and block detail, with optimistic
-      updates. Partly offers quick choices; Skip offers optional reasons.
+- [x] Done, Partly, Skip and Undo from the now panel and block detail, with optimistic
+      updates. Partly offers quick choices; Skip offers optional reasons. Between
+      blocks, the block that ended last waits in the now panel to be marked.
 - [ ] Actual lane: done and partly blocks at their actual times, the current block as a
       growing bar, skipped blocks outlined in the plan lane.
 - [ ] Log an unplanned entry (Drift first, `L`), defaulting to "from the last entry until

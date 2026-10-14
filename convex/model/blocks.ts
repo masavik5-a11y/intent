@@ -2,12 +2,15 @@ import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import {
   actualLaneOf,
+  applyStatus,
   blockShapeProblem,
   hasActual,
   hasPlan,
   INTENT_FIELDS,
   planLaneOf,
   type IntentField,
+  type StatusAction,
+  type StatusProblem,
 } from "../../shared/blocks";
 import { findOverlap, overlapWindow } from "../../shared/lanes";
 import {
@@ -17,7 +20,14 @@ import {
   MAX_INTENT_LENGTH,
   MAX_TITLE_LENGTH,
 } from "../../shared/text";
-import { daysBetween, isDateKey, type DateKey } from "../../shared/time";
+import type { ErrorCode } from "../../shared/errors";
+import {
+  daysBetween,
+  isDateKey,
+  MINUTES_PER_DAY,
+  type DateKey,
+  type LocalMoment,
+} from "../../shared/time";
 import { appError } from "../lib/errors";
 import * as Activities from "./activities";
 import * as Categories from "./categories";
@@ -196,6 +206,37 @@ export async function update(
   await ctx.db.patch("blocks", block._id, patch);
 }
 
+/**
+ * Done, Partly, Skip or Undo (PRD A1, A4), as shared/blocks.ts applyStatus decides.
+ * `now` is the device's local day and minute: Done on a running block ends then, and
+ * the device's clock is the one the screen showed when the button was pressed.
+ */
+export async function setStatus(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  blockId: Id<"blocks">,
+  action: StatusAction,
+  now: LocalMoment,
+): Promise<void> {
+  const block = await getOwned(ctx, userId, blockId);
+  checkMoment(now);
+  const others = await othersAround(ctx, userId, block.date, block._id);
+  const result = applyStatus(block, action, actualLaneOf(others), now);
+  if ("problem" in result) throw appError(STATUS_ERRORS[result.problem]);
+  const next = { ...fieldsOf(block), ...result.fields };
+  checkShape(next);
+  assertFreeAmong(next, others);
+  // Fields set to undefined (actual times on Skip and Undo) are removed.
+  await ctx.db.patch("blocks", block._id, result.fields);
+}
+
+const STATUS_ERRORS: Record<StatusProblem, ErrorCode> = {
+  UNPLANNED: "INVALID_INPUT",
+  NOT_STARTED: "NOT_STARTED",
+  NO_ROOM: "NO_ROOM",
+  INVALID_TIME: "INVALID_TIME",
+};
+
 export async function remove(
   ctx: MutationCtx,
   userId: Id<"users">,
@@ -213,6 +254,18 @@ export async function remove(
 function checkDate(date: string): DateKey {
   if (!isDateKey(date)) throw appError("INVALID_INPUT");
   return date;
+}
+
+/** A local day and minute from the device: a real day, a whole minute in it. */
+function checkMoment(now: LocalMoment): void {
+  checkDate(now.date);
+  if (
+    !Number.isInteger(now.minute) ||
+    now.minute < 0 ||
+    now.minute >= MINUTES_PER_DAY
+  ) {
+    throw appError("INVALID_INPUT");
+  }
 }
 
 /** Invariants 1 to 4, on the fields a block is about to have. */
@@ -250,6 +303,19 @@ function clearableText(value: string | null, max: number): string | undefined {
   return value === null ? undefined : optionalText(value, max);
 }
 
+/** The user's blocks that can share time with one dated `date`, except `blockId`. */
+async function othersAround(
+  ctx: QueryCtx,
+  userId: Id<"users">,
+  date: DateKey,
+  blockId: Id<"blocks"> | undefined,
+): Promise<Doc<"blocks">[]> {
+  const [first, , last] = overlapWindow(date);
+  return (await listBetween(ctx, userId, first, last)).filter(
+    (other) => other._id !== blockId,
+  );
+}
+
 /**
  * Invariant 5: in neither lane does a block share time with another, including the
  * tails of blocks that cross midnight from the day before, or into the day after.
@@ -261,10 +327,14 @@ async function assertFree(
   block: BlockFields,
   blockId?: Id<"blocks">,
 ): Promise<void> {
-  const [first, , last] = overlapWindow(block.date);
-  const others = (await listBetween(ctx, userId, first, last)).filter(
-    (other) => other._id !== blockId,
-  );
+  assertFreeAmong(block, await othersAround(ctx, userId, block.date, blockId));
+}
+
+/** Invariant 5 against blocks already loaded with othersAround. */
+function assertFreeAmong(
+  block: BlockFields,
+  others: readonly Doc<"blocks">[],
+): void {
   const inPlan =
     hasPlan(block) &&
     findOverlap(

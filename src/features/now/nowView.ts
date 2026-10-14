@@ -1,5 +1,11 @@
-import { effectiveIntent, planLaneOf } from "@shared/blocks";
-import { entriesAfter, entryAt } from "@shared/lanes";
+import {
+  actualLaneOf,
+  effectiveIntent,
+  isRunning,
+  planLaneOf,
+  planSpan,
+} from "@shared/blocks";
+import { entriesAfter, liveActual, spanBounds } from "@shared/lanes";
 import { countdown, type Countdown } from "@shared/pace";
 import {
   formatDuration,
@@ -33,15 +39,25 @@ export interface NowIntent {
 
 export interface NowCurrent extends NowBlock {
   countdown: Countdown;
+  /** Minutes it has had so far, for Partly's quick choices. */
+  soFarMin: number;
   /** The activity asks for a draining bar (PRD U2). */
   pressure: boolean;
   intent: NowIntent;
 }
 
 export interface NowView {
-  /** The block the plan says is running, or null between blocks. */
+  /**
+   * The block running now: the plan holds this minute and it is not marked yet. Null
+   * between blocks, and once the current block is marked done or skipped.
+   */
   current: NowCurrent | null;
-  /** The next two blocks after now. */
+  /**
+   * Between blocks, the block that ended last and is not marked yet, so it can be
+   * marked with one tap. Null while a block runs.
+   */
+  toMark: NowBlock | null;
+  /** The next two blocks after now, leaving out those skipped ahead of time. */
   next: NowBlock[];
 }
 
@@ -60,18 +76,31 @@ export function nowView(
     activity: activities.find((item) => item._id === block.activityId),
     category: categories.find((item) => item._id === block.categoryId),
   });
-  const running = entryAt(lane, now);
-  const next = entriesAfter(lane, now, UP_NEXT).map((entry) =>
-    describe(entry.block),
-  );
-  if (running === null) return { current: null, next };
+  const next = entriesAfter(
+    lane.filter((entry) => entry.block.status !== "skipped"),
+    now,
+    UP_NEXT,
+  ).map((entry) => describe(entry.block));
+  const running = lane.find((entry) => isRunning(entry.block, now));
+  if (running === undefined) {
+    const ended = lastEndedUnmarked(lane, now);
+    return {
+      current: null,
+      toMark: ended === undefined ? null : describe(ended),
+      next,
+    };
+  }
 
   const current = describe(running.block);
   const intent = effectiveIntent(running.block, current.activity ?? null);
+  const others = blocks.filter((block) => block._id !== running.block._id);
+  const soFar = liveActual(planSpan(running.block), actualLaneOf(others), now);
   return {
+    toMark: null,
     current: {
       ...current,
       countdown: countdown(running, now),
+      soFarMin: soFar?.durationMin ?? 0,
       pressure: current.activity?.pressure ?? false,
       intent: {
         doneWhen: intent.doneWhen?.text ?? null,
@@ -83,6 +112,29 @@ export function nowView(
     },
     next,
   };
+}
+
+/** The unmarked block whose plan ended most recently, at or before `now`. */
+function lastEndedUnmarked(
+  lane: ReturnType<typeof planLaneOf<PlannedBlockDoc>>,
+  now: LocalMoment,
+): PlannedBlockDoc | undefined {
+  let latest: { block: PlannedBlockDoc; end: number } | undefined;
+  for (const entry of lane) {
+    if (entry.block.status !== "planned") continue;
+    const { end } = spanBounds(now.date, entry);
+    if (end > now.minute) continue;
+    if (latest === undefined || end > latest.end) {
+      latest = { block: entry.block, end };
+    }
+  }
+  return latest?.block;
+}
+
+/** "Gym ended at 12:30", for the block left to mark between blocks. */
+export function endedText(item: NowBlock): string {
+  const { block } = item;
+  return `${block.title} ended at ${minutesToLabel(block.plannedStartMin + block.plannedDurationMin)}`;
 }
 
 /** "42 min", or "1h 12m" from an hour on. */
