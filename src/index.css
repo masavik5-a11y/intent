@@ -23,3 +23,12 @@
     @apply bg-background text-base text-foreground antialiased;
   }
 }
+
+/* Untracked time in the actual lane (DESIGN.md section 3): a faint diagonal hatch. */
+@utility bg-hatch {
+  background-image: repeating-linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--muted-foreground) 28%, transparent) 0 1px,
+    transparent 1px 7px
+  );
+}

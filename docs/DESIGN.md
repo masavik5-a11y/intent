@@ -138,7 +138,10 @@ Order, top to bottom. Items appear only when they have content.
    "Launch the course · 38 days left".
 6. **How**, **If I don't feel like it**, **Minimum version**.
 7. **Actions**: Done, Partly, Skip. Below them a quiet text link: "Not feeling it".
-8. **Day totals**: on purpose, drift, untracked. Updated every minute.
+8. **Day totals**: on purpose, drift, untracked. Updated every minute. The running
+   block counts up to now. On the phone (and below 1024 px) and on past days they are
+   one quiet line above the grid instead: "On purpose 2h 50m Drift 40m Untracked
+   3h 30m".
 9. **Weekly pace** for the current block's category, if it has a target:
    "Deep work 9 of 15h · 3 days left · behind by 1h 30m". Plain text, normal colour.
 10. **Up next**: the following two blocks.

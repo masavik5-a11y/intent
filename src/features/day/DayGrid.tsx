@@ -9,7 +9,7 @@ import {
 import { MINUTES_PER_DAY } from "@shared/time";
 import { cn } from "@/lib/utils";
 import { BlockCard } from "./BlockCard";
-import { hourMarks, type CardState } from "./dayView";
+import { hourMarks, type CardState, type GridStretch } from "./dayView";
 
 /** Room for the hour labels left of the lanes. */
 const GUTTER_PX = 44;
@@ -47,6 +47,8 @@ interface DayGridProps {
   cards: readonly GridCard[];
   /** What happened: the actual lane (DESIGN.md section 3). */
   actualCards: readonly GridCard[];
+  /** Untracked time before now, drawn as a hatch under the actual lane's cards. */
+  untracked: readonly GridStretch[];
   /** Grid position of the now line, on today only. */
   nowPosition: number | null;
   /** From this grid position on, the actual lane is still to come and dimmed. */
@@ -72,6 +74,7 @@ export function DayGrid({
   isPhone,
   cards,
   actualCards,
+  untracked,
   nowPosition,
   futureFrom,
   settled,
@@ -227,6 +230,18 @@ export function DayGrid({
                 style={{ top: Math.round(Math.max(futureFrom, 0) * pxPerMin) }}
               />
             )}
+            {untracked.map((stretch) => {
+              const box = pxBox(stretch.top, stretch.height, pxPerMin);
+              // Clicks pass through to the lane, which logs an entry there.
+              return (
+                <div
+                  key={stretch.top}
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-x-1 rounded-block bg-hatch"
+                  style={{ top: box.top, height: box.height }}
+                />
+              );
+            })}
             {actualCards.map((card) => (
               <GridBlock
                 key={card.key}

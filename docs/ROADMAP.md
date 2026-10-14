@@ -179,7 +179,7 @@ recurrence, notifications.
       now". Also from a click in the actual lane and "Log what I'm doing" between blocks.
 - [x] Edit actual times on any block, and its one-line note (A2, A5). Unplanned entries
       open in their own detail panel. (Split from the slice above, 2026-10-14.)
-- [ ] Untracked time drawn as a hatch that grows with the now line; day totals (on
+- [x] Untracked time drawn as a hatch that grows with the now line; day totals (on
       purpose, drift, untracked) updating every minute.
 - [ ] The edit rule in the UI: past is edited as actual, future as plan; on past days the
       plan is frozen behind an explicit "Edit plan".

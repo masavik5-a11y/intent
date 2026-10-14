@@ -9,6 +9,7 @@ import {
   slotStart,
 } from "@shared/grid";
 import { minuteFrom } from "@shared/lanes";
+import { summarizeDay } from "@shared/summary";
 import { DEFAULT_SETTINGS } from "@shared/settings";
 import { formatTimeRange, type DateKey, type LocalMoment } from "@shared/time";
 import { BlockDetailPanel } from "@/features/block-detail/BlockDetailPanel";
@@ -38,7 +39,9 @@ import {
   entryTitle,
   planCardState,
   planLane,
+  untrackedStretches,
 } from "./dayView";
+import { DayTotals } from "./DayTotals";
 import { QuickAdd } from "./QuickAdd";
 import { DEFAULT_DURATION_MIN, type NewBlockArgs } from "./QuickAddForm";
 import { suggestedStart } from "./quickAddRules";
@@ -127,6 +130,21 @@ export function DayScreen({
     blocks === undefined ? [] : actualLane(blocks, date, gridStartMin, now);
   const categoryOf = indexById(categories);
   const activityOf = indexById(activities);
+  // Untracked time and the totals, live to the minute (PRD T8, U4).
+  const untracked =
+    blocks === undefined
+      ? []
+      : untrackedStretches(blocks, date, gridStartMin, now);
+  const totals =
+    blocks === undefined || categories === undefined || !canLog
+      ? null
+      : summarizeDay(
+          blocks,
+          (categoryId: Id<"categories">) => categoryOf.get(categoryId)?.kind,
+          date,
+          gridStartMin,
+          now,
+        );
 
   /** What every card shows of its block, in either lane. */
   const looksOf = (block: Doc<"blocks">) => {
@@ -253,7 +271,13 @@ export function DayScreen({
               error={statusError}
               onAction={mark}
               onLog={() => onOpenLog(null)}
+              totals={null}
             />
+          </div>
+        )}
+        {totals !== null && (tense === "past" || !isWide) && (
+          <div className="border-b px-4 py-2">
+            <DayTotals totals={totals} variant="strip" />
           </div>
         )}
         {blocks !== undefined && items.length === 0 && (
@@ -271,6 +295,7 @@ export function DayScreen({
           isPhone={isPhone}
           cards={cards}
           actualCards={actualCards}
+          untracked={untracked}
           nowPosition={nowPosition}
           futureFrom={
             tense === "future" ? 0 : tense === "today" ? nowPosition : null
@@ -296,6 +321,7 @@ export function DayScreen({
             error={statusError}
             onAction={mark}
             onLog={() => onOpenLog(null)}
+            totals={totals}
           />
         </aside>
       )}
