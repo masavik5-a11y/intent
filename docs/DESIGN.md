@@ -210,6 +210,10 @@ The life I'm building
   the URL (`?notFeeling=<block>`), so the back gesture closes it. "Start" closes it and
   records nothing; "Skip on purpose" records a skip and the now panel then asks
   "Why? (optional)" as after any skip.
+- "Start the minimum" (PRD V3) keeps the block and remembers the choice. The now panel
+  then shows "Doing the minimum · 20 minutes, three exercises" with "Back to the full
+  block"; Done on it records "Partly · the minimum · 25m of 1h 30m", never a skip.
+  Skipping on purpose afterwards lets the choice go.
 
 ## 5. Categories and colour
 

@@ -83,7 +83,7 @@ export const update = mutation({
   },
 });
 
-/** Done, Partly, Skip or Undo (PRD A1, A4). */
+/** Done, Partly, Skip, Undo (PRD A1, A4) or Start the minimum (PRD V3). */
 export const setStatus = mutation({
   args: {
     blockId: v.id("blocks"),
@@ -92,6 +92,7 @@ export const setStatus = mutation({
       v.object({ type: v.literal("partial"), minutes: v.number() }),
       v.object({ type: v.literal("skip"), reason: v.optional(vSkipReason) }),
       v.object({ type: v.literal("undo") }),
+      v.object({ type: v.literal("startMinimum") }),
     ),
     /** The device's local day and minute when the button was pressed. */
     now: v.object({ date: vDateKey, minute: v.number() }),

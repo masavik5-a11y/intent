@@ -28,6 +28,16 @@ describe("statusLine", () => {
       { status: "partial", actualStartMin: 660, actualDurationMin: 25 },
       "Partly · 25m of 1h 30m",
     ],
+    [
+      "the minimum, finished",
+      {
+        status: "partial",
+        minimumChosen: true,
+        actualStartMin: 660,
+        actualDurationMin: 20,
+      },
+      "Partly · the minimum · 20m of 1h 30m",
+    ],
     ["skipped", { status: "skipped" }, "Skipped"],
     [
       "skipped with a reason",

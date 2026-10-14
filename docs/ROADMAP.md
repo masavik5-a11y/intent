@@ -186,7 +186,7 @@ recurrence, notifications.
 - [x] "Not feeling it" view (V2, DESIGN.md section 4b), opened from the now panel or `X`:
       if-then, minimum version, cost of skipping, anti-vision, vision, in that order,
       then Start, Start the minimum, Skip on purpose.
-- [ ] "Start the minimum" (V3): sets `minimumChosen`; finishing records Partly with the
+- [x] "Start the minimum" (V3): sets `minimumChosen`; finishing records Partly with the
       minimum noted, never a skip. Tested in `applyStatus`.
 - [ ] Guard (V4): a test asserting that anti-vision and cost-of-skipping text never
       reach the Today screen by default; the notification side is asserted in M4.

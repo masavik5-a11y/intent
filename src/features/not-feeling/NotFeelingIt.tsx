@@ -12,6 +12,8 @@ interface NotFeelingActions {
   onStart: () => void;
   /** Skip, recorded like any skip; its optional reason is asked afterwards. */
   onSkipOnPurpose: () => void;
+  /** PRD V3: keep the block, do the small version; finishing it counts as Partly. */
+  onStartMinimum: () => void;
   onClose: () => void;
 }
 
@@ -45,6 +47,7 @@ export function NotFeelingPanel({
   wide,
   onStart,
   onSkipOnPurpose,
+  onStartMinimum,
   onClose,
 }: NotFeelingActions & {
   view: NotFeelingView;
@@ -74,6 +77,16 @@ export function NotFeelingPanel({
                 >
                   {section.text}
                 </p>
+                {section.key === "minimumVersion" && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="mt-1 h-11 self-start sm:h-9"
+                    onClick={onStartMinimum}
+                  >
+                    Start the minimum
+                  </Button>
+                )}
               </section>
             ))}
             {view.compassEmpty && (
@@ -91,7 +104,7 @@ export function NotFeelingPanel({
         )}
       </div>
       {/* Equal weight: skipping on purpose is a real choice, not a lesser button. */}
-      <div className="flex gap-2 border-t px-4 py-3 sm:px-5">
+      <div className="flex flex-wrap gap-2 border-t px-4 py-3 sm:px-5">
         <Button
           type="button"
           variant="outline"
@@ -99,6 +112,14 @@ export function NotFeelingPanel({
           onClick={onStart}
         >
           Start
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          className="h-11 flex-1 sm:h-9"
+          onClick={onStartMinimum}
+        >
+          Start the minimum
         </Button>
         <Button
           type="button"

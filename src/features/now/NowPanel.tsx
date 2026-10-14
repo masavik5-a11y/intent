@@ -176,7 +176,8 @@ function CurrentBlock({
   onAction: (action: StatusAction) => void;
   onNotFeeling: () => void;
 }) {
-  const { block, intent, countdown, pressure, soFarMin } = current;
+  const { block, intent, countdown, pressure, soFarMin, minimumChosen } =
+    current;
   const strong = pressure && inLastTenMinutes(countdown);
   return (
     <div className="flex flex-col gap-3">
@@ -209,6 +210,22 @@ function CurrentBlock({
           <span className="text-muted-foreground"> · {block.focus}</span>
         )}
       </h2>
+      {minimumChosen && (
+        // PRD V3: the small version, chosen on purpose. Done records it as Partly.
+        <div className="flex items-start gap-2 rounded-block bg-muted/60 px-3 py-2">
+          <p className="flex-1 text-sm">
+            <span className="font-medium">Doing the minimum</span>
+            {intent.minimumVersion !== null && ` · ${intent.minimumVersion}`}
+          </p>
+          <button
+            type="button"
+            onClick={() => onAction({ type: "undo" })}
+            className="min-h-11 rounded-sm text-sm text-muted-foreground underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 sm:min-h-0"
+          >
+            Back to the full block
+          </button>
+        </div>
+      )}
       {intent.doneWhen !== null && (
         <p className="text-base">
           <span className="text-muted-foreground">Done when: </span>

@@ -436,6 +436,10 @@ export function DayScreen({
             mark(feelingBlock._id, { type: "skip" });
             onCloseOverlay();
           }}
+          onStartMinimum={() => {
+            mark(feelingBlock._id, { type: "startMinimum" });
+            onCloseOverlay();
+          }}
           onClose={onCloseOverlay}
         />
       )}

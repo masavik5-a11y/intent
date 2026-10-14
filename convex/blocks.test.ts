@@ -736,6 +736,41 @@ describe("blocks.setStatus", () => {
     expect(block && "actualDurationMin" in block).toBe(false);
   });
 
+  test("Start the minimum, then Done: partly done with the minimum noted", async () => {
+    const t = newTest();
+    const { as, deepWork } = await setUp(t);
+    const blockId = await plan(as, deepWork, TUE, "13:00", 60);
+    await as.mutation(api.blocks.setStatus, {
+      blockId,
+      action: { type: "startMinimum" },
+      now: at(TUE, "13:05"),
+    });
+    expect(await read(t, blockId)).toMatchObject({
+      status: "planned",
+      minimumChosen: true,
+    });
+    await as.mutation(api.blocks.setStatus, {
+      blockId,
+      action: { type: "done" },
+      now: at(TUE, "13:25"),
+    });
+    expect(await read(t, blockId)).toMatchObject({
+      status: "partial",
+      minimumChosen: true,
+      actualStartMin: 780,
+      actualDurationMin: 25,
+    });
+    // Skipping on purpose lets the choice go.
+    await as.mutation(api.blocks.setStatus, {
+      blockId,
+      action: { type: "skip" },
+      now: evening,
+    });
+    const block = await read(t, blockId);
+    expect(block).toMatchObject({ status: "skipped" });
+    expect(block && "minimumChosen" in block).toBe(false);
+  });
+
   test("a future block can be skipped ahead of time", async () => {
     const t = newTest();
     const { as, deepWork } = await setUp(t);
