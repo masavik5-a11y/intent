@@ -523,7 +523,7 @@ Rule: a bug in time or lane logic gets a failing unit test first, then the fix.
   ran on a local deployment on this PC; that one is no longer used.
 - **Prod:** Convex production deployment + Vercel project. Vercel's build command is
   `npx convex deploy --cmd 'npm run build'` with `CONVEX_DEPLOY_KEY` set, so backend and
-  frontend deploy together from `main`. The command, the fallback of every address to
+  frontend deploy together from `main`; other branches are not built (`ignoreCommand`). The command, the fallback of every address to
   `index.html` and the no-cache rule for `sw.js` are in `vercel.json`.
 - **CI:** a GitHub Actions workflow (`.github/workflows/check.yml`) runs `npm ci`,
   `npm run check` and a production build on every push.
@@ -573,10 +573,11 @@ so only pushed work is there.
 - **Branches:** a cloud session pushes its own branch and opens a pull request. Filip
   merges; a merge to `main` is a production deploy (Vercel deploys the functions to
   `diligent-hawk-428`, then the site).
-- **Previews:** Vercel builds every pushed branch, but `CONVEX_DEPLOY_KEY` is set for
-  Production only, so a branch build stops at `npx convex deploy`. Until that is decided
-  (skip branch builds, or give previews their own Convex preview deployments), ignore a
-  failed Vercel preview on a pull request; the Check workflow is the gate.
+- **No previews:** Vercel builds `main` only. `ignoreCommand` in `vercel.json` skips
+  every other branch (exit 0 means "skip"), because `CONVEX_DEPLOY_KEY` is set for
+  Production only and a branch build would fail at `npx convex deploy`. On a pull
+  request the Check workflow is the gate; the screens are checked on the live app after
+  the merge. Per-PR previews with Convex preview deployments are possible later.
 - **Files that stay on Filip's PC** and that a cloud session does not need: `.env.local`
   (which dev deployment the CLI uses), `.convex/` (the old local backend), and Claude's
   memory notes there, whose content is in section 17.
@@ -642,6 +643,7 @@ Things assumed here that must be confirmed in the milestone that depends on them
 | 2026-10-14 | Wake and sleep times live in `settings` (`wakeMin`, `sleepMin`). | First-run setup asks for them, and the grid's Fit zoom needs the waking range. |
 | 2026-10-14 | Date and colour-key fields are typed in the schema (`vDateKey`, `vColorKey`). | The brand reaches every document and argument; the model validates the value. |
 | 2026-10-14 | Between midnight and the grid's start, "Today" is still the day that is ending (Filip's choice). | The grid runs 05:00 to 05:00, so only that day shows the now line after midnight. |
+| 2026-10-14 | Vercel builds `main` only; pull requests get no preview (Filip's choice). | Cloud sessions work through pull requests; previews would need their own Convex deployments. The Check workflow gates a PR; screens are checked after the merge. |
 
 ## 17. Implementation notes
 
