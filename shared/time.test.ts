@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   addDays,
   dateKeyParts,
+  daysBetween,
   formatDayLabel,
   formatDuration,
   formatTimeRange,
@@ -124,6 +125,30 @@ describe("addDays", () => {
 
   test("rejects a result outside the supported range", () => {
     expect(() => addDays(key("9999-12-31"), 1)).toThrow(RangeError);
+  });
+});
+
+describe("daysBetween", () => {
+  test.each([
+    ["2026-10-13", "2026-10-13", 0],
+    ["2026-10-13", "2026-10-14", 1],
+    ["2026-10-14", "2026-10-13", -1],
+    ["2026-10-31", "2026-11-01", 1],
+    ["2026-12-31", "2027-01-01", 1],
+    ["2024-02-28", "2024-03-01", 2],
+    ["2026-03-28", "2026-03-30", 2], // over a clock change
+    ["2026-10-24", "2026-10-26", 2],
+    ["2026-01-01", "2027-01-01", 365],
+    ["2024-01-01", "2025-01-01", 366],
+  ])("from %s to %s is %d", (from, to, expected) => {
+    expect(daysBetween(key(from), key(to))).toBe(expected);
+  });
+
+  test("undoes addDays", () => {
+    const start = key("2026-10-13");
+    for (const days of [-400, -31, -1, 0, 1, 30, 365, 1000]) {
+      expect(daysBetween(start, addDays(start, days))).toBe(days);
+    }
   });
 });
 

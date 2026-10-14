@@ -123,8 +123,13 @@ This is the decision most likely to cause bugs if it is done loosely, so it is f
 - The server needs the user's zone only to answer "what is the local date and minute
   right now?" for notifications. It uses `settings.timeZone` (IANA name, saved from the
   device) with `Intl.DateTimeFormat(..., { timeZone }).formatToParts(now)`.
-- A day view for date D loads blocks with `date = D` and `date = D − 1` (for tails that
-  cross midnight). Week and month views load a date range through the same index.
+- The grid of day D shows 24 hours from `gridStartMin` on D, that is
+  `[D gridStart, D+1 gridStart)` (DESIGN.md section 3; `shared/grid.ts`). Every moment
+  appears in exactly one day's grid. So a day view loads blocks with `date` D − 1 (tails
+  that cross into D), D, and D + 1 (blocks before `gridStartMin` on the next calendar
+  day, which sit at the bottom). The no-overlap check reads the same three days
+  (`overlapWindow` in `shared/lanes.ts`). Week and month views load a date range
+  through the same index.
 
 `shared/time.ts` exposes the only functions allowed to parse or format these values:
 `parseDateKey`, `toDateKey`, `addDays`, `minutesToLabel`, `isValidMinute`, and so on.

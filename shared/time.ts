@@ -146,6 +146,11 @@ export function addDays(date: DateKey, days: number): DateKey {
   });
 }
 
+/** Whole days from `from` to `to`: positive when `to` is later. */
+export function daysBetween(from: DateKey, to: DateKey): number {
+  return Math.round((toUtcMs(to) - toUtcMs(from)) / MS_PER_DAY);
+}
+
 export function weekdayOf(date: DateKey): Weekday {
   return new Date(toUtcMs(date)).getUTCDay() as Weekday;
 }
