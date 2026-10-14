@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Link, useLocation } from "@tanstack/react-router";
-import { Ellipsis } from "lucide-react";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
+import { Ellipsis, Plus } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -22,8 +22,24 @@ function itemTone(active: boolean): string {
 /** Phone navigation: a bottom bar, with the less used screens behind More. */
 export function BottomBar({ className }: { className?: string }) {
   const pathname = useLocation({ select: (location) => location.pathname });
+  const navigate = useNavigate();
   const [moreOpen, setMoreOpen] = useState(false);
   const moreActive = MORE_ITEMS.some((item) => item.matches(pathname));
+  const [first, second, ...rest] = BAR_ITEMS;
+
+  // Quick add on the day being viewed, or on today from any other screen.
+  function quickAdd() {
+    const day = /^\/day\/([^/]+)$/.exec(pathname)?.[1];
+    if (day === undefined) {
+      void navigate({ to: "/", search: { add: "now" } });
+    } else {
+      void navigate({
+        to: "/day/$date",
+        params: { date: day },
+        search: { add: "now" },
+      });
+    }
+  }
 
   return (
     <nav
@@ -33,7 +49,27 @@ export function BottomBar({ className }: { className?: string }) {
         className,
       )}
     >
-      {BAR_ITEMS.map((item) => (
+      {[first, second].map(
+        (item) =>
+          item !== undefined && (
+            <BarLink
+              key={item.label}
+              item={item}
+              active={item.matches(pathname)}
+            />
+          ),
+      )}
+      <button
+        type="button"
+        aria-label="Add a block"
+        onClick={quickAdd}
+        className="flex min-h-14 flex-1 items-center justify-center outline-none"
+      >
+        <span className="flex size-11 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform active:scale-95">
+          <Plus className="size-5" aria-hidden="true" />
+        </span>
+      </button>
+      {rest.map((item) => (
         <BarLink key={item.label} item={item} active={item.matches(pathname)} />
       ))}
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>

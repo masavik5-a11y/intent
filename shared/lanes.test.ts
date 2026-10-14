@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   findOverlap,
+  firstFreeSpan,
   overlapWindow,
   spanBounds,
   spansOverlap,
@@ -183,5 +184,56 @@ describe("findOverlap", () => {
     expect(
       findOverlap({ id: 7, ...span(TUE, "09:30", 60) }, numbered),
     ).toBeNull();
+  });
+});
+
+describe("firstFreeSpan", () => {
+  const lane = [
+    entry("sleep-mon", MON, "23:00", 480), // Mon 23:00 – Tue 07:00
+    entry("routine", TUE, "07:00", 60), // 07:00 – 08:00
+    entry("deep", TUE, "08:00", 180), // 08:00 – 11:00
+    entry("gym", TUE, "11:30", 90), // 11:30 – 13:00
+    entry("sleep-tue", TUE, "23:00", 480), // Tue 23:00 – Wed 07:00
+  ];
+
+  test("a free start stays where it is", () => {
+    expect(firstFreeSpan(span(TUE, "14:00", 60), lane)).toEqual(
+      span(TUE, "14:00", 60),
+    );
+  });
+
+  test("moves past the blocks in the way, one after another", () => {
+    expect(firstFreeSpan(span(TUE, "07:00", 60), lane)).toEqual(
+      span(TUE, "13:00", 60),
+    );
+  });
+
+  test("a short gap that fits is used", () => {
+    expect(firstFreeSpan(span(TUE, "10:00", 30), lane)).toEqual(
+      span(TUE, "11:00", 30),
+    );
+  });
+
+  test("from inside last night's sleep, it starts when the sleep ends", () => {
+    expect(firstFreeSpan(span(TUE, "05:00", 30), lane)).toEqual(
+      span(TUE, "11:00", 30),
+    );
+    expect(firstFreeSpan(span(TUE, "05:00", 30), lane.slice(0, 1))).toEqual(
+      span(TUE, "07:00", 30),
+    );
+  });
+
+  test("moves onto the next day past tonight's sleep", () => {
+    expect(firstFreeSpan(span(TUE, "23:30", 60), lane)).toEqual(
+      span(WED, "07:00", 60),
+    );
+  });
+
+  test("gives up when nothing fits within a day", () => {
+    const full = [
+      entry("all", TUE, "00:00", 1440),
+      entry("next", WED, "00:00", 1440),
+    ];
+    expect(firstFreeSpan(span(TUE, "09:00", 60), full)).toBeNull();
   });
 });

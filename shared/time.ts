@@ -246,6 +246,23 @@ export function parseDuration(text: string): number | null {
   return Number.isInteger(total) ? total : null;
 }
 
+const CLOCK_DIGITS = /^(\d{1,2})(?:[:.h]?(\d{2}))?$/;
+
+/**
+ * Minutes from midnight for a time typed quickly, 24-hour: "9", "09", "930", "0930",
+ * "9:30", "9.30", "21", "2130", "21:30". Null when it is not a clock time. Not snapped
+ * to the 5-minute step.
+ */
+export function parseClockInput(text: string): number | null {
+  // Without a separator the last two digits are the minutes: "930" is 9:30.
+  const match = CLOCK_DIGITS.exec(text.trim());
+  if (match === null) return null;
+  const hours = Number(match[1]);
+  const minutes = match[2] === undefined ? 0 : Number(match[2]);
+  if (hours > 23 || minutes > 59) return null;
+  return hours * MINUTES_PER_HOUR + minutes;
+}
+
 /** "11:00–12:30". The end wraps past midnight like minutesToLabel. */
 export function formatTimeRange(startMin: number, durationMin: number): string {
   return `${minutesToLabel(startMin)}–${minutesToLabel(startMin + durationMin)}`;

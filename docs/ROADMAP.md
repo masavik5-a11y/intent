@@ -127,8 +127,9 @@ Covers T1–T7 (plan lane), I1–I4, U1, U2, V1, P4, S1, S5.
       as "Intent" and "For hard days"; the pressure switch, default duration, notify switch.
 - [x] Day screen: header with date navigation, hour grid, plan lane with block cards, an
       empty actual lane, now line, `useNow()`. The date is in the URL.
-- [ ] Quick add (button, `N`, click on an empty slot). Block detail panel: edit, delete,
-      inherited intent shown as inherited, per-block overrides, focus, done-when.
+- [x] Quick add (button, `N`, click on an empty slot, the phone's +).
+- [ ] Block detail panel: edit, delete, inherited intent shown as inherited, per-block
+      overrides, focus, done-when.
 - [ ] Blocks that cross midnight: creation, and the tail at the top of the next day.
 - [ ] Now panel: current block by plan, done-when, why (serif), how, if-then, minimum,
       countdown bar for pressure blocks and plain time left otherwise, up next, and the

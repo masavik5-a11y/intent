@@ -11,6 +11,7 @@ import {
   isValidMinute,
   minutesToLabel,
   parseDateKey,
+  parseClockInput,
   parseDuration,
   parseTimeLabel,
   toDateKey,
@@ -277,6 +278,49 @@ describe("formatTimeRange", () => {
     [1380, 480, "23:00–07:00"], // sleep, crossing midnight
   ])("start %d, duration %d -> %s", (start, duration, expected) => {
     expect(formatTimeRange(start, duration)).toBe(expected);
+  });
+});
+
+describe("parseClockInput", () => {
+  test.each([
+    ["9", 540],
+    ["09", 540],
+    ["930", 570],
+    ["0930", 570],
+    ["9:30", 570],
+    ["09:30", 570],
+    ["9.30", 570],
+    ["9h30", 570],
+    ["21", 1260],
+    ["2130", 1290],
+    [" 21:30 ", 1290],
+    ["0", 0],
+    ["000", 0],
+    ["2355", 1435],
+    ["123", 83], // 01:23
+  ])("%j is minute %d", (text, minute) => {
+    expect(parseClockInput(text)).toBe(minute);
+  });
+
+  test.each([
+    "",
+    "24",
+    "2400",
+    "960",
+    "9:60",
+    "12345",
+    "9:3",
+    "abc",
+    "9 30",
+    "-1",
+  ])("%j is not a time", (text) => {
+    expect(parseClockInput(text)).toBeNull();
+  });
+
+  test("reads what minutesToLabel writes", () => {
+    for (const minute of [0, 5, 545, 720, 1435]) {
+      expect(parseClockInput(minutesToLabel(minute))).toBe(minute);
+    }
   });
 });
 

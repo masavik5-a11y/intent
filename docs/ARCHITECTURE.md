@@ -667,7 +667,16 @@ one; delete an entry when it stops being true.
   minute ticker that also catches up when the app returns to the foreground); ESLint
   rejects `Date.now()` and `new Date()` anywhere else in `src/` and in `shared/`.
 - `/` is `src/routes/_app/index.tsx`: it waits for the settings, because which day is
-  today depends on the grid's start, then redirects to `/day/<today>`.
+  today depends on the grid's start, then redirects to `/day/<today>`. `/?add=now`
+  (the phone's +) lands on the day and then opens quick add as its own history entry.
+- Quick add is `?add=now` or `?add=<grid position>` on `/day/$date`. TanStack Router
+  writes a string that looks like a number with quotes (`?add=%22930%22`), so keep
+  such values numbers in `validateSearch`.
+- The browser's `type="time"` field follows its locale and can show AM/PM; the app is
+  24-hour, so times are typed in `src/components/TimeInput.tsx`.
+- A file named like a component next to a module of the same name in another case
+  (`QuickAdd.tsx` and `quickAdd.ts`) is one file to Windows and breaks `tsc`. Name pure
+  modules differently (`quickAddRules.ts`).
 - Editing a file in two steps while Vite runs can leave the browser holding the
   in-between module under a `?t=` address, even across reloads. `touch` the file to
   make Vite serve it fresh.

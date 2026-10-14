@@ -3,6 +3,7 @@ import {
   fitPxPerMin,
   PHONE_PX_PER_MIN,
   pxBox,
+  pxToMinutes,
   wakePosition,
 } from "@shared/grid";
 import { MINUTES_PER_DAY } from "@shared/time";
@@ -45,6 +46,8 @@ interface DayGridProps {
   /** From this grid position on, the actual lane is still to come and dimmed. */
   futureFrom: number | null;
   onOpenCard?: (key: string) => void;
+  /** A click on the plan lane where there is no block, at this grid position. */
+  onEmptySlot?: (position: number) => void;
 }
 
 /** The two-lane hour grid (DESIGN.md section 3). Plan on the left, actual on the right. */
@@ -58,6 +61,7 @@ export function DayGrid({
   nowPosition,
   futureFrom,
   onOpenCard,
+  onEmptySlot,
 }: DayGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -150,11 +154,18 @@ export function DayGrid({
           className="absolute inset-y-0 right-0 flex gap-1"
           style={{ left: GUTTER_PX }}
         >
+          {/* Clicking empty plan lane opens quick add there. The keyboard has the
+              Add block button and N for the same thing. */}
           <div
-            className={cn("relative", laneClass)}
+            className={cn("relative", laneClass, onEmptySlot && "cursor-copy")}
             style={isPhone ? { width: "60%" } : undefined}
             aria-label="Plan"
             role="list"
+            onClick={(event) => {
+              if (event.target !== event.currentTarget) return;
+              const top = event.currentTarget.getBoundingClientRect().top;
+              onEmptySlot?.(pxToMinutes(event.clientY - top, pxPerMin));
+            }}
           >
             {cards.map((card) => {
               const box = pxBox(card.top, card.height, pxPerMin);

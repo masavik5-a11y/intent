@@ -63,3 +63,31 @@ export function findOverlap<Id, E extends LaneEntry<Id>>(
   }
   return first?.entry ?? null;
 }
+
+/**
+ * The first place at or after `span`'s start where a span of its length fits, moving
+ * past each entry it would collide with. Null when nothing fits within a day of the
+ * start. `lane` holds the entries around the candidate, as for findOverlap.
+ */
+export function firstFreeSpan<Id, E extends LaneEntry<Id>>(
+  span: LaneSpan,
+  lane: readonly E[],
+): LaneSpan | null {
+  let candidate = span;
+  // Each step moves past a different entry, so this many steps are always enough.
+  for (let step = 0; step <= lane.length; step += 1) {
+    const blocking = findOverlap(candidate, lane);
+    if (blocking === null) return candidate;
+    // Start again where the blocking entry ends, counted from the candidate's day.
+    const end = spanBounds(candidate.date, blocking).end;
+    const days = Math.floor(end / MINUTES_PER_DAY);
+    candidate = {
+      date: addDays(candidate.date, days),
+      startMin: end - days * MINUTES_PER_DAY,
+      durationMin: span.durationMin,
+    };
+    const moved = spanBounds(span.date, candidate).start - span.startMin;
+    if (moved > MINUTES_PER_DAY) return null;
+  }
+  return null;
+}

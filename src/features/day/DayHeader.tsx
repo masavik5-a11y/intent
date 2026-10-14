@@ -1,8 +1,8 @@
 import { useRef } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { addDays, parseDateKey, type DateKey } from "@shared/time";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { dayTitle } from "./dayView";
 
@@ -11,8 +11,20 @@ const ICON_BUTTON = cn(
   "size-11 sm:size-9",
 );
 
-/** Date navigation (PRD T6): previous, next, today, and any date from a picker. */
-export function DayHeader({ date, today }: { date: DateKey; today: DateKey }) {
+/**
+ * Date navigation (PRD T6): previous, next, today, and any date from a picker. On
+ * wider screens it also holds the screen's one primary action, adding a block; the
+ * phone has that in its bottom bar.
+ */
+export function DayHeader({
+  date,
+  today,
+  onAdd,
+}: {
+  date: DateKey;
+  today: DateKey;
+  onAdd: () => void;
+}) {
   const navigate = useNavigate();
   const pickerRef = useRef<HTMLInputElement>(null);
 
@@ -67,7 +79,7 @@ export function DayHeader({ date, today }: { date: DateKey; today: DateKey }) {
         >
           <CalendarDays aria-hidden="true" />
         </button>
-        {/* The native picker, opened by the button above; never shown itself. */}
+        {/* The native picker, opened by the button beside it; never shown itself. */}
         <input
           ref={pickerRef}
           type="date"
@@ -83,6 +95,10 @@ export function DayHeader({ date, today }: { date: DateKey; today: DateKey }) {
           className="pointer-events-none absolute inset-0 opacity-0"
         />
       </span>
+      <Button className="ml-1 hidden h-9 sm:inline-flex" onClick={onAdd}>
+        <Plus aria-hidden="true" />
+        Add block
+      </Button>
     </header>
   );
 }

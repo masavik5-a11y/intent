@@ -79,7 +79,7 @@ export const RAIL_ITEMS: readonly NavItem[] = [
 ];
 export const RAIL_FOOTER_ITEM: NavItem = settings;
 
-/** Phone bottom bar. Quick add (+) joins it in M1. */
+/** Phone bottom bar; BottomBar puts quick add (+) after the first two. */
 export const BAR_ITEMS: readonly NavItem[] = [today, week, insights];
 
 /** Everything the bottom bar has no room for, behind its More button. */
