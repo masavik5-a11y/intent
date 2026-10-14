@@ -1,4 +1,3 @@
-import { formatTimeRange } from "@shared/time";
 import { AppIcon } from "@/components/AppIcon";
 import { cn } from "@/lib/utils";
 
@@ -12,8 +11,10 @@ interface BlockCardProps {
   focus: string | undefined;
   icon: string | undefined;
   colorKey: string;
-  startMin: number;
-  durationMin: number;
+  /** "09:00–11:00", or "until 07:00" for the tail of last night's block. */
+  time: string;
+  /** What a screen reader says for it. */
+  name: string;
   /** Pixel box inside the lane. */
   top: number;
   height: number;
@@ -33,8 +34,8 @@ export function BlockCard({
   focus,
   icon,
   colorKey,
-  startMin,
-  durationMin,
+  time,
+  name,
   top,
   height,
   current,
@@ -43,10 +44,6 @@ export function BlockCard({
   cutBottom,
   onOpen,
 }: BlockCardProps) {
-  const range = formatTimeRange(startMin, durationMin);
-  const label = [title, focus, range.replace("–", " to ")]
-    .filter((part) => part !== undefined && part !== "")
-    .join(", ");
   // One pixel of air above and below, so blocks that touch stay two blocks.
   const boxTop = top + 1;
   const boxHeight = Math.max(height - 2, 2);
@@ -54,8 +51,8 @@ export function BlockCard({
     <button
       type="button"
       data-color={colorKey}
-      aria-label={label}
-      title={height < BAR_ONLY_PX ? `${title} · ${range}` : undefined}
+      aria-label={name}
+      title={height < BAR_ONLY_PX ? `${title} · ${time}` : undefined}
       onClick={onOpen}
       style={{ top: boxTop, height: boxHeight }}
       className={cn(
@@ -82,11 +79,11 @@ export function BlockCard({
             <span className="truncate text-sm font-medium">
               {title}
               {height < TIME_LINE_PX && (
-                <span className="font-normal opacity-80"> · {range}</span>
+                <span className="font-normal opacity-80"> · {time}</span>
               )}
             </span>
             {height >= TIME_LINE_PX && (
-              <span className="truncate text-xs opacity-80">{range}</span>
+              <span className="truncate text-xs opacity-80">{time}</span>
             )}
             {height >= FOCUS_LINE_PX && focus !== undefined && (
               <span className="truncate text-xs">{focus}</span>

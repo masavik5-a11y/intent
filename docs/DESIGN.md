@@ -94,6 +94,7 @@ those four unreachable on a phone. Change it here if daily use suggests another 
 | Untracked | Before now, empty actual-lane time is shown as a faint diagonal hatch. |
 | Future | The actual lane after now is empty and slightly dimmed. |
 | Short blocks | Under 20 px tall: coloured bar only, title on hover or tap. |
+| Across midnight | A block running past the grid's end is cut there with a flat bottom edge and shows its whole range ("23:30–07:00"); its tail opens the next day's grid with a flat top edge and reads "until 07:00". Screen readers hear "continues into Sat 17 Oct" or "continues from Fri 16 Oct". |
 | Hour lines | Hairlines on the hour, labels every hour on desktop, every two on phone. |
 
 All geometry (minutes to pixels, snapping, compressing sleep) comes from pure functions

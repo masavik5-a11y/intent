@@ -1,7 +1,15 @@
 import { describe, expect, test } from "vitest";
 import type { DateKey } from "@shared/time";
 import type { Doc, Id } from "@/lib/api";
-import { dayTense, dayTitle, hourMarks, itemAt, planLane } from "./dayView";
+import {
+  cardName,
+  cardTime,
+  dayTense,
+  dayTitle,
+  hourMarks,
+  itemAt,
+  planLane,
+} from "./dayView";
 
 const MON = "2026-10-12" as DateKey;
 const TUE = "2026-10-13" as DateKey;
@@ -128,5 +136,35 @@ describe("hourMarks", () => {
   test("a grid starting at half past begins at the next full hour", () => {
     expect(hourMarks(330)[0]).toEqual({ position: 30, label: "06:00" });
     expect(hourMarks(330)).toHaveLength(24);
+  });
+});
+
+describe("cardTime and cardName", () => {
+  const sleep = { ...block("Sleep", TUE, 1380, 480), focus: "Phone away" };
+  const [tonight] = planLane([sleep], TUE, 300);
+  const [tail] = planLane([sleep], WED, 300);
+  const [deep] = planLane([block("Deep work", TUE, 540, 180)], TUE, 300);
+
+  test("the head of a block across midnight shows its whole range", () => {
+    expect(tonight && cardTime(tonight.block, tonight.segment)).toBe(
+      "23:00–07:00",
+    );
+    expect(tonight && cardName(tonight.block, tonight.segment, TUE)).toBe(
+      "Sleep, Phone away, 23:00 to 07:00, continues into Wed 14 Oct",
+    );
+  });
+
+  test("its tail on the next day reads as the rest of it", () => {
+    expect(tail && cardTime(tail.block, tail.segment)).toBe("until 07:00");
+    expect(tail && cardName(tail.block, tail.segment, WED)).toBe(
+      "Sleep, Phone away, 23:00 to 07:00, continues from Tue 13 Oct",
+    );
+  });
+
+  test("a block inside the day is just its range", () => {
+    expect(deep && cardTime(deep.block, deep.segment)).toBe("09:00–12:00");
+    expect(deep && cardName(deep.block, deep.segment, TUE)).toBe(
+      "Deep work, 09:00 to 12:00",
+    );
   });
 });

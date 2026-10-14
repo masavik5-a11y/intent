@@ -17,7 +17,7 @@ import { useNow } from "@/lib/now";
 import { useIsPhone, useMediaQuery } from "@/lib/useMediaQuery";
 import { DayGrid, type GridCard } from "./DayGrid";
 import { DayHeader } from "./DayHeader";
-import { dayTense, itemAt, planLane } from "./dayView";
+import { cardName, cardTime, dayTense, itemAt, planLane } from "./dayView";
 import { QuickAdd } from "./QuickAdd";
 import { DEFAULT_DURATION_MIN, type NewBlockArgs } from "./QuickAddForm";
 import { suggestedStart } from "./quickAddRules";
@@ -97,8 +97,8 @@ export function DayScreen({
       focus: block.focus,
       icon: activity?.icon ?? category?.icon,
       colorKey: category?.colorKey ?? "gray",
-      startMin: block.plannedStartMin,
-      durationMin: block.plannedDurationMin,
+      time: cardTime(block, segment),
+      name: cardName(block, segment, date),
       top: segment.top,
       height: segment.height,
       current: current?.block._id === block._id,

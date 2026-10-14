@@ -130,7 +130,7 @@ Covers T1–T7 (plan lane), I1–I4, U1, U2, V1, P4, S1, S5.
 - [x] Quick add (button, `N`, click on an empty slot, the phone's +).
 - [x] Block detail panel: edit, delete, inherited intent shown as inherited, per-block
       overrides, focus, done-when.
-- [ ] Blocks that cross midnight: creation, and the tail at the top of the next day.
+- [x] Blocks that cross midnight: creation, and the tail at the top of the next day.
 - [ ] Now panel: current block by plan, done-when, why (serif), how, if-then, minimum,
       countdown bar for pressure blocks and plain time left otherwise, up next, and the
       between-blocks state. Uses `shared/pace.ts` `countdown` with tests.

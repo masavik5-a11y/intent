@@ -22,8 +22,8 @@ export interface GridCard {
   focus: string | undefined;
   icon: string | undefined;
   colorKey: string;
-  startMin: number;
-  durationMin: number;
+  time: string;
+  name: string;
   /** Grid minutes. */
   top: number;
   height: number;
@@ -178,8 +178,8 @@ export function DayGrid({
                     focus={card.focus}
                     icon={card.icon}
                     colorKey={card.colorKey}
-                    startMin={card.startMin}
-                    durationMin={card.durationMin}
+                    time={card.time}
+                    name={card.name}
                     top={box.top}
                     height={box.height}
                     current={card.current}

@@ -4,6 +4,7 @@ import {
   addDays,
   dateKeyParts,
   formatDayLabel,
+  formatTimeRange,
   MINUTES_PER_DAY,
   MINUTES_PER_HOUR,
   minutesToLabel,
@@ -89,4 +90,40 @@ export function hourMarks(gridStartMin: number, every = 1): HourMark[] {
     marks.push({ position, label: minutesToLabel(gridStartMin + position) });
   }
   return marks;
+}
+
+/**
+ * The time a card shows. The tail of a block that began in the previous day's grid
+ * reads "until 07:00", so it is clearly the rest of something; every other block shows
+ * its whole range, "23:00–07:00" included.
+ */
+export function cardTime(block: Doc<"blocks">, segment: GridSegment): string {
+  const end = block.plannedStartMin + block.plannedDurationMin;
+  return segment.startsBefore
+    ? `until ${minutesToLabel(end)}`
+    : formatTimeRange(block.plannedStartMin, block.plannedDurationMin);
+}
+
+/**
+ * What a screen reader says for a card (DESIGN.md section 11): "Sleep, 23:00 to 07:00,
+ * continues into Wed 14 Oct". A block cut by the grid's edge names the day it comes
+ * from or goes on into.
+ */
+export function cardName(
+  block: Doc<"blocks">,
+  segment: GridSegment,
+  day: DateKey,
+): string {
+  const range = formatTimeRange(
+    block.plannedStartMin,
+    block.plannedDurationMin,
+  );
+  const parts = [block.title, block.focus, range.replace("–", " to ")];
+  if (segment.startsBefore) {
+    parts.push(`continues from ${formatDayLabel(addDays(day, -1))}`);
+  }
+  if (segment.endsAfter) {
+    parts.push(`continues into ${formatDayLabel(addDays(day, 1))}`);
+  }
+  return parts.filter((part) => part !== undefined && part !== "").join(", ");
 }
