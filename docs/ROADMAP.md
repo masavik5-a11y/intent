@@ -89,8 +89,12 @@ how to restrict sign-up in Convex Auth.
       functions (checked with `npx convex data --prod`). The first Vercel build had a
       `dev:` key and deployed to the development backend instead; the key was replaced.
       **Left, in order:**
-      1. Record the site address in ARCHITECTURE.md section 14 (the Frontend row), then
-         `npx convex env set SITE_URL https://<site address> --prod`.
+      1. Done: the site is https://intent-asda-3b4a.vercel.app, recorded in
+         ARCHITECTURE.md section 14, and production's `SITE_URL` points at it. Installed
+         on the PC. On the phone Chrome offered only a shortcut, because Vercel's
+         Deployment Protection hid the manifest behind a vercel.com sign-in; Filip is
+         turning it off for production. Check afterwards that
+         `curl -I https://intent-asda-3b4a.vercel.app/manifest.webmanifest` answers 200.
       2. Filip opens the site, creates the account, installs it on the PC and the phone.
          Another email must get "Sign-up is closed for this address."
       3. Delete the two development deploy keys ("df" and "intent") in the Convex

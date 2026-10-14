@@ -509,8 +509,14 @@ As set up on 2026-10-14. Secrets are never written here.
 | Code | github.com/masavik5-a11y/intent (private), branch `main` | CI: `.github/workflows/check.yml` |
 | Convex project | team `masavik`, project `intent`, region eu-west-1. Dashboard: https://dashboard.convex.dev/t/masavik/intent | |
 | Convex dev | deployment `befitting-trout-81`, selected in `.env.local` with `npx convex deployment select befitting-trout-81` | `SITE_URL=http://localhost:5173`, `JWT_PRIVATE_KEY`, `JWKS`, `ALLOWED_EMAILS` = the dev test address from `.env.example` and Filip's address |
-| Convex prod | deployment `diligent-hawk-428` (`--prod` in CLI commands) | `JWT_PRIVATE_KEY`, `JWKS`, `ALLOWED_EMAILS` = Filip's address. `SITE_URL`: not set yet, needs the site address |
-| Frontend | Vercel project imported from the repository; live since 2026-10-14. Site address: **not recorded yet** | `CONVEX_DEPLOY_KEY` = the production deploy key (`prod:`) |
+| Convex prod | deployment `diligent-hawk-428` (`--prod` in CLI commands) | `SITE_URL=https://intent-asda-3b4a.vercel.app`, `JWT_PRIVATE_KEY`, `JWKS`, `ALLOWED_EMAILS` = Filip's address |
+| Frontend | Vercel project imported from the repository; live since 2026-10-14 at https://intent-asda-3b4a.vercel.app | `CONVEX_DEPLOY_KEY` = the production deploy key (`prod:`). Deployment Protection (Vercel Authentication) must be **off** for production, see below |
+
+Vercel's Deployment Protection ("Vercel Authentication") must not cover the production
+address. With it on, every file redirects to a vercel.com sign-in; the browser fetches the
+web app manifest and the service worker without that sign-in, so the phone cannot install
+the app and the worker cannot update. It protects nothing worth protecting: the bundle
+holds no secrets, and the data sits behind the app's own sign-in in Convex.
 
 The Convex CLI on this PC is logged in, so commands reach both deployments without a
 deploy key. Check which deployment a command targets before running it; production
