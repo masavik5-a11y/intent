@@ -551,6 +551,36 @@ The Convex CLI on this PC is logged in, so commands reach both deployments witho
 deploy key. Check which deployment a command targets before running it; production
 changes need Filip's say-so.
 
+### Cloud sessions (Claude Code on the web)
+
+Work can also run in a Claude Code cloud session (claude.ai/code, the Claude app, or
+**Cloud** in the desktop app) on `masavik5-a11y/intent`. The session's VM clones GitHub,
+so only pushed work is there.
+
+- **Setup is in the repository.** The SessionStart hook in `.claude/settings.json` runs
+  `scripts/cloud-session-start.sh`. On a cloud VM (`CLAUDE_CODE_REMOTE=true`) it installs
+  Node 24 from nodejs.org (the VMs ship Node 22), checksum-verified, puts it first on
+  `PATH` through `CLAUDE_ENV_FILE`, and runs `npm ci` whenever `package-lock.json`
+  changed. Anywhere else it exits at once. The cloud environment needs no setup script,
+  variables or secrets for this: the default **Trusted** network allows
+  `registry.npmjs.org` and `nodejs.org`.
+- **What works there:** `npm run check`, `npm run build`, git, pull requests (the Check
+  workflow runs on them).
+- **What does not:** the Convex CLI. There is no login, and `*.convex.cloud` is not on
+  the Trusted allowlist, so no `npm run dev`, no pushing functions to the dev deployment
+  and no `npx convex data`. There is no Browser pane either. convex-test covers the
+  backend; checking the screens moves to Filip, after the merge or on a preview.
+- **Branches:** a cloud session pushes its own branch and opens a pull request. Filip
+  merges; a merge to `main` is a production deploy (Vercel deploys the functions to
+  `diligent-hawk-428`, then the site).
+- **Previews:** Vercel builds every pushed branch, but `CONVEX_DEPLOY_KEY` is set for
+  Production only, so a branch build stops at `npx convex deploy`. Until that is decided
+  (skip branch builds, or give previews their own Convex preview deployments), ignore a
+  failed Vercel preview on a pull request; the Check workflow is the gate.
+- **Files that stay on Filip's PC** and that a cloud session does not need: `.env.local`
+  (which dev deployment the CLI uses), `.convex/` (the old local backend), and Claude's
+  memory notes there, whose content is in section 17.
+
 ### First-time production setup
 
 Done once, in this order. Steps marked (you) need a browser sign-in.

@@ -103,7 +103,8 @@ docs/       Product and technical docs. Update them when a decision changes.
 
 - At the start of a session, read ROADMAP.md, state which slice you are doing, then do it.
 - When a slice is finished and verified, tick its checkbox in ROADMAP.md and commit it:
-  one local commit per slice. Never push unless asked.
+  one local commit per slice. Never push unless asked (a cloud session pushes its own
+  branch, see below).
 - If a requirement is ambiguous or a doc contradicts the code, stop and ask rather than
   guessing. If a decision changes, update the doc in the same change.
 - ROADMAP.md lists "Verify first" risks per milestone. Check those before building on them.
@@ -112,6 +113,12 @@ docs/       Product and technical docs. Update them when a decision changes.
   code, and add to it when you hit a new one.
 - The Convex CLI on this PC is logged in and reaches production with `--prod`. Never run
   a command against production without Filip's say-so in that session.
+- **In a cloud session** (Claude Code on the web): the SessionStart hook prepares Node 24
+  and `npm ci`. There is no Convex access and no browser, so verify a slice with
+  `npm run check` and `npm run build`, say plainly that the in-app check could not run,
+  and list what Filip should look at. Commit on the session's branch, push it and open a
+  pull request; never push to `main`. Merging to `main` deploys production, and only
+  Filip merges. Details: ARCHITECTURE.md section 14, "Cloud sessions".
 
 <!-- `npx convex ai-files install` (milestone M0) adds a managed Convex section below
      this line. Do not edit inside its markers; rerun the command to refresh it. -->
