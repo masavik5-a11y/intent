@@ -1,4 +1,4 @@
-import { planLaneOf } from "@shared/blocks";
+import { actualLaneOf, planLaneOf } from "@shared/blocks";
 import { findOverlap, type LaneSpan } from "@shared/lanes";
 import { formatTimeRange } from "@shared/time";
 import type { Doc, Id, PlannedBlockDoc } from "./api";
@@ -24,4 +24,21 @@ export function overlapMessage(block: PlannedBlockDoc): string {
     block.plannedDurationMin,
   );
   return `That overlaps ${block.title} (${range}). Pick another time or a shorter length.`;
+}
+
+/** The entry a span would collide with in the actual lane, among those on screen. */
+export function collidingEntry(
+  span: LaneSpan & { id?: Id<"blocks"> },
+  blocks: readonly Doc<"blocks">[],
+): Doc<"blocks"> | undefined {
+  return findOverlap(span, actualLaneOf(blocks))?.block;
+}
+
+/** "That overlaps Gym (11:00–11:50), already recorded. Pick another time…" */
+export function entryOverlapMessage(block: Doc<"blocks">): string {
+  const range = formatTimeRange(
+    block.actualStartMin ?? 0,
+    block.actualDurationMin ?? 0,
+  );
+  return `That overlaps ${block.title} (${range}), already recorded. Pick another time or a shorter length.`;
 }

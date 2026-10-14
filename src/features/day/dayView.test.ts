@@ -10,6 +10,7 @@ import {
   cardTime,
   dayTense,
   dayTitle,
+  entryTitle,
   hourMarks,
   planCardState,
   planLane,
@@ -280,6 +281,41 @@ describe("cardTime and cardName", () => {
     expect(deep && cardTime(deep.block, deep.segment)).toBe("09:00–12:00");
     expect(deep && cardName(deep.block, deep.segment, TUE)).toBe(
       "Deep work, 09:00 to 12:00",
+    );
+  });
+});
+
+describe("entryTitle", () => {
+  const driftCategory: Doc<"categories"> = {
+    _id: "c" as Id<"categories">,
+    _creationTime: 0,
+    userId: "u" as Id<"users">,
+    name: "Drift",
+    kind: "drift",
+    colorKey: "red",
+    icon: "cloud",
+    sortOrder: 7,
+    archived: false,
+  };
+
+  test("drift entries name the category first, once", () => {
+    expect(entryTitle(entry("Phone", TUE, 780, 30), driftCategory)).toBe(
+      "Drift · Phone",
+    );
+    expect(entryTitle(entry("Drift", TUE, 780, 30), driftCategory)).toBe(
+      "Drift",
+    );
+  });
+
+  test("other entries and planned blocks keep their title", () => {
+    const body = {
+      ...driftCategory,
+      name: "Body",
+      kind: "intentional" as const,
+    };
+    expect(entryTitle(entry("Run", TUE, 1080, 40), body)).toBe("Run");
+    expect(entryTitle(block("Phone", TUE, 780, 30), driftCategory)).toBe(
+      "Phone",
     );
   });
 });

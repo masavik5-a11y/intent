@@ -59,6 +59,8 @@ interface DayGridProps {
   onOpenCard?: (key: string) => void;
   /** A click on the plan lane where there is no block, at this grid position. */
   onEmptySlot?: (position: number) => void;
+  /** A click on the actual lane before now where nothing is recorded. */
+  onEmptyActualSlot?: (position: number) => void;
 }
 
 /** The two-lane hour grid (DESIGN.md section 3). Plan on the left, actual on the right. */
@@ -75,6 +77,7 @@ export function DayGrid({
   settled,
   onOpenCard,
   onEmptySlot,
+  onEmptyActualSlot,
 }: DayGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -201,7 +204,22 @@ export function DayGrid({
               />
             ))}
           </div>
-          <div className="relative flex-1" aria-label="Actual" role="list">
+          {/* Clicking empty actual lane before now logs an entry there; the future
+              part is covered by its dimmed overlay, so it does not. L and the now
+              panel's "Log what I'm doing" do the same from the keyboard. */}
+          <div
+            className={cn(
+              "relative flex-1",
+              onEmptyActualSlot && "cursor-copy",
+            )}
+            aria-label="Actual"
+            role="list"
+            onClick={(event) => {
+              if (event.target !== event.currentTarget) return;
+              const top = event.currentTarget.getBoundingClientRect().top;
+              onEmptyActualSlot?.(pxToMinutes(event.clientY - top, pxPerMin));
+            }}
+          >
             {futureFrom !== null && futureFrom < MINUTES_PER_DAY && (
               <div
                 aria-hidden="true"

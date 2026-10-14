@@ -1,5 +1,5 @@
 import { planLaneOf } from "@shared/blocks";
-import { momentAt } from "@shared/grid";
+import { momentAt, momentOnGrid } from "@shared/grid";
 import { firstFreeSpan } from "@shared/lanes";
 import {
   MINUTE_STEP,
@@ -46,22 +46,6 @@ function fold(text: string): string {
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
     .toLowerCase();
-}
-
-/**
- * The moment a clock time means on `day`'s grid. The grid runs from its start time to
- * the same time next morning, so a time before the start belongs to the next calendar
- * day: on Tuesday's grid, 01:00 is Wednesday 01:00, at the bottom.
- */
-export function momentOnGrid(
-  day: DateKey,
-  gridStartMin: number,
-  minuteOfDay: number,
-): LocalMoment {
-  const position =
-    (((minuteOfDay - gridStartMin) % MINUTES_PER_DAY) + MINUTES_PER_DAY) %
-    MINUTES_PER_DAY;
-  return momentAt(day, gridStartMin, position);
 }
 
 /**

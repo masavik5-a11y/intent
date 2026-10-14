@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import type { DateKey } from "@shared/time";
 import type { Doc, Id } from "@/lib/api";
-import { matchActivities, momentOnGrid, suggestedStart } from "./quickAddRules";
+import { matchActivities, suggestedStart } from "./quickAddRules";
 
 const TUE = "2026-10-13" as DateKey;
 const WED = "2026-10-14" as DateKey;
@@ -76,22 +76,6 @@ describe("matchActivities", () => {
 
   test("no match: nothing", () => {
     expect(names("swim")).toEqual([]);
-  });
-});
-
-describe("momentOnGrid", () => {
-  test.each([
-    [540, { date: TUE, minute: 540 }], // 09:00
-    [300, { date: TUE, minute: 300 }], // 05:00, the grid's first minute
-    [1435, { date: TUE, minute: 1435 }],
-    [60, { date: WED, minute: 60 }], // 01:00 is next calendar day's, at the bottom
-    [295, { date: WED, minute: 295 }],
-  ])("%d on Tuesday's 05:00 grid is %o", (minute, moment) => {
-    expect(momentOnGrid(TUE, 300, minute)).toEqual(moment);
-  });
-
-  test("with a midnight grid start every time is the day itself", () => {
-    expect(momentOnGrid(TUE, 0, 60)).toEqual({ date: TUE, minute: 60 });
   });
 });
 

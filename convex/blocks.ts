@@ -35,6 +35,22 @@ export const create = mutation({
   },
 });
 
+/** Logs an unplanned entry: something that happened without a plan (PRD A3). */
+export const logEntry = mutation({
+  args: {
+    date: vDateKey,
+    title: v.optional(v.string()),
+    categoryId: v.id("categories"),
+    actualStartMin: v.number(),
+    actualDurationMin: v.number(),
+  },
+  returns: v.id("blocks"),
+  handler: async (ctx, args) => {
+    const userId = await requireUser(ctx);
+    return await Blocks.logEntry(ctx, userId, args);
+  },
+});
+
 /** Changes a block's plan. Fields left out stay as they are; null clears one. */
 export const update = mutation({
   args: {

@@ -24,6 +24,7 @@ import type { ErrorCode } from "../../shared/errors";
 import {
   daysBetween,
   isDateKey,
+  isValidMinute,
   MINUTES_PER_DAY,
   type DateKey,
   type LocalMoment,
@@ -54,6 +55,18 @@ export type NewBlock = { [F in IntentField]?: string } & {
   plannedStartMin: number;
   plannedDurationMin: number;
 };
+
+/** An unplanned entry (PRD A3): only what happened, so status `done` and no plan. */
+export interface NewEntry {
+  /** The calendar day it began on. */
+  date: DateKey;
+  /** Defaults to the category's name: "Drift". */
+  title?: string;
+  categoryId: Id<"categories">;
+  /** Minutes from the midnight of `date`, below 1440. */
+  actualStartMin: number;
+  actualDurationMin: number;
+}
 
 /** Fields left out stay as they are; null clears an optional field. */
 export type BlockChanges = { [F in IntentField]?: string | null } & {
@@ -148,6 +161,30 @@ export async function create(
     if (text !== undefined) fields[field] = text;
   }
 
+  checkShape(fields);
+  await assertFree(ctx, userId, fields);
+  return await ctx.db.insert("blocks", { userId, ...fields });
+}
+
+/** Logs an unplanned entry in the actual lane (PRD A3). */
+export async function logEntry(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  input: NewEntry,
+): Promise<Id<"blocks">> {
+  const date = checkDate(input.date);
+  const category = await Categories.getOwned(ctx, userId, input.categoryId);
+  // An entry is stored on the day it began, like a planned block.
+  if (!isValidMinute(input.actualStartMin)) throw appError("INVALID_TIME");
+  const typed = input.title === undefined ? "" : input.title.trim();
+  const fields: BlockFields = {
+    date,
+    title: requiredTitle(typed === "" ? category.name : typed),
+    categoryId: category._id,
+    status: "done",
+    actualStartMin: input.actualStartMin,
+    actualDurationMin: input.actualDurationMin,
+  };
   checkShape(fields);
   await assertFree(ctx, userId, fields);
   return await ctx.db.insert("blocks", { userId, ...fields });

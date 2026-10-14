@@ -13,6 +13,11 @@ interface DaySearch {
   add?: "now" | number;
   /** The block whose detail is open. */
   block?: string;
+  /**
+   * Logging an unplanned entry is open: "now" for "from the last entry until now", or
+   * the clicked grid position in the actual lane.
+   */
+  log?: "now" | number;
 }
 
 export const Route = createFileRoute("/_app/day/$date")({
@@ -23,25 +28,32 @@ export const Route = createFileRoute("/_app/day/$date")({
     return { date };
   },
   validateSearch: (search: Record<string, unknown>): DaySearch => {
-    const { add, block } = search;
+    const { add, block, log } = search;
     if (typeof block === "string") return { block };
     if (add === "now") return { add };
     if (typeof add === "number" && add >= 0 && add < MINUTES_PER_DAY) {
       return { add };
+    }
+    if (log === "now") return { log };
+    if (typeof log === "number" && log >= 0 && log < MINUTES_PER_DAY) {
+      return { log };
     }
     return {};
   },
   component: DayRoute,
 });
 
-function addRequest(add: DaySearch["add"]): AddRequest | undefined {
-  if (add === undefined) return undefined;
-  return { position: add === "now" ? null : add };
+/** What an overlay in the URL was opened for: a grid position, or nothing in particular. */
+function positionRequest(
+  value: "now" | number | undefined,
+): AddRequest | undefined {
+  if (value === undefined) return undefined;
+  return { position: value === "now" ? null : value };
 }
 
 function DayRoute() {
   const { date } = Route.useRouteContext();
-  const { add, block } = Route.useSearch();
+  const { add, block, log } = Route.useSearch();
   const navigate = Route.useNavigate();
   const router = useRouter();
   const canGoBack = useCanGoBack();
@@ -49,6 +61,12 @@ function DayRoute() {
   const openAdd = useCallback(
     (position: number | null) =>
       void navigate({ search: { add: position ?? "now" } }),
+    [navigate],
+  );
+
+  const openLog = useCallback(
+    (position: number | null) =>
+      void navigate({ search: { log: position ?? "now" } }),
     [navigate],
   );
 
@@ -74,8 +92,10 @@ function DayRoute() {
     <DayScreen
       key={date}
       date={date}
-      add={addRequest(add)}
+      add={positionRequest(add)}
       onOpenAdd={openAdd}
+      log={positionRequest(log)}
+      onOpenLog={openLog}
       selectedBlockId={block}
       onSelectBlock={openBlock}
       onCloseOverlay={closeOverlay}
