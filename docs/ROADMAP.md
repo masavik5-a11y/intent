@@ -2,9 +2,10 @@
 
 Build order, one milestone at a time. Requirement IDs refer to [PRD.md](PRD.md).
 
-**Current milestone: M1. Every slice is built and ticked (2026-10-14); "Done when" waits
-for the deploy and Filip's own use on PC and phone. M0 has one check left: a second
-email is refused on the live site, see the open M0 slice.** Update this line when a
+**Current milestone: M2.** M0 and M1 met their "Done when" on the live app
+(2026-10-14). One M1 check is still to be seen once after the next deploy: the
+draining bar on a block whose activity has Countdown on (the block Filip watched had it
+off, so it showed plain time left, as designed). Update this line when a
 milestone is finished.
 
 ## How to work
@@ -82,7 +83,7 @@ how to restrict sign-up in Convex Auth.
 - [x] Private GitHub repository and an Actions workflow that runs `npm run check`.
       Repository github.com/masavik5-a11y/intent (private); the workflow is
       `.github/workflows/check.yml`. The "Check" run for 820ad99 is green (2026-10-14).
-- [ ] Production: Convex production deployment and Vercel project, deploying from `main`.
+- [x] Production: Convex production deployment and Vercel project, deploying from `main`.
       *Status 2026-10-14:* Convex project `intent` exists; the production deployment
       `diligent-hawk-428` has `JWT_PRIVATE_KEY`, `JWKS` and `ALLOWED_EMAILS`. Vercel holds
       the production deploy key and the site is live; production has the auth tables and
@@ -96,12 +97,13 @@ how to restrict sign-up in Convex Auth.
       PC and the phone.
       The two development deploy keys ("df" and "intent") are deleted in the Convex
       dashboard.
-      **Left:** Filip confirms that creating an account with any other email on the live
-      site answers "Sign-up is closed for this address".
+      Filip confirmed on 2026-10-14 that another email on the live site answers
+      "Sign-up is closed for this address".
 
 **Done when:** you are signed in to the deployed app on the PC and on the phone, it is
 installed as an app on both, a second email cannot sign up, and `npm run check` is green
 locally and in GitHub Actions.
+*Met 2026-10-14.*
 
 **Not in this milestone:** any planner feature.
 
@@ -147,6 +149,8 @@ second, an overlapping block is refused with a clear message, a sleep block cros
 midnight shows correctly on both days, at the right time the now panel shows the right
 block with its why and a draining bar, and your vision and anti-vision are written and
 saved on the Compass screen.
+*Met 2026-10-14, checked by Filip on the live app on PC and phone. Still to see once:
+the draining bar on a Countdown block.*
 
 **Not in this milestone:** statuses, the actual lane's content, drag and drop,
 recurrence, notifications.
