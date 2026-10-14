@@ -137,7 +137,7 @@ Covers T1–T7 (plan lane), I1–I4, U1, U2, V1, P4, S1, S5.
 - [x] Compass screen (V1): "The life I'm building" and "The life I refuse to drift into",
       side by side, with the writing prompts from PRINCIPLES.md while empty and the date
       last edited.
-- [ ] First-run setup: wake and sleep times, first three activities with their why and
+- [x] First-run setup: wake and sleep times, first three activities with their why and
       cost of skipping, then an invitation to write the compass (skippable).
 - [ ] Phone layout for everything above. Light and dark themes with a manual switch.
 

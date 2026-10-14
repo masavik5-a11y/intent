@@ -1,5 +1,6 @@
 import { useId, useState, type FormEvent, type ReactNode } from "react";
 import type { IntentField } from "@shared/blocks";
+import { pressureByDefault } from "@shared/categories";
 import { ICON_NAMES, type IconName } from "@shared/icons";
 import { MAX_INTENT_LENGTH, MAX_TITLE_LENGTH } from "@shared/text";
 import { AppIcon } from "@/components/AppIcon";
@@ -13,11 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { Doc } from "@/lib/api";
 import { COST_OF_SKIPPING_HINT, INTENT_PROMPTS } from "@/lib/intentPrompts";
 import { cn } from "@/lib/utils";
-import {
-  draftProblem,
-  pressureByDefault,
-  type ActivityDraft,
-} from "./activityDraft";
+import { draftProblem, type ActivityDraft } from "./activityDraft";
 
 // On an activity, "done when" is the default for its blocks.
 const PROMPTS: Record<IntentField, string> = {

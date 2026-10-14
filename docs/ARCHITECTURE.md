@@ -186,6 +186,7 @@ export default defineSchema({
     weekStartsOn: v.number(), // 1 = Monday
     wakeMin: v.number(), // the waking part of the day, which Fit zoom shows whole
     sleepMin: v.number(),
+    setupCompletedAt: v.optional(v.number()), // first-run setup finished or skipped
     // M4
     notifyBlockStart: v.optional(v.boolean()),
     notifyEndingSoon: v.optional(v.boolean()),
@@ -667,7 +668,8 @@ one; delete an entry when it stops being true.
   minute ticker that also catches up when the app returns to the foreground); ESLint
   rejects `Date.now()` and `new Date()` anywhere else in `src/` and in `shared/`.
 - `/` is `src/routes/_app/index.tsx`: it waits for the settings, because which day is
-  today depends on the grid's start, then redirects to `/day/<today>`. `/?add=now`
+  today depends on the grid's start, then redirects to `/day/<today>`, or to
+  `/welcome` (first-run setup) while `settings.setupCompletedAt` is unset. `/?add=now`
   (the phone's +) lands on the day and then opens quick add as its own history entry.
 - Quick add is `?add=now` or `?add=<grid position>` on `/day/$date`. TanStack Router
   writes a string that looks like a number with quotes (`?add=%22930%22`), so keep

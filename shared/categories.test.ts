@@ -1,5 +1,10 @@
 import { describe, expect, test } from "vitest";
-import { COLOR_KEYS, DEFAULT_CATEGORIES, isColorKey } from "./categories";
+import {
+  COLOR_KEYS,
+  DEFAULT_CATEGORIES,
+  isColorKey,
+  pressureByDefault,
+} from "./categories";
 import { isIconName } from "./icons";
 
 describe("isColorKey", () => {
@@ -42,5 +47,22 @@ describe("DEFAULT_CATEGORIES", () => {
     }
     const colours = DEFAULT_CATEGORIES.map((category) => category.colorKey);
     expect(new Set(colours).size).toBe(colours.length);
+  });
+});
+
+describe("pressureByDefault", () => {
+  test.each([
+    ["Deep work", true],
+    [" deep work ", true],
+    ["Body", false],
+    ["Mind", false],
+    ["Sleep", false],
+    ["Rest on purpose", false],
+  ])("%j: %s", (name, expected) => {
+    expect(pressureByDefault({ name })).toBe(expected);
+  });
+
+  test("no category: off", () => {
+    expect(pressureByDefault(undefined)).toBe(false);
   });
 });

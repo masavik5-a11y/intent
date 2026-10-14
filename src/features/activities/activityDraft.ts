@@ -1,4 +1,5 @@
 import { INTENT_FIELDS, type IntentField } from "@shared/blocks";
+import { pressureByDefault } from "@shared/categories";
 import { isIconName, type IconName } from "@shared/icons";
 import { isValidDuration } from "@shared/time";
 import type { Doc, Id } from "@/lib/api";
@@ -27,14 +28,6 @@ const NO_INTENT: { [F in IntentField]: string } = {
   minimumVersion: "",
   costOfSkipping: "",
 };
-
-/**
- * Pressure (the countdown and the ten-minutes-left warning) starts on for deep work
- * and off for everything else (PRD section 4). You can switch it either way.
- */
-export function pressureByDefault(category: Doc<"categories"> | undefined) {
-  return category?.name.trim().toLowerCase() === "deep work";
-}
 
 /** A blank activity in `category`, or in the first category that is not archived. */
 export function newDraft(

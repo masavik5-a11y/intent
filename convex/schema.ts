@@ -50,6 +50,8 @@ export default defineSchema({
     /** The waking part of the day, which the grid's Fit zoom shows whole. */
     wakeMin: v.number(),
     sleepMin: v.number(),
+    /** When first-run setup was finished or skipped (ms since the epoch). */
+    setupCompletedAt: v.optional(v.number()),
   }).index("by_userId", ["userId"]),
 
   // One row per user: the vision and anti-vision texts (PRD V1).

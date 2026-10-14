@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { DEFAULT_CATEGORIES } from "../shared/categories";
 import { DEFAULT_SETTINGS } from "../shared/settings";
 import { api } from "./_generated/api";
@@ -120,5 +120,89 @@ describe("settings.get", () => {
     const t = newTest();
     const { as } = await signedIn(t);
     expect(await as.query(api.settings.get)).toBeNull();
+  });
+});
+
+describe("settings.setWakeAndSleep", () => {
+  test("requires a session", async () => {
+    const t = newTest();
+    await expectAppError(
+      t.mutation(api.settings.setWakeAndSleep, {
+        wakeMin: 420,
+        sleepMin: 1380,
+      }),
+      "UNAUTHENTICATED",
+    );
+  });
+
+  test("stores the waking hours", async () => {
+    const t = newTest();
+    const { as } = await signedIn(t);
+    await as.mutation(api.setup.ensure, { timeZone: "Europe/Prague" });
+    await as.mutation(api.settings.setWakeAndSleep, {
+      wakeMin: 390,
+      sleepMin: 60, // 01:00, after midnight
+    });
+    expect(await as.query(api.settings.get)).toMatchObject({
+      wakeMin: 390,
+      sleepMin: 60,
+    });
+  });
+
+  test.each([
+    [425.5, 1380],
+    [422, 1380],
+    [420, 1440],
+    [-5, 1380],
+  ])("rejects wake %d and sleep %d", async (wakeMin, sleepMin) => {
+    const t = newTest();
+    const { as } = await signedIn(t);
+    await as.mutation(api.setup.ensure, { timeZone: "Europe/Prague" });
+    await expectAppError(
+      as.mutation(api.settings.setWakeAndSleep, { wakeMin, sleepMin }),
+      "INVALID_TIME",
+    );
+  });
+
+  test("before the first visit there is nothing to change", async () => {
+    const t = newTest();
+    const { as } = await signedIn(t);
+    await expectAppError(
+      as.mutation(api.settings.setWakeAndSleep, {
+        wakeMin: 420,
+        sleepMin: 1380,
+      }),
+      "NOT_FOUND",
+    );
+  });
+});
+
+describe("setup.complete", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test("marks setup as done once; later calls keep the first time", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-14T10:00:00Z"));
+    const t = newTest();
+    const { as } = await signedIn(t);
+    await as.mutation(api.setup.ensure, { timeZone: "Europe/Prague" });
+    expect(
+      (await as.query(api.settings.get))?.setupCompletedAt,
+    ).toBeUndefined();
+
+    await as.mutation(api.setup.complete, {});
+    vi.setSystemTime(new Date("2026-10-15T10:00:00Z"));
+    await as.mutation(api.setup.complete, {});
+
+    expect((await as.query(api.settings.get))?.setupCompletedAt).toBe(
+      Date.parse("2026-10-14T10:00:00Z"),
+    );
+  });
+
+  test("requires a session", async () => {
+    const t = newTest();
+    await expectAppError(t.mutation(api.setup.complete, {}), "UNAUTHENTICATED");
   });
 });

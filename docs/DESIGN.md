@@ -303,7 +303,10 @@ Sentence case everywhere. No exclamation marks. Buttons are verbs: "Plan tomorro
 ## 10. Empty, loading and error states
 
 - **First run:** categories are seeded, and a short three-step setup asks for wake and
-  sleep times and offers to create the first three activities with their why.
+  sleep times and offers to create the first three activities with their why (and cost
+  of skipping), then invites you to write the compass ("Write my compass" or "Later").
+  Every step can be skipped, and so can the whole setup. The app opens on `/welcome`
+  until it is finished or skipped, then on today.
 - **Loading:** grid skeleton with hour lines; never a full-page spinner.
 - **Offline:** a small banner, "Offline. Showing the last synced plan.", editing controls
   disabled.

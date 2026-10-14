@@ -18,6 +18,7 @@ import { Route as AppInsightsRouteImport } from './routes/_app/insights'
 import { Route as AppMonthRouteImport } from './routes/_app/month'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppWeekRouteImport } from './routes/_app/week'
+import { Route as AppWelcomeRouteImport } from './routes/_app/welcome'
 import { Route as AppDayDateRouteImport } from './routes/_app/day.$date'
 
 const AppRoute = AppRouteImport.update({
@@ -64,6 +65,11 @@ const AppWeekRoute = AppWeekRouteImport.update({
   path: '/week',
   getParentRoute: () => AppRoute,
 } as any)
+const AppWelcomeRoute = AppWelcomeRouteImport.update({
+  id: '/welcome',
+  path: '/welcome',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDayDateRoute = AppDayDateRouteImport.update({
   id: '/day/$date',
   path: '/day/$date',
@@ -79,6 +85,7 @@ export interface FileRoutesByFullPath {
   '/month': typeof AppMonthRoute
   '/settings': typeof AppSettingsRoute
   '/week': typeof AppWeekRoute
+  '/welcome': typeof AppWelcomeRoute
   '/day/$date': typeof AppDayDateRoute
 }
 export interface FileRoutesByTo {
@@ -89,6 +96,7 @@ export interface FileRoutesByTo {
   '/month': typeof AppMonthRoute
   '/settings': typeof AppSettingsRoute
   '/week': typeof AppWeekRoute
+  '/welcome': typeof AppWelcomeRoute
   '/': typeof AppIndexRoute
   '/day/$date': typeof AppDayDateRoute
 }
@@ -102,6 +110,7 @@ export interface FileRoutesById {
   '/_app/month': typeof AppMonthRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/week': typeof AppWeekRoute
+  '/_app/welcome': typeof AppWelcomeRoute
   '/_app/': typeof AppIndexRoute
   '/_app/day/$date': typeof AppDayDateRoute
 }
@@ -116,6 +125,7 @@ export interface FileRouteTypes {
     | '/month'
     | '/settings'
     | '/week'
+    | '/welcome'
     | '/day/$date'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -126,6 +136,7 @@ export interface FileRouteTypes {
     | '/month'
     | '/settings'
     | '/week'
+    | '/welcome'
     | '/'
     | '/day/$date'
   id:
@@ -138,6 +149,7 @@ export interface FileRouteTypes {
     | '/_app/month'
     | '/_app/settings'
     | '/_app/week'
+    | '/_app/welcome'
     | '/_app/'
     | '/_app/day/$date'
   fileRoutesById: FileRoutesById
@@ -212,6 +224,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppWeekRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/welcome': {
+      id: '/_app/welcome'
+      path: '/welcome'
+      fullPath: '/welcome'
+      preLoaderRoute: typeof AppWelcomeRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/day/$date': {
       id: '/_app/day/$date'
       path: '/day/$date'
@@ -229,6 +248,7 @@ interface AppRouteChildren {
   AppMonthRoute: typeof AppMonthRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppWeekRoute: typeof AppWeekRoute
+  AppWelcomeRoute: typeof AppWelcomeRoute
   AppIndexRoute: typeof AppIndexRoute
   AppDayDateRoute: typeof AppDayDateRoute
 }
@@ -240,6 +260,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppMonthRoute: AppMonthRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppWeekRoute: AppWeekRoute,
+  AppWelcomeRoute: AppWelcomeRoute,
   AppIndexRoute: AppIndexRoute,
   AppDayDateRoute: AppDayDateRoute,
 }

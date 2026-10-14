@@ -20,3 +20,14 @@ export const ensure = mutation({
     return null;
   },
 });
+
+/** First-run setup is finished, or skipped: the app opens on today from now on. */
+export const complete = mutation({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    const userId = await requireUser(ctx);
+    await Settings.completeSetup(ctx, userId);
+    return null;
+  },
+});

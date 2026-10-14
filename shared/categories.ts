@@ -58,3 +58,14 @@ export const DEFAULT_CATEGORIES: readonly CategoryDefaults[] = [
   { name: "Sleep", kind: "maintenance", colorKey: "slate", icon: "moon" },
   { name: "Drift", kind: "drift", colorKey: "red", icon: "cloud" },
 ];
+
+/**
+ * Pressure (the countdown and the ten-minutes-left warning) starts on for deep work
+ * and off for everything else, sleep, meditation and rest included (PRD section 4).
+ * It is a default for new activities; each can be switched either way.
+ */
+export function pressureByDefault(
+  category: { name: string } | undefined,
+): boolean {
+  return category?.name.trim().toLowerCase() === "deep work";
+}
