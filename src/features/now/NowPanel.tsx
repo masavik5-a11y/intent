@@ -1,8 +1,13 @@
 import { useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
+import type { StatusAction } from "@shared/blocks";
 import { AppIcon } from "@/components/AppIcon";
+import type { Doc, Id } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { StatusActions } from "@/features/status/StatusActions";
+import { StatusSummary } from "@/features/status/StatusSummary";
 import {
+  endedText,
   freeText,
   inLastTenMinutes,
   nextLine,
@@ -14,19 +19,29 @@ import {
 
 /**
  * The now panel (DESIGN.md section 4a): the block the plan says is running, with its
- * finish line, its why and how, a draining bar for countdown blocks, and what comes
- * next. `compact` is the phone's card: the first lines, and the rest behind "More".
+ * finish line, its why and how, a draining bar for countdown blocks, Done, Partly and
+ * Skip, and what comes next. Between blocks, the block that just ended waits there to
+ * be marked. `compact` is the phone's card: the first lines and the actions, the rest
+ * behind "More".
  */
 export function NowPanel({
   view,
   compact,
+  lastMarked,
+  error,
+  onAction,
 }: {
   view: NowView;
   compact: boolean;
+  /** The block marked last from here, shown with Undo until another is marked. */
+  lastMarked: Doc<"blocks"> | undefined;
+  /** Why the last mark did not save. */
+  error: string | null;
+  onAction: (blockId: Id<"blocks">, action: StatusAction) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const showAll = !compact || expanded;
-  const { current, next } = view;
+  const { current, toMark, next } = view;
 
   return (
     <section
@@ -37,10 +52,51 @@ export function NowPanel({
         compact ? "px-4 py-3" : "p-4 sm:p-5",
       )}
     >
+      {error !== null && (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
+      {lastMarked !== undefined && lastMarked.status !== "planned" && (
+        <div className="flex flex-col gap-1 rounded-block bg-muted/60 px-3 py-2">
+          <p className="truncate text-sm font-medium">{lastMarked.title}</p>
+          <StatusSummary
+            block={lastMarked}
+            onAction={(action) => onAction(lastMarked._id, action)}
+          />
+        </div>
+      )}
+
       {current === null ? (
-        <FreeTime next={next[0]} />
+        <>
+          <FreeTime next={next[0]} />
+          {toMark !== null && (
+            <div
+              data-color={toMark.category?.colorKey}
+              className="flex flex-col gap-2"
+            >
+              <p className="flex items-center gap-2 text-sm">
+                <AppIcon
+                  name={toMark.activity?.icon ?? toMark.category?.icon}
+                  className="size-4 shrink-0 text-key-solid"
+                />
+                {endedText(toMark)}
+              </p>
+              <StatusActions
+                key={toMark.block._id}
+                plannedDurationMin={toMark.block.plannedDurationMin}
+                started
+                onAction={(action) => onAction(toMark.block._id, action)}
+              />
+            </div>
+          )}
+        </>
       ) : (
-        <CurrentBlock current={current} showAll={showAll} />
+        <CurrentBlock
+          current={current}
+          showAll={showAll}
+          onAction={(action) => onAction(current.block._id, action)}
+        />
       )}
 
       {showAll && next.length > 0 && (
@@ -78,11 +134,13 @@ export function NowPanel({
 function CurrentBlock({
   current,
   showAll,
+  onAction,
 }: {
   current: NowCurrent;
   showAll: boolean;
+  onAction: (action: StatusAction) => void;
 }) {
-  const { block, intent, countdown, pressure } = current;
+  const { block, intent, countdown, pressure, soFarMin } = current;
   const strong = pressure && inLastTenMinutes(countdown);
   return (
     <div className="flex flex-col gap-3">
@@ -144,6 +202,13 @@ function CurrentBlock({
           {intent.minimumVersion}
         </Labeled>
       )}
+      <StatusActions
+        key={block._id}
+        plannedDurationMin={block.plannedDurationMin}
+        started
+        soFarMin={soFarMin}
+        onAction={onAction}
+      />
     </div>
   );
 }

@@ -116,7 +116,8 @@ docs/       Product and technical docs. Update them when a decision changes.
 - **In a cloud session** (Claude Code on the web): the SessionStart hook prepares Node 24
   and `npm ci`. There is no Convex access and no browser, so verify a slice with
   `npm run check` and `npm run build`, say plainly that the in-app check could not run,
-  and list what Filip should look at. Commit on the session's branch, push it and open a
+  and list what Filip should look at. Headless Chromium can still screenshot new
+  components rendered with mock data (ARCHITECTURE.md section 14). Commit on the session's branch, push it and open a
   pull request; never push to `main`. Merging to `main` deploys production, and only
   Filip merges. Details: ARCHITECTURE.md section 14, "Cloud sessions".
 

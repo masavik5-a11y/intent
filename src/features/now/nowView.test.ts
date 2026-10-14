@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import type { DateKey } from "@shared/time";
 import type { Doc, Id, PlannedBlockDoc } from "@/lib/api";
 import {
+  endedText,
   formatLeft,
   freeText,
   inLastTenMinutes,
@@ -121,6 +122,72 @@ describe("nowView", () => {
     expect(view.current?.block.title).toBe("Sleep");
     expect(view.current?.pressure).toBe(false);
     expect(view.current?.countdown.minutesLeft).toBe(120);
+  });
+});
+
+describe("nowView with marked blocks (M2)", () => {
+  test("the running block has its time so far, for Partly", () => {
+    const view = nowView(blocks, [gym], [body], { date: TUE, minute: 697 });
+    expect(view.current?.soFarMin).toBe(37);
+  });
+
+  test("a block marked done early stops being current", () => {
+    const marked = blocks.map((item) =>
+      item.title === "Gym"
+        ? {
+            ...item,
+            status: "done" as const,
+            actualStartMin: 660,
+            actualDurationMin: 30,
+          }
+        : item,
+    );
+    const view = nowView(marked, [gym], [body], { date: TUE, minute: 700 });
+    expect(view.current).toBeNull();
+    // It is marked, so there is nothing left to mark either.
+    expect(view.toMark).toBeNull();
+    expect(view.next[0]?.block.title).toBe("Lunch");
+  });
+
+  test("so does a skipped one, and skipped blocks leave up next", () => {
+    const skipped = blocks.map((item) =>
+      item.title === "Gym" || item.title === "Lunch"
+        ? { ...item, status: "skipped" as const }
+        : item,
+    );
+    const view = nowView(skipped, [gym], [body], { date: TUE, minute: 700 });
+    expect(view.current).toBeNull();
+    expect(view.next.map((item) => item.block.title)).toEqual([
+      "Read",
+      "Sleep",
+    ]);
+  });
+
+  test("between blocks, the last block that ended unmarked", () => {
+    const view = nowView(blocks, [gym], [body], { date: TUE, minute: 900 });
+    expect(view.toMark?.block.title).toBe("Lunch");
+    expect(view.toMark && endedText(view.toMark)).toBe("Lunch ended at 14:00");
+  });
+
+  test("once it is marked, the one before it is not offered", () => {
+    const marked = blocks.map((item) =>
+      item.title === "Lunch" ? { ...item, status: "skipped" as const } : item,
+    );
+    const view = nowView(marked, [gym], [body], { date: TUE, minute: 900 });
+    expect(view.toMark?.block.title).toBe("Gym");
+  });
+
+  test("nothing to mark while a block runs", () => {
+    const view = nowView(blocks, [gym], [body], { date: TUE, minute: 1210 });
+    expect(view.current?.block.title).toBe("Read");
+    expect(view.toMark).toBeNull();
+  });
+
+  test("in the morning, last night's sleep waits to be marked", () => {
+    const view = nowView(blocks, [gym], [body], { date: WED, minute: 480 });
+    expect(view.current).toBeNull();
+    expect(view.toMark?.block.title).toBe("Sleep");
+    expect(view.toMark && endedText(view.toMark)).toBe("Sleep ended at 07:00");
   });
 });
 

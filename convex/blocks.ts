@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireUser } from "./lib/auth";
 import * as Blocks from "./model/blocks";
-import { intentFields, vDateKey } from "./schema";
+import { intentFields, vDateKey, vSkipReason } from "./schema";
 
 /** In an update: left out keeps the field, null clears it. */
 const clearableText = v.optional(v.union(v.string(), v.null()));
@@ -57,6 +57,27 @@ export const update = mutation({
   handler: async (ctx, { blockId, ...changes }) => {
     const userId = await requireUser(ctx);
     await Blocks.update(ctx, userId, blockId, changes);
+    return null;
+  },
+});
+
+/** Done, Partly, Skip or Undo (PRD A1, A4). */
+export const setStatus = mutation({
+  args: {
+    blockId: v.id("blocks"),
+    action: v.union(
+      v.object({ type: v.literal("done") }),
+      v.object({ type: v.literal("partial"), minutes: v.number() }),
+      v.object({ type: v.literal("skip"), reason: v.optional(vSkipReason) }),
+      v.object({ type: v.literal("undo") }),
+    ),
+    /** The device's local day and minute when the button was pressed. */
+    now: v.object({ date: vDateKey, minute: v.number() }),
+  },
+  returns: v.null(),
+  handler: async (ctx, { blockId, action, now }) => {
+    const userId = await requireUser(ctx);
+    await Blocks.setStatus(ctx, userId, blockId, action, now);
     return null;
   },
 });

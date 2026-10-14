@@ -555,6 +555,254 @@ describe("plan and actual are two lanes (M2 shapes)", () => {
   });
 });
 
+describe("blocks.setStatus", () => {
+  /** The device's moment "HH:MM" on `date`. */
+  function at(date: DateKey, time: string) {
+    const [hours = 0, mins = 0] = time.split(":").map(Number);
+    return { date, minute: hours * 60 + mins };
+  }
+  const evening = at(TUE, "18:00");
+
+  test("requires a session", async () => {
+    const t = newTest();
+    const { as, deepWork } = await setUp(t);
+    const blockId = await plan(as, deepWork, TUE, "13:00", 60);
+    await expectAppError(
+      t.mutation(api.blocks.setStatus, {
+        blockId,
+        action: { type: "done" },
+        now: evening,
+      }),
+      "UNAUTHENTICATED",
+    );
+  });
+
+  test("Done after the block records the plan", async () => {
+    const t = newTest();
+    const { as, deepWork } = await setUp(t);
+    const blockId = await plan(as, deepWork, TUE, "13:00", 60);
+    await as.mutation(api.blocks.setStatus, {
+      blockId,
+      action: { type: "done" },
+      now: evening,
+    });
+    expect(await read(t, blockId)).toMatchObject({
+      status: "done",
+      plannedStartMin: 780,
+      plannedDurationMin: 60,
+      actualStartMin: 780,
+      actualDurationMin: 60,
+    });
+  });
+
+  test("Done while it runs ends it now", async () => {
+    const t = newTest();
+    const { as, gym } = await setUp(t);
+    const blockId = await as.mutation(api.blocks.create, {
+      date: TUE,
+      activityId: gym,
+      plannedStartMin: 660,
+      plannedDurationMin: 90,
+    });
+    await as.mutation(api.blocks.setStatus, {
+      blockId,
+      action: { type: "done" },
+      now: at(TUE, "11:50"),
+    });
+    expect(await read(t, blockId)).toMatchObject({
+      actualStartMin: 660,
+      actualDurationMin: 50,
+    });
+  });
+
+  test("Done after an overrun starts late and keeps the planned end", async () => {
+    const t = newTest();
+    const { userId, as, deepWork } = await setUp(t);
+    await t.run((ctx) =>
+      ctx.db.insert("blocks", {
+        userId,
+        date: TUE,
+        title: "Lunch",
+        categoryId: deepWork,
+        plannedStartMin: 720,
+        plannedDurationMin: 60,
+        status: "done",
+        actualStartMin: 720,
+        actualDurationMin: 75, // until 13:15
+      }),
+    );
+    const write = await plan(as, deepWork, TUE, "13:00", 60, "Write");
+    await as.mutation(api.blocks.setStatus, {
+      blockId: write,
+      action: { type: "done" },
+      now: evening,
+    });
+    expect(await read(t, write)).toMatchObject({
+      actualStartMin: 795,
+      actualDurationMin: 45,
+    });
+  });
+
+  test("Done before the block starts is refused", async () => {
+    const t = newTest();
+    const { as, deepWork } = await setUp(t);
+    const blockId = await plan(as, deepWork, TUE, "13:00", 60);
+    await expectAppError(
+      as.mutation(api.blocks.setStatus, {
+        blockId,
+        action: { type: "done" },
+        now: at(TUE, "12:55"),
+      }),
+      "NOT_STARTED",
+    );
+    expect(await read(t, blockId)).toMatchObject({ status: "planned" });
+  });
+
+  test("Done finds no room when what happened already fills the plan", async () => {
+    const t = newTest();
+    const { userId, as, deepWork } = await setUp(t);
+    await t.run((ctx) =>
+      ctx.db.insert("blocks", {
+        userId,
+        date: TUE,
+        title: "Phone",
+        categoryId: deepWork,
+        status: "done",
+        actualStartMin: 760,
+        actualDurationMin: 120,
+      }),
+    );
+    const blockId = await plan(as, deepWork, TUE, "13:00", 60);
+    await expectAppError(
+      as.mutation(api.blocks.setStatus, {
+        blockId,
+        action: { type: "done" },
+        now: evening,
+      }),
+      "NO_ROOM",
+    );
+  });
+
+  test("Partly records the minutes given", async () => {
+    const t = newTest();
+    const { as, deepWork } = await setUp(t);
+    const blockId = await plan(as, deepWork, TUE, "13:00", 60);
+    await as.mutation(api.blocks.setStatus, {
+      blockId,
+      action: { type: "partial", minutes: 25 },
+      now: evening,
+    });
+    expect(await read(t, blockId)).toMatchObject({
+      status: "partial",
+      actualStartMin: 780,
+      actualDurationMin: 25,
+    });
+    await expectAppError(
+      as.mutation(api.blocks.setStatus, {
+        blockId,
+        action: { type: "partial", minutes: 12 },
+        now: evening,
+      }),
+      "INVALID_TIME",
+    );
+  });
+
+  test("Skip with a reason, then Undo, leaves a planned block as it was", async () => {
+    const t = newTest();
+    const { as, deepWork } = await setUp(t);
+    const blockId = await plan(as, deepWork, TUE, "13:00", 60);
+    await as.mutation(api.blocks.setStatus, {
+      blockId,
+      action: { type: "done" },
+      now: evening,
+    });
+    await as.mutation(api.blocks.setStatus, {
+      blockId,
+      action: { type: "skip", reason: "tired" },
+      now: evening,
+    });
+    let block = await read(t, blockId);
+    expect(block).toMatchObject({ status: "skipped", skipReason: "tired" });
+    expect(block && "actualStartMin" in block).toBe(false);
+
+    await as.mutation(api.blocks.setStatus, {
+      blockId,
+      action: { type: "undo" },
+      now: evening,
+    });
+    block = await read(t, blockId);
+    expect(block).toMatchObject({ status: "planned", plannedStartMin: 780 });
+    expect(block && "skipReason" in block).toBe(false);
+    expect(block && "actualDurationMin" in block).toBe(false);
+  });
+
+  test("a future block can be skipped ahead of time", async () => {
+    const t = newTest();
+    const { as, deepWork } = await setUp(t);
+    const blockId = await plan(as, deepWork, WED, "09:00", 60);
+    await as.mutation(api.blocks.setStatus, {
+      blockId,
+      action: { type: "skip" },
+      now: evening,
+    });
+    expect(await read(t, blockId)).toMatchObject({ status: "skipped" });
+  });
+
+  test("an unplanned entry has no status to change", async () => {
+    const t = newTest();
+    const { userId, as, deepWork } = await setUp(t);
+    const blockId = await t.run((ctx) =>
+      ctx.db.insert("blocks", {
+        userId,
+        date: TUE,
+        title: "Phone",
+        categoryId: deepWork,
+        status: "done",
+        actualStartMin: 780,
+        actualDurationMin: 45,
+      }),
+    );
+    await expectAppError(
+      as.mutation(api.blocks.setStatus, {
+        blockId,
+        action: { type: "undo" },
+        now: evening,
+      }),
+      "INVALID_INPUT",
+    );
+  });
+
+  test("refuses someone else's block, and a moment that is not one", async () => {
+    const t = newTest();
+    const me = await setUp(t, "me@intent.test");
+    const other = await setUp(t, "other@intent.test");
+    const theirs = await plan(other.as, other.deepWork, TUE, "13:00", 60);
+    await expectAppError(
+      me.as.mutation(api.blocks.setStatus, {
+        blockId: theirs,
+        action: { type: "done" },
+        now: evening,
+      }),
+      "NOT_FOUND",
+    );
+    const mine = await plan(me.as, me.deepWork, TUE, "13:00", 60);
+    for (const now of [
+      { date: TUE, minute: 1440 },
+      { date: TUE, minute: 12.5 },
+      { date: "2026-02-30" as DateKey, minute: 600 },
+    ]) {
+      await expectAppError(
+        me.as.mutation(api.blocks.setStatus, {
+          blockId: mine,
+          action: { type: "done" },
+          now,
+        }),
+        "INVALID_INPUT",
+      );
+    }
+  });
+});
+
 describe("blocks.remove", () => {
   test("deletes the block and frees its time", async () => {
     const t = newTest();
