@@ -1,5 +1,7 @@
+import { CircleCheck, Contrast, Plus, type LucideIcon } from "lucide-react";
 import { AppIcon } from "@/components/AppIcon";
 import { cn } from "@/lib/utils";
+import type { CardState } from "./dayView";
 
 /** Below this height a block is a coloured bar; its title shows on hover or tap. */
 const BAR_ONLY_PX = 20;
@@ -18,8 +20,8 @@ interface BlockCardProps {
   /** Pixel box inside the lane. */
   top: number;
   height: number;
-  /** The block runs now: solid fill (DESIGN.md section 4). */
-  current: boolean;
+  /** How it looks: DESIGN.md section 4. */
+  state: CardState;
   /** Its detail is open. */
   selected: boolean;
   /** Cut at the grid's top or bottom edge because it crosses into another day's grid. */
@@ -28,7 +30,18 @@ interface BlockCardProps {
   onOpen?: () => void;
 }
 
-/** A block in the plan lane: category colour, icon, title, time, focus if there is room. */
+/** The small mark after the title that says what became of a block, besides colour. */
+const STATE_MARKS: Partial<Record<CardState, LucideIcon>> = {
+  done: CircleCheck,
+  partial: Contrast,
+  unplanned: Plus,
+};
+
+/**
+ * A block in either lane: category colour, icon, title, time, focus if there is room.
+ * Solid while it runs, outlined and struck through when skipped, a little muted when
+ * done (DESIGN.md section 4). Every state has a mark or a word, never colour alone.
+ */
 export function BlockCard({
   title,
   focus,
@@ -38,7 +51,7 @@ export function BlockCard({
   name,
   top,
   height,
-  current,
+  state,
   selected,
   cutTop,
   cutBottom,
@@ -47,6 +60,9 @@ export function BlockCard({
   // One pixel of air above and below, so blocks that touch stay two blocks.
   const boxTop = top + 1;
   const boxHeight = Math.max(height - 2, 2);
+  const solid = state === "current" || state === "live";
+  const skipped = state === "skipped";
+  const Mark = STATE_MARKS[state];
   return (
     <button
       type="button"
@@ -57,7 +73,12 @@ export function BlockCard({
       style={{ top: boxTop, height: boxHeight }}
       className={cn(
         "absolute inset-x-1 overflow-hidden rounded-block px-2 text-left outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
-        current ? "bg-key-solid text-on-solid" : "bg-key-tint text-key-ink",
+        solid
+          ? "bg-key-solid text-on-solid"
+          : skipped
+            ? "border border-dashed border-key-solid/70 bg-transparent text-key-ink"
+            : "bg-key-tint text-key-ink",
+        state === "done" && "opacity-75",
         selected &&
           "ring-2 ring-foreground ring-offset-1 ring-offset-background",
         cutTop && "rounded-t-none",
@@ -70,16 +91,28 @@ export function BlockCard({
             name={icon}
             className={cn(
               "mt-0.5 size-3.5 shrink-0",
-              current
+              state === "current"
                 ? "animate-pulse motion-reduce:animate-none"
-                : "text-key-solid",
+                : solid
+                  ? ""
+                  : "text-key-solid",
             )}
           />
           <span className="flex min-w-0 flex-col">
-            <span className="truncate text-sm font-medium">
-              {title}
+            <span className="flex min-w-0 items-center gap-1 text-sm font-medium">
+              <span className={cn("truncate", skipped && "line-through")}>
+                {title}
+              </span>
+              {Mark !== undefined && (
+                <Mark
+                  aria-hidden="true"
+                  className="size-3.5 shrink-0 text-key-solid"
+                />
+              )}
               {height < TIME_LINE_PX && (
-                <span className="font-normal opacity-80"> · {time}</span>
+                <span className="truncate font-normal opacity-80">
+                  · {time}
+                </span>
               )}
             </span>
             {height >= TIME_LINE_PX && (

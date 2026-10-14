@@ -2,12 +2,16 @@ import { describe, expect, test } from "vitest";
 import type { DateKey } from "@shared/time";
 import type { Doc, Id } from "@/lib/api";
 import {
+  actualCardName,
+  actualCardState,
+  actualCardTime,
+  actualLane,
   cardName,
   cardTime,
   dayTense,
   dayTitle,
   hourMarks,
-  itemAt,
+  planCardState,
   planLane,
 } from "./dayView";
 
@@ -20,6 +24,7 @@ function block(
   date: DateKey,
   startMin: number,
   durationMin: number,
+  extra: Partial<Doc<"blocks">> = {},
 ): Doc<"blocks"> {
   return {
     _id: title as Id<"blocks">,
@@ -31,6 +36,27 @@ function block(
     plannedStartMin: startMin,
     plannedDurationMin: durationMin,
     status: "planned",
+    ...extra,
+  };
+}
+
+/** An unplanned entry: what happened, no plan. */
+function entry(
+  title: string,
+  date: DateKey,
+  startMin: number,
+  durationMin: number,
+): Doc<"blocks"> {
+  const {
+    plannedStartMin: _start,
+    plannedDurationMin: _length,
+    ...rest
+  } = block(title, date, 0, 5);
+  return {
+    ...rest,
+    status: "done",
+    actualStartMin: startMin,
+    actualDurationMin: durationMin,
   };
 }
 
@@ -101,16 +127,105 @@ describe("planLane", () => {
   });
 });
 
-describe("itemAt", () => {
-  const lane = planLane([block("Deep work", TUE, 540, 180)], TUE, 300);
+describe("planCardState", () => {
+  const write = block("Write", TUE, 780, 60);
+  const at = (minute: number) => ({ date: TUE, minute });
 
-  test.each([
-    [240, "Deep work"], // 09:00, its first minute
-    [419, "Deep work"],
-    [420, undefined], // 12:00, already over
-    [239, undefined],
-  ])("position %d is in %s", (position, title) => {
-    expect(itemAt(lane, position)?.block.title).toBe(title);
+  test.each<[string, Doc<"blocks">, number, string]>([
+    ["still to come", write, 700, "planned"],
+    ["running", write, 800, "current"],
+    ["over but not marked", write, 900, "planned"],
+    [
+      "marked done early: no longer current",
+      { ...write, status: "done", actualStartMin: 780, actualDurationMin: 20 },
+      800,
+      "done",
+    ],
+    [
+      "partly done",
+      {
+        ...write,
+        status: "partial",
+        actualStartMin: 780,
+        actualDurationMin: 20,
+      },
+      900,
+      "partial",
+    ],
+    ["skipped", { ...write, status: "skipped" }, 800, "skipped"],
+  ])("%s", (_, item, minute, state) => {
+    expect(planCardState(item, at(minute))).toBe(state);
+  });
+});
+
+describe("actualLane", () => {
+  const blocks = [
+    block("Sleep", MON, 1380, 480, {
+      status: "done",
+      actualStartMin: 1380,
+      actualDurationMin: 510, // until Tue 07:30
+    }),
+    block("Gym", TUE, 660, 90, {
+      status: "partial",
+      actualStartMin: 660,
+      actualDurationMin: 45,
+    }),
+    entry("Phone", TUE, 750, 30),
+    block("Write", TUE, 780, 60), // running at 13:20
+    block("Read", TUE, 1200, 30, { status: "skipped" }),
+  ];
+  const now = { date: TUE, minute: 800 };
+  const lane = actualLane(blocks, TUE, 300, now);
+
+  test("what was recorded and the running block, top to bottom", () => {
+    expect(
+      lane.map((item) => [item.block.title, item.segment.top, item.live]),
+    ).toEqual([
+      ["Sleep", 0, false],
+      ["Gym", 360, false],
+      ["Phone", 450, false],
+      ["Write", 480, true],
+    ]);
+    expect(lane[3]?.segment.height).toBe(20);
+  });
+
+  test("states: recorded, unplanned, and the growing bar", () => {
+    expect(lane.map(actualCardState)).toEqual([
+      "recorded",
+      "recorded",
+      "unplanned",
+      "live",
+    ]);
+  });
+
+  test("times: the tail, partly done, the range, since", () => {
+    expect(lane.map(actualCardTime)).toEqual([
+      "until 07:30",
+      "45m of 1h 30m · 11:00–11:45",
+      "12:30–13:00",
+      "since 13:00",
+    ]);
+  });
+
+  test("names for screen readers", () => {
+    expect(lane.map(actualCardName)).toEqual([
+      "Sleep, 23:00 to 07:30, done",
+      "Gym, 11:00 to 11:45, partly done, 45m of 1h 30m",
+      "Phone, 12:30 to 13:00, unplanned",
+      "Write, running since 13:00",
+    ]);
+  });
+
+  test("a plan card names its status", () => {
+    const gym = blocks[1];
+    if (gym === undefined || gym.plannedStartMin === undefined) {
+      throw new Error("fixture");
+    }
+    const [item] = planLane([gym], TUE, 300);
+    if (item === undefined) throw new Error("fixture");
+    expect(cardName(item.block, item.segment, TUE)).toBe(
+      "Gym, 11:00 to 12:30, partly done",
+    );
   });
 });
 

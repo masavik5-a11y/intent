@@ -172,8 +172,9 @@ recurrence, notifications.
 - [x] Done, Partly, Skip and Undo from the now panel and block detail, with optimistic
       updates. Partly offers quick choices; Skip offers optional reasons. Between
       blocks, the block that ended last waits in the now panel to be marked.
-- [ ] Actual lane: done and partly blocks at their actual times, the current block as a
-      growing bar, skipped blocks outlined in the plan lane.
+- [x] Actual lane: done and partly blocks at their actual times, the current block as a
+      growing bar, skipped blocks outlined in the plan lane. Unplanned entries show
+      with a "+"; opening them comes with the next slice.
 - [ ] Log an unplanned entry (Drift first, `L`), defaulting to "from the last entry until
       now". Edit actual times on any block.
 - [ ] Untracked time drawn as a hatch that grows with the now line; day totals (on

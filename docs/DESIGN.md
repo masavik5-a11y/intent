@@ -112,12 +112,15 @@ line if there is room, and the time range.
 | Planned, future | Tinted fill, normal text | — |
 | Current | Solid fill, white text, subtle pulse on the icon | Growing solid bar from the start to the now line |
 | Done | Tinted fill, check icon, slightly muted | Tinted fill at actual times |
-| Partly | Tinted fill, half-check icon | Tinted fill at actual times, label "1h 45m of 3h" |
-| Skipped | Outline only, struck-through title | Nothing |
+| Partly | Tinted fill, half-filled circle icon | Tinted fill at actual times, label "1h 45m of 3h · 09:30–11:15" (the amount first, so a narrow lane cuts the range) |
+| Skipped | Dashed outline only, struck-through title | Nothing |
 | Unplanned | — | Tinted fill with a small "+" marker |
 | Drift | — | Drift colour, label "Drift · phone" |
 
-Never rely on colour alone: every state also has an icon or a text label.
+Never rely on colour alone: every state also has an icon or a text label. A block
+marked done or skipped early stops being "current": its card takes its new state and
+the growing bar stops. The growing bar is exactly what Done would record at that
+minute (`liveActual` in `shared/lanes.ts`).
 
 ## 4a. The now panel and urgency
 

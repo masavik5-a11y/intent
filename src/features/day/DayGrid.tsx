@@ -9,7 +9,7 @@ import {
 import { MINUTES_PER_DAY } from "@shared/time";
 import { cn } from "@/lib/utils";
 import { BlockCard } from "./BlockCard";
-import { hourMarks } from "./dayView";
+import { hourMarks, type CardState } from "./dayView";
 
 /** Room for the hour labels left of the lanes. */
 const GUTTER_PX = 44;
@@ -27,11 +27,13 @@ export interface GridCard {
   /** Grid minutes. */
   top: number;
   height: number;
-  current: boolean;
+  state: CardState;
   /** Its detail is open. */
   selected: boolean;
   cutTop: boolean;
   cutBottom: boolean;
+  /** Opens block detail when pressed. */
+  openable: boolean;
 }
 
 interface DayGridProps {
@@ -43,6 +45,8 @@ interface DayGridProps {
   /** Phone: fixed scale and scrolling. Wider: Fit, the waking day fills the height. */
   isPhone: boolean;
   cards: readonly GridCard[];
+  /** What happened: the actual lane (DESIGN.md section 3). */
+  actualCards: readonly GridCard[];
   /** Grid position of the now line, on today only. */
   nowPosition: number | null;
   /** From this grid position on, the actual lane is still to come and dimmed. */
@@ -65,6 +69,7 @@ export function DayGrid({
   sleepMin,
   isPhone,
   cards,
+  actualCards,
   nowPosition,
   futureFrom,
   settled,
@@ -187,40 +192,31 @@ export function DayGrid({
               onEmptySlot?.(pxToMinutes(event.clientY - top, pxPerMin));
             }}
           >
-            {cards.map((card) => {
-              const box = pxBox(card.top, card.height, pxPerMin);
-              return (
-                <div key={card.key} role="listitem">
-                  <BlockCard
-                    title={card.title}
-                    focus={card.focus}
-                    icon={card.icon}
-                    colorKey={card.colorKey}
-                    time={card.time}
-                    name={card.name}
-                    top={box.top}
-                    height={box.height}
-                    current={card.current}
-                    selected={card.selected}
-                    cutTop={card.cutTop}
-                    cutBottom={card.cutBottom}
-                    onOpen={
-                      onOpenCard === undefined
-                        ? undefined
-                        : () => onOpenCard(card.key)
-                    }
-                  />
-                </div>
-              );
-            })}
+            {cards.map((card) => (
+              <GridBlock
+                key={card.key}
+                card={card}
+                pxPerMin={pxPerMin}
+                onOpenCard={onOpenCard}
+              />
+            ))}
           </div>
-          <div className="relative flex-1" aria-label="Actual">
+          <div className="relative flex-1" aria-label="Actual" role="list">
             {futureFrom !== null && futureFrom < MINUTES_PER_DAY && (
               <div
+                aria-hidden="true"
                 className="absolute inset-x-0 bottom-0 rounded-t-block bg-muted/50"
                 style={{ top: Math.round(Math.max(futureFrom, 0) * pxPerMin) }}
               />
             )}
+            {actualCards.map((card) => (
+              <GridBlock
+                key={card.key}
+                card={card}
+                pxPerMin={pxPerMin}
+                onOpenCard={onOpenCard}
+              />
+            ))}
           </div>
         </div>
 
@@ -237,6 +233,42 @@ export function DayGrid({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/** One card placed in a lane, in pixels. */
+function GridBlock({
+  card,
+  pxPerMin,
+  onOpenCard,
+}: {
+  card: GridCard;
+  pxPerMin: number;
+  onOpenCard: ((key: string) => void) | undefined;
+}) {
+  const box = pxBox(card.top, card.height, pxPerMin);
+  return (
+    <div role="listitem">
+      <BlockCard
+        title={card.title}
+        focus={card.focus}
+        icon={card.icon}
+        colorKey={card.colorKey}
+        time={card.time}
+        name={card.name}
+        top={box.top}
+        height={box.height}
+        state={card.state}
+        selected={card.selected}
+        cutTop={card.cutTop}
+        cutBottom={card.cutBottom}
+        onOpen={
+          onOpenCard === undefined || !card.openable
+            ? undefined
+            : () => onOpenCard(card.key)
+        }
+      />
     </div>
   );
 }
