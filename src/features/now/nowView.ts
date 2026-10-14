@@ -124,21 +124,23 @@ export function nowView(
   };
 }
 
-/** The unmarked block whose plan ended most recently, at or before `now`. */
+/**
+ * The block whose plan ended last, at or before `now`, if it is not marked yet. Only
+ * that one: an older unmarked block (yesterday's, say) waits for the evening review.
+ */
 function lastEndedUnmarked(
   lane: ReturnType<typeof planLaneOf<PlannedBlockDoc>>,
   now: LocalMoment,
 ): PlannedBlockDoc | undefined {
   let latest: { block: PlannedBlockDoc; end: number } | undefined;
   for (const entry of lane) {
-    if (entry.block.status !== "planned") continue;
     const { end } = spanBounds(now.date, entry);
     if (end > now.minute) continue;
     if (latest === undefined || end > latest.end) {
       latest = { block: entry.block, end };
     }
   }
-  return latest?.block;
+  return latest?.block.status === "planned" ? latest.block : undefined;
 }
 
 /** "Gym ended at 12:30", for the block left to mark between blocks. */

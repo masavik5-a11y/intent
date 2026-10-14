@@ -669,6 +669,24 @@ describe("Start the minimum (PRD V3)", () => {
     });
   });
 
+  test("never on a block already marked: that would erase what happened", () => {
+    const marked: TestBlock[] = [
+      { ...write, status: "done", actualStartMin: 780, actualDurationMin: 60 },
+      {
+        ...write,
+        status: "partial",
+        actualStartMin: 780,
+        actualDurationMin: 20,
+      },
+      { ...write, status: "skipped" },
+    ];
+    for (const block of marked) {
+      expect(applyStatus(block, { type: "startMinimum" }, [], evening)).toEqual(
+        { problem: "MARKED" },
+      );
+    }
+  });
+
   test("every change keeps the block's shape", () => {
     const actions: StatusAction[] = [
       { type: "startMinimum" },

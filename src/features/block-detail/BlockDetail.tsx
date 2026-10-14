@@ -91,6 +91,19 @@ export function BlockDetail({
 }: BlockDetailProps) {
   const ids = useId();
   const [draft, setDraft] = useState(() => draftOf(block));
+  // When what happened changes while the form is open (Undo then Partly here, or a
+  // mark from the other device), the typed actual times describe the old mark: drop
+  // them, so the fields show the new one and Save does not write the old one back.
+  const actualKey = `${block.actualStartMin}/${block.actualDurationMin}`;
+  const [seenActual, setSeenActual] = useState(actualKey);
+  if (actualKey !== seenActual) {
+    setSeenActual(actualKey);
+    setDraft((current) => ({
+      ...current,
+      actualClockMin: null,
+      actualDurationMin: null,
+    }));
+  }
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);

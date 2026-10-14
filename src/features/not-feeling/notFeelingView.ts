@@ -37,6 +37,8 @@ export function notFeelingView(
   compass: { vision?: string; antiVision?: string } | null,
 ): NotFeelingView {
   const intent = effectiveIntent(block, activity ?? null);
+  const compassEmpty =
+    !present(compass?.vision) && !present(compass?.antiVision);
   const candidates: (NotFeelingSection | null)[] = [
     intent.ifThen && {
       key: "ifThen",
@@ -50,12 +52,15 @@ export function notFeelingView(
       text: intent.minimumVersion.text,
       voice: false,
     },
-    intent.costOfSkipping && {
-      key: "costOfSkipping",
-      heading: "If I keep skipping this",
-      text: intent.costOfSkipping.text,
-      voice: false,
-    },
+    // With no compass written, the hard look waits too (DESIGN.md section 4b).
+    compassEmpty || intent.costOfSkipping === null
+      ? null
+      : {
+          key: "costOfSkipping",
+          heading: "If I keep skipping this",
+          text: intent.costOfSkipping.text,
+          voice: false,
+        },
     present(compass?.antiVision)
       ? {
           key: "antiVision",
@@ -82,6 +87,6 @@ export function notFeelingView(
     sections: candidates.filter(
       (section): section is NotFeelingSection => section !== null,
     ),
-    compassEmpty: !present(compass?.vision) && !present(compass?.antiVision),
+    compassEmpty,
   };
 }

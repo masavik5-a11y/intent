@@ -120,6 +120,28 @@ describe("defaultEntrySpan", () => {
     ).toEqual({ start: at(TUE, start), durationMin: length });
   });
 
+  test("a click just below an entry that ends off the quarter starts where it ends", () => {
+    expect(
+      defaultEntrySpan({
+        ...base,
+        now: at(TUE, "10:40"),
+        blocks: [done("Gym", "09:00", 70)], // until 10:10
+        position: 312, // 10:12, floored to 10:00
+      }),
+    ).toEqual({ start: at(TUE, "10:10"), durationMin: 30 });
+  });
+
+  test("an entry recorded past now still counts as the last one", () => {
+    // Partly 30 at 10:20 on a block from 10:00 records 10:00-10:30.
+    expect(
+      defaultEntrySpan({
+        ...base,
+        now: at(TUE, "10:21"),
+        blocks: [done("Morning", "09:00", 60), done("Gym", "10:00", 30)],
+      }),
+    ).toEqual({ start: at(TUE, "10:30"), durationMin: 5 });
+  });
+
   test("a click snaps to the quarter hour", () => {
     expect(
       defaultEntrySpan({

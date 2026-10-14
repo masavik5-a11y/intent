@@ -289,6 +289,7 @@ const STATUS_ERRORS: Record<StatusProblem, ErrorCode> = {
   NOT_STARTED: "NOT_STARTED",
   NO_ROOM: "NO_ROOM",
   INVALID_TIME: "INVALID_TIME",
+  MARKED: "INVALID_INPUT",
 };
 
 export async function remove(

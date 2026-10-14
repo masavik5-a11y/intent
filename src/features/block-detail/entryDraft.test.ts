@@ -87,6 +87,22 @@ describe("entryDraft", () => {
     });
   });
 
+  test("moving an early-morning entry past the grid start moves it minutes, not a day", () => {
+    // Wed 04:30 sits at the bottom of Tuesday's grid; 05:10 is forty minutes later.
+    const early = {
+      ...phone,
+      date: WED,
+      actualStartMin: 270,
+      actualDurationMin: 60,
+    };
+    const draft = { ...entryDraftOf(early), startClockMin: 310 };
+    expect(entryStart(early, draft, 300)).toEqual({ date: WED, minute: 310 });
+    expect(entryUpdateArgs(early, draft, 300, [drift])).toEqual({
+      blockId: "e1",
+      actualStartMin: 310,
+    });
+  });
+
   test.each([
     [{ startClockMin: 782 }, "Use a start time in 5-minute steps."],
     [{ durationMin: 0 }, "Use a length from 5 minutes to 24 hours."],

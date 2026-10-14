@@ -88,7 +88,14 @@ export function StatusActions({
             <div
               className="flex flex-col gap-2"
               onKeyDown={(event) => {
-                if (event.key !== "Enter") return;
+                // Only from the text field: Enter on a preset length chip must
+                // choose that length, not save the one typed before.
+                if (
+                  event.key !== "Enter" ||
+                  !(event.target instanceof HTMLInputElement)
+                ) {
+                  return;
+                }
                 event.preventDefault();
                 onAction({ type: "partial", minutes: typed });
               }}

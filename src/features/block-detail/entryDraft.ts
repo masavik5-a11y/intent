@@ -1,5 +1,11 @@
 import { gridDayOf, momentOnGrid } from "@shared/grid";
-import { isValidDuration, isValidMinute, type LocalMoment } from "@shared/time";
+import { minuteFrom } from "@shared/lanes";
+import {
+  addDays,
+  isValidDuration,
+  isValidMinute,
+  type LocalMoment,
+} from "@shared/time";
 import type { Doc, Id } from "@/lib/api";
 
 // The form for an unplanned entry (PRD A2, A3, A5): what it was, its category, when,
@@ -25,20 +31,27 @@ export function entryDraftOf(entry: Doc<"blocks">): EntryDraft {
 }
 
 /**
- * Where the draft's start puts the entry: read on the grid of the day the entry begins
- * in now, so 01:00 on a grid that starts at 05:00 is the next calendar day, at the
- * bottom (shared/grid.ts, momentOnGrid).
+ * Where the draft's start puts the entry: the reading of the typed clock time nearest
+ * to where the entry starts now, on its own grid or the grid before or after
+ * (shared/grid.ts, momentOnGrid). So 01:00 for an entry at 13:00 is the next calendar
+ * day, at the bottom of the same grid, and 05:10 for an entry at 04:30 is forty
+ * minutes later, not most of a day earlier. A tie keeps the entry's own grid.
  */
 export function entryStart(
   entry: Doc<"blocks">,
   draft: EntryDraft,
   gridStartMin: number,
 ): LocalMoment {
-  const grid = gridDayOf(
-    { date: entry.date, minute: entry.actualStartMin ?? 0 },
-    gridStartMin,
-  );
-  return momentOnGrid(grid, gridStartMin, draft.startClockMin);
+  const current = entry.actualStartMin ?? 0;
+  const grid = gridDayOf({ date: entry.date, minute: current }, gridStartMin);
+  let best: { moment: LocalMoment; distance: number } | null = null;
+  for (const day of [grid, addDays(grid, -1), addDays(grid, 1)]) {
+    const moment = momentOnGrid(day, gridStartMin, draft.startClockMin);
+    const distance = Math.abs(minuteFrom(entry.date, moment) - current);
+    if (best === null || distance < best.distance) best = { moment, distance };
+  }
+  // The loop runs three times, so best is always set.
+  return best?.moment ?? momentOnGrid(grid, gridStartMin, draft.startClockMin);
 }
 
 /** What is wrong with the draft, in the words the form shows, or null. */

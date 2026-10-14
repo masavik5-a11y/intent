@@ -88,13 +88,12 @@ describe("notFeelingView (PRD V2, DESIGN.md 4b)", () => {
     ]);
   });
 
-  test("an empty compass is offered for writing", () => {
+  test("an empty compass: the if-then and minimum only, and an offer to write it", () => {
     const view = notFeelingView(gymBlock, gym, null);
     expect(view.compassEmpty).toBe(true);
     expect(view.sections.map((section) => section.key)).toEqual([
       "ifThen",
       "minimumVersion",
-      "costOfSkipping",
     ]);
   });
 });

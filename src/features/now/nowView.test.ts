@@ -174,7 +174,22 @@ describe("nowView with marked blocks (M2)", () => {
       item.title === "Lunch" ? { ...item, status: "skipped" as const } : item,
     );
     const view = nowView(marked, [gym], [body], { date: TUE, minute: 900 });
-    expect(view.toMark?.block.title).toBe("Gym");
+    expect(view.toMark).toBeNull();
+  });
+
+  test("yesterday's unmarked block is not offered after last night's sleep", () => {
+    const yesterday = [
+      block("Read", TUE, 1200, 30), // never marked
+      block("Sleep", TUE, 1380, 480, {
+        status: "done",
+        actualStartMin: 1380,
+        actualDurationMin: 480,
+      }),
+      block("Work", WED, 480, 120),
+    ];
+    const view = nowView(yesterday, [gym], [body], { date: WED, minute: 450 });
+    expect(view.current).toBeNull();
+    expect(view.toMark).toBeNull();
   });
 
   test("nothing to mark while a block runs", () => {

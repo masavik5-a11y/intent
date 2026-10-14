@@ -384,10 +384,11 @@ export interface StatusFields {
 /**
  * Why a status change cannot be made: the block is an unplanned entry (it is deleted,
  * not unmarked); it has not started, so it cannot be done yet; the actual lane has no
- * room for it; or Partly was given a length that is not one.
+ * room for it; Partly was given a length that is not one; or the minimum was asked
+ * for on a block already marked.
  */
 export type StatusProblem =
-  "UNPLANNED" | "NOT_STARTED" | "NO_ROOM" | "INVALID_TIME";
+  "UNPLANNED" | "NOT_STARTED" | "NO_ROOM" | "INVALID_TIME" | "MARKED";
 
 /**
  * The fields Done, Partly, Skip or Undo writes on a block (PRD A1, A4, and section 7).
@@ -441,6 +442,8 @@ export function applyStatus(
         },
       };
     case "startMinimum":
+      // Only before it is marked: on a done block it would erase what happened.
+      if (block.status !== "planned") return { problem: "MARKED" };
       return {
         fields: { ...cleared, status: "planned", minimumChosen: true },
       };

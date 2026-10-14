@@ -40,8 +40,8 @@ export interface EntrySpan {
 /**
  * Where a new entry starts and how long it lasts before anything is typed.
  *
- * - From a click in the actual lane: that slot, for 30 minutes, ending sooner at the
- *   next thing recorded or, today, at now.
+ * - From a click in the actual lane: that slot (or where an entry covering it ends),
+ *   for 30 minutes, ending sooner at the next thing recorded or, today, at now.
  * - Today otherwise: "from the last entry until now". The last entry is the latest
  *   end of anything recorded, or the start of the running block's bar (its time so
  *   far is what the entry would describe). With nothing before now, the last 30
@@ -82,7 +82,12 @@ export function defaultEntrySpan({
   });
 
   if (position !== null) {
-    const start = slotStart(position, CLICK_SNAP_MIN);
+    let start = slotStart(position, CLICK_SNAP_MIN);
+    // The quarter hour clicked may begin inside an entry that ends off the quarter
+    // (10:12 below one that ended at 10:10): start where that entry ends.
+    for (const entry of [...recorded].sort((a, b) => a.start - b.start)) {
+      if (entry.start <= start && start < entry.end) start = entry.end;
+    }
     let end = start + DEFAULT_ENTRY_MIN;
     for (const entry of recorded) {
       if (entry.start > start && entry.start < end) end = entry.start;
@@ -93,8 +98,12 @@ export function defaultEntrySpan({
 
   if (nowAt !== null) {
     const live = liveActualLane(blocks, now).find((entry) => entry.live);
+    // Every entry that began before now counts, even one recorded past now (Partly
+    // with more minutes than have gone by): the new entry starts after it.
     const boundaries = [
-      ...recorded.map((entry) => entry.end).filter((end) => end <= nowAt),
+      ...recorded
+        .filter((entry) => entry.start < nowAt)
+        .map((entry) => entry.end),
       ...(live === undefined ? [] : [toPosition(live)]),
     ].filter((at) => at >= 0);
     const start =
