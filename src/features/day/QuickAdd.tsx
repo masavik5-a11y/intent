@@ -6,6 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { SheetCloseButton } from "@/components/SheetCloseButton";
 import {
   Sheet,
   SheetContent,
@@ -35,6 +36,7 @@ export function QuickAdd({ open, isPhone, onClose, ...form }: QuickAddProps) {
         <SheetContent
           side="bottom"
           className="max-h-[90dvh] gap-0 overflow-y-auto rounded-t-panel"
+          showCloseButton={false}
         >
           <SheetHeader className="px-4 pt-4">
             <SheetTitle className="text-lg">{TITLE}</SheetTitle>
@@ -43,6 +45,7 @@ export function QuickAdd({ open, isPhone, onClose, ...form }: QuickAddProps) {
           <div className="px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
             {open && <QuickAddForm {...form} />}
           </div>
+          <SheetCloseButton />
         </SheetContent>
       </Sheet>
     );

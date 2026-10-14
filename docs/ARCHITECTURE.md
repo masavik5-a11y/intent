@@ -388,6 +388,10 @@ functions to validate and to apply. One implementation, two callers.
 - **URL state**: the viewed date and the selected block id are route and search params.
 - **Local UI state**: React state inside the feature. Add a small store only when two
   distant features truly share ephemeral state.
+- **Device preferences** live in `localStorage`, not in Convex: so far only the theme
+  (`src/lib/theme.ts`, key `intent-theme`), so the PC can be dark while the phone
+  follows its system. `index.html` applies it before the first paint with a copy of
+  the same logic.
 - **Mutations** that the user feels (status taps, drags, quick add) use optimistic
   updates built from the `shared/` functions, so the UI responds instantly.
 - **Feature structure**: `features/day/DayScreen.tsx` (container: queries, mutations,
@@ -689,6 +693,15 @@ one; delete an entry when it stops being true.
   sheet's title (`tabIndex={-1}`) when the sheet shows something rather than asks for
   typing; see `ActivitiesScreen`. Closing such a sheet goes back in history when it
   can (`useCanGoBack`), so the Android back gesture and Cancel agree.
+- A sheet's generated close button is 28 px. Pass `showCloseButton={false}` and put
+  `<SheetCloseButton />` last in the content (44 px on the phone; last, so a form's
+  first field still gets the initial focus).
+- A `MediaQueryList` that nothing references can be garbage collected with its change
+  listener: keep it in a variable (`systemScheme` in `src/lib/theme.ts`).
+- While the Claude window is behind another one, the Browser pane draws no frames:
+  screenshots time out, clicks can be dropped, animations stop at their start state
+  and media-query change events do not fire. Read the DOM instead, or ask Filip to
+  bring the window forward.
 - Shared form pieces in `src/components/`: `DurationInput` (typed or preset lengths,
   snapped to 5 minutes), `TimeInput` (24-hour), `CategoryPicker`, `Field` and `AppIcon`
   (an icon by its stored name). Save failures read through `saveErrorMessage` in

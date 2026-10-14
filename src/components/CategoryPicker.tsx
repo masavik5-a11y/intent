@@ -30,7 +30,7 @@ export function CategoryPicker({
               data-color={item.colorKey}
               onClick={() => onChange(item)}
               className={cn(
-                "flex h-9 items-center gap-1.5 rounded-full border-2 bg-key-tint px-3 text-sm text-key-ink outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
+                "flex h-11 items-center gap-1.5 rounded-full border-2 bg-key-tint px-3 text-sm text-key-ink outline-none transition-colors sm:h-9 focus-visible:ring-3 focus-visible:ring-ring/50",
                 item._id === value ? "border-key-solid" : "border-transparent",
               )}
             >

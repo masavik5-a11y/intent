@@ -73,7 +73,7 @@ export function DurationInput({
             aria-pressed={minutes === value}
             onClick={() => onChange(minutes)}
             className={cn(
-              "h-8 rounded-full border px-3 text-sm outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
+              "h-11 rounded-full border px-3 text-sm sm:h-8 outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
               minutes === value
                 ? "border-foreground bg-foreground text-background"
                 : "border-border hover:bg-muted",

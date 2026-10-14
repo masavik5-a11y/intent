@@ -24,15 +24,26 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
     <title>Intent</title>
     <script>
-      // Follow the system theme before first paint, so there is no flash.
-      // The manual switch (PRD S5) is added in M1.
+      // Apply the device's theme choice before first paint, so there is no flash.
+      // A copy of applyTheme in src/lib/theme.ts, which takes over once the app runs:
+      // keep the two in step.
       (function () {
-        var query = window.matchMedia("(prefers-color-scheme: dark)");
-        function apply() {
-          document.documentElement.classList.toggle("dark", query.matches);
+        var choice = "system";
+        try {
+          var stored = localStorage.getItem("intent-theme");
+          if (stored === "light" || stored === "dark") choice = stored;
+        } catch (e) {}
+        var systemDark = window.matchMedia(
+          "(prefers-color-scheme: dark)",
+        ).matches;
+        var theme =
+          choice === "system" ? (systemDark ? "dark" : "light") : choice;
+        document.documentElement.classList.toggle("dark", theme === "dark");
+        if (choice !== "system") {
+          var colour = theme === "dark" ? "#0a0a0a" : "#ffffff";
+          var metas = document.querySelectorAll('meta[name="theme-color"]');
+          for (var i = 0; i < metas.length; i++) metas[i].content = colour;
         }
-        apply();
-        query.addEventListener("change", apply);
       })();
     </script>
   </head>

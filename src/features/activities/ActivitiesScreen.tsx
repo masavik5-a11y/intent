@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SheetCloseButton } from "@/components/SheetCloseButton";
 import {
   Sheet,
   SheetContent,
@@ -116,6 +117,7 @@ export function ActivitiesScreen({
           // Viewing an activity should not pop up the phone's keyboard: focus the
           // title. A new one focuses its name, which is typed next anyway.
           initialFocus={editing === undefined ? true : titleRef}
+          showCloseButton={false}
         >
           <SheetHeader className="px-4 pt-4 sm:px-6">
             <SheetTitle
@@ -154,6 +156,7 @@ export function ActivitiesScreen({
               }
             />
           )}
+          <SheetCloseButton />
         </SheetContent>
       </Sheet>
     </div>

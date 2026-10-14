@@ -2,6 +2,7 @@ import { useEffect, useRef, type ComponentProps } from "react";
 import { XIcon } from "lucide-react";
 import { formatTimeRange } from "@shared/time";
 import { Button } from "@/components/ui/button";
+import { SheetCloseButton } from "@/components/SheetCloseButton";
 import {
   Sheet,
   SheetContent,
@@ -84,6 +85,7 @@ export function BlockDetailPanel({ wide, ...detail }: BlockDetailPanelProps) {
         className="w-full gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-md"
         // Looking at a block should not pop up the phone's keyboard.
         initialFocus={titleRef}
+        showCloseButton={false}
       >
         <SheetHeader className="px-4 pt-4 sm:px-5">
           <SheetTitle
@@ -96,6 +98,7 @@ export function BlockDetailPanel({ wide, ...detail }: BlockDetailPanelProps) {
           <SheetDescription>{range}</SheetDescription>
         </SheetHeader>
         {form}
+        <SheetCloseButton />
       </SheetContent>
     </Sheet>
   );

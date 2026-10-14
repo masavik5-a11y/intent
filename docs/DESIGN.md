@@ -253,7 +253,7 @@ in both themes, that ink on tint and white on solid reach 4.5:1 and that the sol
 | **Week** | Seven days (P6). | Compact columns, same colours. Past days show both lanes as two thin columns. |
 | **Month** | Find and add future events (P7). | Standard month calendar. Recurring blocks are hidden; other blocks show as coloured dots or short labels. |
 | **Insights** | Looking back (R4). | A few plain charts, 7 and 30 day ranges. |
-| **Settings** | Preferences. | Notification times and toggles, enable notifications on this device, theme, grid start, zoom, categories, sign out. |
+| **Settings** | Preferences. | Notification times and toggles, enable notifications on this device, theme, grid start, zoom, categories, sign out. The theme is "Like this device", Light or Dark, chosen per device (M1). |
 | **Sign in** | One account. | Email and password. |
 
 ## 8. Keyboard (desktop)

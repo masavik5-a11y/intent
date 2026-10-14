@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { Ellipsis, Plus } from "lucide-react";
+import { SheetCloseButton } from "@/components/SheetCloseButton";
 import {
   Sheet,
   SheetContent,
@@ -77,7 +78,11 @@ export function BottomBar({ className }: { className?: string }) {
           <Ellipsis className="size-5" aria-hidden="true" />
           More
         </SheetTrigger>
-        <SheetContent side="bottom" className="rounded-t-panel">
+        <SheetContent
+          side="bottom"
+          className="rounded-t-panel"
+          showCloseButton={false}
+        >
           <SheetHeader>
             <SheetTitle>More</SheetTitle>
             <SheetDescription className="sr-only">
@@ -109,6 +114,7 @@ export function BottomBar({ className }: { className?: string }) {
               );
             })}
           </ul>
+          <SheetCloseButton />
         </SheetContent>
       </Sheet>
     </nav>

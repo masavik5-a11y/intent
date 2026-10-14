@@ -139,7 +139,7 @@ Covers T1–T7 (plan lane), I1–I4, U1, U2, V1, P4, S1, S5.
       last edited.
 - [x] First-run setup: wake and sleep times, first three activities with their why and
       cost of skipping, then an invitation to write the compass (skippable).
-- [ ] Phone layout for everything above. Light and dark themes with a manual switch.
+- [x] Phone layout for everything above. Light and dark themes with a manual switch.
 
 **Done when:** you can plan tomorrow completely on the PC, see it on the phone within a
 second, an overlapping block is refused with a clear message, a sleep block crossing

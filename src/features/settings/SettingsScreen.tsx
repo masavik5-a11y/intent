@@ -3,8 +3,15 @@ import { useAuthActions } from "@convex-dev/auth/react";
 import { useQuery } from "convex/react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
+import {
+  setThemeChoice,
+  THEME_CHOICES,
+  useThemeChoice,
+  type ThemeChoice,
+} from "@/lib/theme";
+import { cn } from "@/lib/utils";
 
-/** Settings. For now only the account; preferences arrive with their milestones. */
+/** Settings. The account and the theme; other preferences arrive with their milestones. */
 export function SettingsScreen() {
   const viewer = useQuery(api.users.viewer);
   const { signOut } = useAuthActions();
@@ -17,13 +24,55 @@ export function SettingsScreen() {
   }
 
   return (
-    <div className="flex max-w-md flex-col gap-6 p-6">
+    <div className="flex max-w-md flex-col gap-8 p-4 sm:p-6">
       <h1 className="text-xl font-medium">Settings</h1>
+      <AppearanceSection />
       <AccountSection
         email={viewer?.email ?? null}
         onSignOut={() => void handleSignOut()}
       />
     </div>
+  );
+}
+
+const THEME_LABELS: Record<ThemeChoice, string> = {
+  system: "Like this device",
+  light: "Light",
+  dark: "Dark",
+};
+
+function AppearanceSection() {
+  const choice = useThemeChoice();
+  return (
+    <section className="flex flex-col gap-3">
+      <h2 className="text-lg font-medium">Appearance</h2>
+      <div
+        role="radiogroup"
+        aria-label="Theme"
+        className="flex w-full rounded-block border p-1 sm:w-auto sm:self-start"
+      >
+        {THEME_CHOICES.map((option) => (
+          <button
+            key={option}
+            type="button"
+            role="radio"
+            aria-checked={option === choice}
+            onClick={() => setThemeChoice(option)}
+            className={cn(
+              "h-11 flex-1 rounded-[calc(var(--radius-block)-4px)] px-3 text-sm outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-8 sm:flex-none",
+              option === choice
+                ? "bg-foreground text-background"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {THEME_LABELS[option]}
+          </button>
+        ))}
+      </div>
+      <p className="text-sm text-muted-foreground">
+        Chosen for this device only.
+      </p>
+    </section>
   );
 }
 
