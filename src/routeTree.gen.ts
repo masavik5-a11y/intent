@@ -9,9 +9,9 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as SigninRouteImport } from './routes/signin'
+import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppActivitiesRouteImport } from './routes/_app/activities'
 import { Route as AppCompassRouteImport } from './routes/_app/compass'
 import { Route as AppInsightsRouteImport } from './routes/_app/insights'
@@ -20,11 +20,6 @@ import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppWeekRouteImport } from './routes/_app/week'
 import { Route as AppDayDateRouteImport } from './routes/_app/day.$date'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AppRoute = AppRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
@@ -33,6 +28,11 @@ const SigninRoute = SigninRouteImport.update({
   id: '/signin',
   path: '/signin',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppIndexRoute = AppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppActivitiesRoute = AppActivitiesRouteImport.update({
   id: '/activities',
@@ -71,7 +71,7 @@ const AppDayDateRoute = AppDayDateRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof AppIndexRoute
   '/signin': typeof SigninRoute
   '/activities': typeof AppActivitiesRoute
   '/compass': typeof AppCompassRoute
@@ -82,7 +82,6 @@ export interface FileRoutesByFullPath {
   '/day/$date': typeof AppDayDateRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
   '/signin': typeof SigninRoute
   '/activities': typeof AppActivitiesRoute
   '/compass': typeof AppCompassRoute
@@ -90,11 +89,11 @@ export interface FileRoutesByTo {
   '/month': typeof AppMonthRoute
   '/settings': typeof AppSettingsRoute
   '/week': typeof AppWeekRoute
+  '/': typeof AppIndexRoute
   '/day/$date': typeof AppDayDateRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/signin': typeof SigninRoute
   '/_app/activities': typeof AppActivitiesRoute
@@ -103,6 +102,7 @@ export interface FileRoutesById {
   '/_app/month': typeof AppMonthRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/week': typeof AppWeekRoute
+  '/_app/': typeof AppIndexRoute
   '/_app/day/$date': typeof AppDayDateRoute
 }
 export interface FileRouteTypes {
@@ -119,7 +119,6 @@ export interface FileRouteTypes {
     | '/day/$date'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
     | '/signin'
     | '/activities'
     | '/compass'
@@ -127,10 +126,10 @@ export interface FileRouteTypes {
     | '/month'
     | '/settings'
     | '/week'
+    | '/'
     | '/day/$date'
   id:
     | '__root__'
-    | '/'
     | '/_app'
     | '/signin'
     | '/_app/activities'
@@ -139,24 +138,17 @@ export interface FileRouteTypes {
     | '/_app/month'
     | '/_app/settings'
     | '/_app/week'
+    | '/_app/'
     | '/_app/day/$date'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   SigninRoute: typeof SigninRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_app': {
       id: '/_app'
       path: ''
@@ -170,6 +162,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/signin'
       preLoaderRoute: typeof SigninRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_app/': {
+      id: '/_app/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/activities': {
       id: '/_app/activities'
@@ -230,6 +229,7 @@ interface AppRouteChildren {
   AppMonthRoute: typeof AppMonthRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppWeekRoute: typeof AppWeekRoute
+  AppIndexRoute: typeof AppIndexRoute
   AppDayDateRoute: typeof AppDayDateRoute
 }
 
@@ -240,13 +240,13 @@ const AppRouteChildren: AppRouteChildren = {
   AppMonthRoute: AppMonthRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppWeekRoute: AppWeekRoute,
+  AppIndexRoute: AppIndexRoute,
   AppDayDateRoute: AppDayDateRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   SigninRoute: SigninRoute,
 }

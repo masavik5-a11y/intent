@@ -120,6 +120,10 @@ This is the decision most likely to cause bugs if it is done loosely, so it is f
   in the notification dispatcher. Everything in between works on `DateKey` and minutes.
 - "Now" in the UI comes from one hook, `useNow()`, which ticks once a minute and returns
   `{ date: DateKey, minute: number }`. Components never call `new Date()` themselves.
+- "Today" in the UI is the day whose grid holds now: `gridDayOf(now, gridStartMin)`
+  (`useToday()` in `src/lib/useToday.ts`). Until the grid's start, 05:00 by default,
+  the app stays on the day that is ending; blocks are still stored on their calendar
+  date.
 - The server needs the user's zone only to answer "what is the local date and minute
   right now?" for notifications. It uses `settings.timeZone` (IANA name, saved from the
   device) with `Intl.DateTimeFormat(..., { timeZone }).formatToParts(now)`.
@@ -602,6 +606,7 @@ Things assumed here that must be confirmed in the milestone that depends on them
 | 2026-10-14 | Index names list every field: `by_userId`, `by_userId_and_date`. | Convex's guidelines (`convex/_generated/ai/guidelines.md`) require it; the draft schema above was renamed before any table exists. |
 | 2026-10-14 | Wake and sleep times live in `settings` (`wakeMin`, `sleepMin`). | First-run setup asks for them, and the grid's Fit zoom needs the waking range. |
 | 2026-10-14 | Date and colour-key fields are typed in the schema (`vDateKey`, `vColorKey`). | The brand reaches every document and argument; the model validates the value. |
+| 2026-10-14 | Between midnight and the grid's start, "Today" is still the day that is ending (Filip's choice). | The grid runs 05:00 to 05:00, so only that day shows the now line after midnight. |
 
 ## 17. Implementation notes
 
@@ -658,9 +663,14 @@ one; delete an entry when it stops being true.
   `signInSearchFor` in `src/features/auth/redirect.ts`).
 - `/day/$date` validates the date in `beforeLoad` and hands it to the screen as a
   `DateKey` through route context: `Route.useRouteContext().date`.
-- The clock is read only in `src/lib/now.ts` (`readNow`); ESLint rejects `Date.now()` and
-  `new Date()` anywhere else in `src/` and in `shared/`. The `useNow()` hook planned for
-  M1 belongs in that file.
+- The clock is read only in `src/lib/now.ts` (`readNow`, and `useNow()`, one shared
+  minute ticker that also catches up when the app returns to the foreground); ESLint
+  rejects `Date.now()` and `new Date()` anywhere else in `src/` and in `shared/`.
+- `/` is `src/routes/_app/index.tsx`: it waits for the settings, because which day is
+  today depends on the grid's start, then redirects to `/day/<today>`.
+- Editing a file in two steps while Vite runs can leave the browser holding the
+  in-between module under a `?t=` address, even across reloads. `touch` the file to
+  make Vite serve it fresh.
 - Signed-in screens render only while there is a session, so their queries may call
   `requireUser` freely. Import the backend API from `@/lib/api`.
 - A sheet opened from the URL (not from its trigger) gets Base UI's default focus, the

@@ -125,7 +125,7 @@ Covers T1–T7 (plan lane), I1–I4, U1, U2, V1, P4, S1, S5.
 - [x] Activities screen: list by category, create, edit, archive. All intent fields
       (why, how, if-then, minimum version, cost of skipping, default done-when), grouped
       as "Intent" and "For hard days"; the pressure switch, default duration, notify switch.
-- [ ] Day screen: header with date navigation, hour grid, plan lane with block cards, an
+- [x] Day screen: header with date navigation, hour grid, plan lane with block cards, an
       empty actual lane, now line, `useNow()`. The date is in the URL.
 - [ ] Quick add (button, `N`, click on an empty slot). Block detail panel: edit, delete,
       inherited intent shown as inherited, per-block overrides, focus, done-when.

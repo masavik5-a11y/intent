@@ -1,19 +1,12 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { formatDayLabel, parseDateKey } from "@shared/time";
-import { ScreenPlaceholder } from "@/features/shell/ScreenPlaceholder";
-import { readNow } from "@/lib/now";
+import { parseDateKey } from "@shared/time";
+import { DayScreen } from "@/features/day/DayScreen";
 
 export const Route = createFileRoute("/_app/day/$date")({
   // The date lives in the URL (PRD T6). Anything that is not a real day goes to today.
   beforeLoad: ({ params }) => {
     const date = parseDateKey(params.date);
-    if (date === null) {
-      throw redirect({
-        to: "/day/$date",
-        params: { date: readNow().date },
-        replace: true,
-      });
-    }
+    if (date === null) throw redirect({ to: "/", replace: true });
     return { date };
   },
   component: DayRoute,
@@ -21,10 +14,6 @@ export const Route = createFileRoute("/_app/day/$date")({
 
 function DayRoute() {
   const { date } = Route.useRouteContext();
-  return (
-    <ScreenPlaceholder
-      title={formatDayLabel(date, { withYear: true })}
-      milestone="M1"
-    />
-  );
+  // Keyed by date so each day opens fresh: scrolled to its morning, or to now.
+  return <DayScreen key={date} date={date} />;
 }

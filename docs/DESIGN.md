@@ -85,7 +85,7 @@ those four unreachable on a phone. Change it here if daily use suggests another 
 
 | Aspect | Spec |
 | --- | --- |
-| Range | From `gridStartMin` (default 05:00) for 24 hours, so a normal day reads top to bottom and sleep sits at the bottom. |
+| Range | From `gridStartMin` (default 05:00) for 24 hours, so a normal day reads top to bottom and sleep sits at the bottom. Between midnight and that start, "Today" is still the day that is ending, so the now line stays on screen. |
 | Zoom | Desktop default is **Fit**: the waking part of the day fits the viewport without scrolling. Also Comfortable (1.25 px/min) and Detailed (2 px/min). Phone uses 1.5 px/min and scrolls. |
 | Sleep | Long sleep blocks are drawn compressed (fixed 40 px) so they do not eat the screen. |
 | Lanes | Plan and Actual, equal width on desktop. A thin gutter between them. |
