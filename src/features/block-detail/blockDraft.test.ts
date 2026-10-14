@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { DateKey } from "@shared/time";
-import type { Doc, Id } from "@/lib/api";
+import type { Doc, Id, PlannedBlockDoc } from "@/lib/api";
 import {
   draftOf,
   draftProblem,
@@ -8,7 +8,7 @@ import {
   updateArgs,
 } from "./blockDraft";
 
-const gymBlock: Doc<"blocks"> = {
+const gymBlock: PlannedBlockDoc = {
   _id: "b1" as Id<"blocks">,
   _creationTime: 0,
   userId: "u" as Id<"users">,

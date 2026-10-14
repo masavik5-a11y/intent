@@ -22,6 +22,23 @@ export const vCategoryKind = v.union(
   v.literal("drift"),
 );
 
+/** What became of a block; shared/blocks.ts, BLOCK_STATUSES. */
+export const vBlockStatus = v.union(
+  v.literal("planned"),
+  v.literal("done"),
+  v.literal("partial"),
+  v.literal("skipped"),
+);
+
+/** Why a block was skipped; shared/blocks.ts, SKIP_REASONS. */
+export const vSkipReason = v.union(
+  v.literal("tired"),
+  v.literal("noTime"),
+  v.literal("choseOther"),
+  v.literal("forgot"),
+  v.literal("other"),
+);
+
 /**
  * The intent of an activity, and a block's overrides of it. Unset on a block means
  * "inherit from the activity" (shared/blocks.ts, effectiveIntent).
@@ -89,8 +106,9 @@ export default defineSchema({
     ...intentFields,
   }).index("by_userId", ["userId"]),
 
-  // M1 has plan fields only. M2 adds the actual times and the other statuses, and
-  // makes the plan times optional for unplanned entries.
+  // A block has plan times, actual times, or both (docs/ARCHITECTURE.md, section 5).
+  // The model checks which combinations may exist (shared/blocks.ts,
+  // blockShapeProblem).
   blocks: defineTable({
     userId: v.id("users"),
     date: vDateKey,
@@ -99,11 +117,27 @@ export default defineSchema({
     activityId: v.optional(v.id("activities")),
     categoryId: v.id("categories"),
 
-    /** Minutes from the local midnight of `date`. Start + duration may pass 1440. */
-    plannedStartMin: v.number(),
-    plannedDurationMin: v.number(),
+    /**
+     * Minutes from the local midnight of `date`. Start + duration may pass 1440.
+     * Unset on an unplanned entry.
+     */
+    plannedStartMin: v.optional(v.number()),
+    plannedDurationMin: v.optional(v.number()),
 
-    status: v.literal("planned"),
+    status: vBlockStatus,
+    /**
+     * What happened, in minutes from the local midnight of `date`. Set on done and
+     * partly done blocks and on unplanned entries. The start may pass 1440 (a block
+     * planned before midnight that began after it); the end stays within the next day.
+     */
+    actualStartMin: v.optional(v.number()),
+    actualDurationMin: v.optional(v.number()),
+    /** Only on a skipped block, and only when a reason was given. */
+    skipReason: v.optional(vSkipReason),
+    /** A one-line note added after the fact (PRD A5). */
+    note: v.optional(v.string()),
+    /** "Start the minimum" was chosen (PRD V3). */
+    minimumChosen: v.optional(v.boolean()),
 
     ...intentFields,
   }).index("by_userId_and_date", ["userId", "date"]),

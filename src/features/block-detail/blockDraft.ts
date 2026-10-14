@@ -4,7 +4,7 @@ import {
   type IntentField,
 } from "@shared/blocks";
 import { isValidDuration, isValidMinute } from "@shared/time";
-import type { Doc, Id } from "@/lib/api";
+import type { Doc, Id, PlannedBlockDoc } from "@/lib/api";
 
 // The block detail form's state and what it sends. Pure, so it is tested alone.
 
@@ -18,7 +18,7 @@ export type BlockDraft = { [F in IntentField]: string } & {
   plannedDurationMin: number;
 };
 
-export function draftOf(block: Doc<"blocks">): BlockDraft {
+export function draftOf(block: PlannedBlockDoc): BlockDraft {
   return {
     title: block.title,
     focus: block.focus ?? "",
@@ -48,7 +48,7 @@ export function draftProblem(draft: BlockDraft): string | null {
 }
 
 /** Arguments for blocks.update: only what changed; emptied text is sent as null. */
-export function updateArgs(block: Doc<"blocks">, draft: BlockDraft) {
+export function updateArgs(block: PlannedBlockDoc, draft: BlockDraft) {
   const before = draftOf(block);
   const args: { [F in IntentField]?: string | null } & {
     blockId: Id<"blocks">;

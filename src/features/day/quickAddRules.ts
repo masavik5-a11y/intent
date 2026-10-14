@@ -1,4 +1,4 @@
-import { planEntry } from "@shared/blocks";
+import { planLaneOf } from "@shared/blocks";
 import { momentAt } from "@shared/grid";
 import { firstFreeSpan } from "@shared/lanes";
 import {
@@ -91,7 +91,7 @@ export function suggestedStart({
     : momentOnGrid(day, gridStartMin, wakeMin);
   const free = firstFreeSpan(
     { date: from.date, startMin: from.minute, durationMin },
-    blocks.map(planEntry),
+    planLaneOf(blocks),
   );
   return free === null ? from : { date: free.date, minute: free.startMin };
 }

@@ -8,7 +8,7 @@ const modules = import.meta.glob("./**/*.ts");
 
 // The schema checks shapes only; the rules live in convex/model/ and are tested there.
 describe("schema", () => {
-  test("accepts one document of each M1 table", async () => {
+  test("accepts one document of each table so far, and every kind of block", async () => {
     const t = convexTest(schema, modules);
     await t.run(async (ctx) => {
       const userId = await ctx.db.insert("users", { email: "me@intent.test" });
@@ -52,6 +52,40 @@ describe("schema", () => {
       });
       const block = await ctx.db.get("blocks", blockId);
       expect(block?.date).toBe("2026-10-14");
+
+      // M2: a block marked done, a skipped one, and an unplanned entry.
+      await ctx.db.insert("blocks", {
+        userId,
+        date: "2026-10-14" as DateKey,
+        title: "Write",
+        categoryId,
+        plannedStartMin: 540,
+        plannedDurationMin: 60,
+        status: "partial",
+        actualStartMin: 540,
+        actualDurationMin: 30,
+        minimumChosen: true,
+        note: "Only the outline.",
+      });
+      await ctx.db.insert("blocks", {
+        userId,
+        date: "2026-10-14" as DateKey,
+        title: "Read",
+        categoryId,
+        plannedStartMin: 1200,
+        plannedDurationMin: 30,
+        status: "skipped",
+        skipReason: "tired",
+      });
+      await ctx.db.insert("blocks", {
+        userId,
+        date: "2026-10-14" as DateKey,
+        title: "Phone",
+        categoryId,
+        status: "done",
+        actualStartMin: 780,
+        actualDurationMin: 45,
+      });
     });
   });
 });
