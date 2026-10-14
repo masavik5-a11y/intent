@@ -2,9 +2,10 @@
 
 Build order, one milestone at a time. Requirement IDs refer to [PRD.md](PRD.md).
 
-**Current milestone: M1 (started 2026-10-14). M0 has one check left: a second email is
-refused on the live site, see the open M0 slice.** Update this line when a milestone is
-finished.
+**Current milestone: M1. Every slice is built and ticked (2026-10-14); "Done when" waits
+for the deploy and Filip's own use on PC and phone. M0 has one check left: a second
+email is refused on the live site, see the open M0 slice.** Update this line when a
+milestone is finished.
 
 ## How to work
 
