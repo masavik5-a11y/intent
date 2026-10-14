@@ -12,7 +12,7 @@ import { minuteFrom } from "@shared/lanes";
 import { summarizeDay } from "@shared/summary";
 import { DEFAULT_SETTINGS } from "@shared/settings";
 import { formatTimeRange, type DateKey, type LocalMoment } from "@shared/time";
-import { BlockDetailPanel } from "@/features/block-detail/BlockDetailPanel";
+import { SidePanel } from "@/components/SidePanel";
 import { BlockDetail } from "@/features/block-detail/BlockDetail";
 import { EntryDetail } from "@/features/block-detail/EntryDetail";
 import { statusLine } from "@/features/status/statusLabels";
@@ -25,6 +25,7 @@ import { DayGrid, type GridCard } from "./DayGrid";
 import { DayHeader } from "./DayHeader";
 import { NowPanel } from "@/features/now/NowPanel";
 import { LogEntry } from "@/features/log/LogEntry";
+import { NotFeelingIt } from "@/features/not-feeling/NotFeelingIt";
 import type { NewEntryArgs } from "@/features/log/LogEntryForm";
 import { defaultEntrySpan, logCategories } from "@/features/log/logRules";
 import { nowView } from "@/features/now/nowView";
@@ -60,6 +61,9 @@ interface DayScreenProps {
   /** Logging an unplanned entry is open (also in the URL). */
   log: AddRequest | undefined;
   onOpenLog: (position: number | null) => void;
+  /** The block "Not feeling it" is open for (also in the URL). */
+  notFeelingId: string | undefined;
+  onOpenNotFeeling: (blockId: Id<"blocks">) => void;
   /** The block whose detail is open, also from the URL. */
   selectedBlockId: string | undefined;
   onSelectBlock: (blockId: Id<"blocks">) => void;
@@ -74,6 +78,8 @@ export function DayScreen({
   onOpenAdd,
   log,
   onOpenLog,
+  notFeelingId,
+  onOpenNotFeeling,
   selectedBlockId,
   onSelectBlock,
   onCloseOverlay,
@@ -107,25 +113,6 @@ export function DayScreen({
   const [planUnlocked, setPlanUnlocked] = useState(false);
   const planFrozen = tense === "past" && !planUnlocked;
 
-  // N opens quick add and L logs what happened (DESIGN.md section 8), except while
-  // typing or in a dialog.
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      const key = event.key.toLowerCase();
-      if (key !== "n" && key !== "l") return;
-      if (event.ctrlKey || event.metaKey || event.altKey) return;
-      if (isTyping(event.target) || document.querySelector("[role=dialog]")) {
-        return;
-      }
-      if (key === "l" && !canLog) return;
-      if (key === "n" && planFrozen) return;
-      event.preventDefault();
-      if (key === "n") onOpenAdd(null);
-      else onOpenLog(null);
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onOpenAdd, onOpenLog, canLog, planFrozen]);
   const nowPosition =
     tense === "today" ? gridPosition(date, gridStartMin, now) : null;
 
@@ -230,6 +217,41 @@ export function DayScreen({
       ? nowView(blocks, activities, categories, now)
       : null;
 
+  const feelingTargetId = nowPanel?.feelingTarget?.block._id ?? null;
+  const feelingBlock =
+    notFeelingId === undefined
+      ? undefined
+      : blocks?.filter(hasPlan).find((block) => block._id === notFeelingId);
+
+  // N opens quick add, L logs what happened and X opens "Not feeling it" (DESIGN.md
+  // section 8), except while typing or in a dialog.
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      const key = event.key.toLowerCase();
+      if (key !== "n" && key !== "l" && key !== "x") return;
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      if (isTyping(event.target) || document.querySelector("[role=dialog]")) {
+        return;
+      }
+      if (key === "l" && !canLog) return;
+      if (key === "n" && planFrozen) return;
+      if (key === "x" && feelingTargetId === null) return;
+      event.preventDefault();
+      if (key === "n") onOpenAdd(null);
+      else if (key === "l") onOpenLog(null);
+      else if (feelingTargetId !== null) onOpenNotFeeling(feelingTargetId);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [
+    onOpenAdd,
+    onOpenLog,
+    onOpenNotFeeling,
+    canLog,
+    planFrozen,
+    feelingTargetId,
+  ]);
+
   const ready =
     blocks !== undefined &&
     activities !== undefined &&
@@ -283,6 +305,7 @@ export function DayScreen({
               error={statusError}
               onAction={mark}
               onLog={() => onOpenLog(null)}
+              onNotFeeling={onOpenNotFeeling}
               totals={null}
             />
           </div>
@@ -326,24 +349,28 @@ export function DayScreen({
           onOpenCard={(key) => onSelectBlock(key as Id<"blocks">)}
         />
       </div>
-      {isWide && selected === undefined && nowPanel !== null && (
-        <aside className="w-[340px] shrink-0 overflow-y-auto border-l">
-          <NowPanel
-            view={nowPanel}
-            compact={false}
-            lastMarked={lastMarked}
-            error={statusError}
-            onAction={mark}
-            onLog={() => onOpenLog(null)}
-            totals={totals}
-          />
-        </aside>
-      )}
+      {isWide &&
+        selected === undefined &&
+        feelingBlock === undefined &&
+        nowPanel !== null && (
+          <aside className="w-[340px] shrink-0 overflow-y-auto border-l">
+            <NowPanel
+              view={nowPanel}
+              compact={false}
+              lastMarked={lastMarked}
+              error={statusError}
+              onAction={mark}
+              onLog={() => onOpenLog(null)}
+              onNotFeeling={onOpenNotFeeling}
+              totals={totals}
+            />
+          </aside>
+        )}
       {selected !== undefined &&
         activities !== undefined &&
         categories !== undefined &&
         blocks !== undefined && (
-          <BlockDetailPanel
+          <SidePanel
             wide={isWide}
             title={
               hasPlan(selected)
@@ -393,8 +420,25 @@ export function DayScreen({
                 onCancel={onCloseOverlay}
               />
             )}
-          </BlockDetailPanel>
+          </SidePanel>
         )}
+      {feelingBlock !== undefined && (
+        <NotFeelingIt
+          block={feelingBlock}
+          activity={
+            feelingBlock.activityId === undefined
+              ? undefined
+              : activityOf.get(feelingBlock.activityId)
+          }
+          wide={isWide}
+          onStart={onCloseOverlay}
+          onSkipOnPurpose={() => {
+            mark(feelingBlock._id, { type: "skip" });
+            onCloseOverlay();
+          }}
+          onClose={onCloseOverlay}
+        />
+      )}
       {ready && (
         <LogEntry
           open={logSpan !== null}

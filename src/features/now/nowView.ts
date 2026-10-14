@@ -59,6 +59,11 @@ export interface NowView {
   toMark: NowBlock | null;
   /** The next two blocks after now, leaving out those skipped ahead of time. */
   next: NowBlock[];
+  /**
+   * The block "Not feeling it" is about (PRD V2): the running one, or between blocks
+   * the next one. Null when there is neither.
+   */
+  feelingTarget: NowBlock | null;
 }
 
 const UP_NEXT = 2;
@@ -88,6 +93,7 @@ export function nowView(
       current: null,
       toMark: ended === undefined ? null : describe(ended),
       next,
+      feelingTarget: next[0] ?? null,
     };
   }
 
@@ -97,6 +103,7 @@ export function nowView(
   const soFar = liveActual(planSpan(running.block), actualLaneOf(others), now);
   return {
     toMark: null,
+    feelingTarget: current,
     current: {
       ...current,
       countdown: countdown(running, now),

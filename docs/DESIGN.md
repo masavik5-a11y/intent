@@ -205,6 +205,11 @@ The life I'm building
   is a legitimate choice and the button is not styled as a lesser one.
 - If the compass is empty, this view shows the if-then and minimum only, plus one line:
   "Write your compass" linking to the Compass screen.
+- It is about the running block, or between blocks the next one. The quiet link sits
+  under the actions, or between blocks under "Up next"; `X` opens it too. It lives in
+  the URL (`?notFeeling=<block>`), so the back gesture closes it. "Start" closes it and
+  records nothing; "Skip on purpose" records a skip and the now panel then asks
+  "Why? (optional)" as after any skip.
 
 ## 5. Categories and colour
 

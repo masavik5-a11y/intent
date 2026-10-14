@@ -18,6 +18,8 @@ interface DaySearch {
    * the clicked grid position in the actual lane.
    */
   log?: "now" | number;
+  /** "Not feeling it" is open for this block (PRD V2). */
+  notFeeling?: string;
 }
 
 export const Route = createFileRoute("/_app/day/$date")({
@@ -28,8 +30,9 @@ export const Route = createFileRoute("/_app/day/$date")({
     return { date };
   },
   validateSearch: (search: Record<string, unknown>): DaySearch => {
-    const { add, block, log } = search;
+    const { add, block, log, notFeeling } = search;
     if (typeof block === "string") return { block };
+    if (typeof notFeeling === "string") return { notFeeling };
     if (add === "now") return { add };
     if (typeof add === "number" && add >= 0 && add < MINUTES_PER_DAY) {
       return { add };
@@ -53,7 +56,7 @@ function positionRequest(
 
 function DayRoute() {
   const { date } = Route.useRouteContext();
-  const { add, block, log } = Route.useSearch();
+  const { add, block, log, notFeeling } = Route.useSearch();
   const navigate = Route.useNavigate();
   const router = useRouter();
   const canGoBack = useCanGoBack();
@@ -67,6 +70,11 @@ function DayRoute() {
   const openLog = useCallback(
     (position: number | null) =>
       void navigate({ search: { log: position ?? "now" } }),
+    [navigate],
+  );
+
+  const openNotFeeling = useCallback(
+    (blockId: string) => void navigate({ search: { notFeeling: blockId } }),
     [navigate],
   );
 
@@ -96,6 +104,8 @@ function DayRoute() {
       onOpenAdd={openAdd}
       log={positionRequest(log)}
       onOpenLog={openLog}
+      notFeelingId={notFeeling}
+      onOpenNotFeeling={openNotFeeling}
       selectedBlockId={block}
       onSelectBlock={openBlock}
       onCloseOverlay={closeOverlay}

@@ -183,6 +183,20 @@ describe("nowView with marked blocks (M2)", () => {
     expect(view.toMark).toBeNull();
   });
 
+  test("Not feeling it is about the running block, else the next one", () => {
+    expect(
+      nowView(blocks, [gym], [body], { date: TUE, minute: 700 }).feelingTarget
+        ?.block.title,
+    ).toBe("Gym");
+    expect(
+      nowView(blocks, [gym], [body], { date: TUE, minute: 900 }).feelingTarget
+        ?.block.title,
+    ).toBe("Read");
+    expect(
+      nowView([], [gym], [body], { date: TUE, minute: 900 }).feelingTarget,
+    ).toBeNull();
+  });
+
   test("in the morning, last night's sleep waits to be marked", () => {
     const view = nowView(blocks, [gym], [body], { date: WED, minute: 480 });
     expect(view.current).toBeNull();
