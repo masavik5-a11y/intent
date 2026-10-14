@@ -188,8 +188,9 @@ recurrence, notifications.
       then Start, Start the minimum, Skip on purpose.
 - [x] "Start the minimum" (V3): sets `minimumChosen`; finishing records Partly with the
       minimum noted, never a skip. Tested in `applyStatus`.
-- [ ] Guard (V4): a test asserting that anti-vision and cost-of-skipping text never
+- [x] Guard (V4): a test asserting that anti-vision and cost-of-skipping text never
       reach the Today screen by default; the notification side is asserted in M4.
+      (`src/features/day/todayGuard.test.tsx`.)
 - [ ] Past days open with both lanes, totals and notes.
 
 **Done when:** for one real day you can record everything that happened with single taps

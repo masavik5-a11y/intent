@@ -793,9 +793,12 @@ one; delete an entry when it stops being true.
   utilities `bg-key-tint`, `text-key-ink`, `bg-key-solid`, `text-on-solid` (DESIGN.md
   section 5). The voice font is `font-voice`.
 - Vitest has three projects: `shared` (Node), `app` (Node, for `src/`) and `convex`
-  (edge-runtime). Vitest blanks CSS imports unless they are listed in `css.include`. The
-  first component test needs jsdom (a new dependency) and the `app` project switched to
-  it.
+  (edge-runtime). Vitest blanks CSS imports unless they are listed in `css.include`.
+  Components that only need to be rendered, not clicked, are tested with
+  `renderToStaticMarkup` from `react-dom/server` in the Node project (see
+  `todayGuard.test.tsx`, the V4 guard); a test that clicks needs jsdom (a new
+  dependency) and the `app` project switched to it. `src/` has no Node types: read
+  source files in a test with `import.meta.glob(..., { query: "?raw" })`.
 
 **Tooling on this PC**
 
