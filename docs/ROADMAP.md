@@ -2,10 +2,11 @@
 
 Build order, one milestone at a time. Requirement IDs refer to [PRD.md](PRD.md).
 
-**Current milestone: M2.** M0 and M1 met their "Done when" on the live app
-(2026-10-14). One M1 check is still to be seen once after the next deploy: the
-draining bar on a block whose activity has Countdown on (the block Filip watched had it
-off, so it showed plain time left, as designed). Update this line when a
+**Current milestone: M2. Every slice is built and ticked (2026-10-14, pull request #1);
+"Done when" waits for the merge and one real day recorded on the live app.** M0 and M1
+met their "Done when" on the live app (2026-10-14). One M1 check is still to be seen
+once after the deploy: the draining bar on a block whose activity has Countdown on (the
+block Filip watched had it off, so it showed plain time left, as designed). Update this line when a
 milestone is finished.
 
 ## How to work
@@ -191,7 +192,8 @@ recurrence, notifications.
 - [x] Guard (V4): a test asserting that anti-vision and cost-of-skipping text never
       reach the Today screen by default; the notification side is asserted in M4.
       (`src/features/day/todayGuard.test.tsx`.)
-- [ ] Past days open with both lanes, totals and notes.
+- [x] Past days open with both lanes, totals and notes. (The evening review's notes
+      join them in M3.)
 
 **Done when:** for one real day you can record everything that happened with single taps
 plus one or two unplanned entries, and the day's two lanes and three totals match what

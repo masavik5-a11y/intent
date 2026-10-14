@@ -36,12 +36,14 @@ import {
   actualLane,
   cardName,
   cardTime,
+  dayNotes,
   dayTense,
   entryTitle,
   planCardState,
   planLane,
   untrackedStretches,
 } from "./dayView";
+import { DayNotes } from "./DayNotes";
 import { DayTotals } from "./DayTotals";
 import { QuickAdd } from "./QuickAdd";
 import { DEFAULT_DURATION_MIN, type NewBlockArgs } from "./QuickAddForm";
@@ -152,6 +154,7 @@ export function DayScreen({
       icon: activity?.icon ?? category?.icon,
       colorKey: category?.colorKey ?? "gray",
       selected: block._id === selectedBlockId,
+      hasNote: block.note !== undefined,
     };
   };
   const cards: GridCard[] = items.map(({ block, segment }) => ({
@@ -311,8 +314,15 @@ export function DayScreen({
           </div>
         )}
         {totals !== null && (tense === "past" || !isWide) && (
-          <div className="border-b px-4 py-2">
+          <div className="flex flex-col gap-2 border-b px-4 py-2">
             <DayTotals totals={totals} variant="strip" />
+            {/* Looking back at a past day: its notes too (PRD R3). */}
+            {tense === "past" && blocks !== undefined && (
+              <DayNotes
+                notes={dayNotes(blocks, date, gridStartMin)}
+                onOpen={onSelectBlock}
+              />
+            )}
           </div>
         )}
         {blocks !== undefined && items.length === 0 && (

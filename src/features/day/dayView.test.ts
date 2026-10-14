@@ -7,6 +7,7 @@ import {
   actualCardTime,
   actualLane,
   cardName,
+  dayNotes,
   cardTime,
   dayTense,
   dayTitle,
@@ -381,5 +382,39 @@ describe("totalsItems", () => {
       { label: "Drift", value: "45m" },
       { label: "Untracked", value: "7m" },
     ]);
+  });
+});
+
+describe("dayNotes (PRD A5, R3)", () => {
+  const blocks = [
+    block("Write", TUE, 780, 60, { note: "Slow start, good finish." }),
+    block("Gym", TUE, 480, 60, { note: "New bench record." }),
+    block("Read", TUE, 1200, 30),
+    entry("Phone", TUE, 900, 30),
+    { ...entry("Walk", TUE, 1000, 20), note: "With Tom." },
+    // Last night's sleep began on Monday's grid: its note belongs to Monday.
+    block("Sleep", "2026-10-12" as DateKey, 1380, 480, { note: "Woke at 4." }),
+  ];
+
+  test("the day's notes in the order of the day, from blocks and entries", () => {
+    expect(
+      dayNotes(blocks, TUE, 300).map(({ block: item, time, text }) => [
+        item.title,
+        time,
+        text,
+      ]),
+    ).toEqual([
+      ["Gym", "08:00–09:00", "New bench record."],
+      ["Write", "13:00–14:00", "Slow start, good finish."],
+      ["Walk", "16:40–17:00", "With Tom."],
+    ]);
+  });
+
+  test("a note is read out with its card", () => {
+    const [item] = planLane([blocks[0] as Doc<"blocks">], TUE, 300);
+    if (item === undefined) throw new Error("fixture");
+    expect(cardName(item.block, item.segment, TUE)).toBe(
+      "Write, 13:00 to 14:00, note: Slow start, good finish.",
+    );
   });
 });

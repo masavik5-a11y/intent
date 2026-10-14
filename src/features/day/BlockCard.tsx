@@ -1,4 +1,10 @@
-import { CircleCheck, Contrast, Plus, type LucideIcon } from "lucide-react";
+import {
+  CircleCheck,
+  Contrast,
+  Plus,
+  StickyNote,
+  type LucideIcon,
+} from "lucide-react";
 import { AppIcon } from "@/components/AppIcon";
 import { cn } from "@/lib/utils";
 import type { CardState } from "./dayView";
@@ -22,6 +28,8 @@ interface BlockCardProps {
   height: number;
   /** How it looks: DESIGN.md section 4. */
   state: CardState;
+  /** It has a note; the note itself is in its name and in block detail. */
+  hasNote: boolean;
   /** Its detail is open. */
   selected: boolean;
   /** Cut at the grid's top or bottom edge because it crosses into another day's grid. */
@@ -52,6 +60,7 @@ export function BlockCard({
   top,
   height,
   state,
+  hasNote,
   selected,
   cutTop,
   cutBottom,
@@ -107,6 +116,12 @@ export function BlockCard({
                 <Mark
                   aria-hidden="true"
                   className="size-3.5 shrink-0 text-key-solid"
+                />
+              )}
+              {hasNote && (
+                <StickyNote
+                  aria-hidden="true"
+                  className="size-3.5 shrink-0 opacity-70"
                 />
               )}
               {height < TIME_LINE_PX && (
