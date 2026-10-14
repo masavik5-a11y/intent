@@ -11,6 +11,11 @@ export const ERROR_CODES = [
   "WEAK_PASSWORD",
   /** Sign-in or sign-up without a usable email. */
   "INVALID_EMAIL",
+  /**
+   * An argument the UI never sends on its own: a malformed time zone, an unknown
+   * colour key or icon. Means a bug or a hand-made call, not a user mistake.
+   */
+  "INVALID_INPUT",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

@@ -115,7 +115,7 @@ Covers T1–T7 (plan lane), I1–I4, U1, U2, V1, P4, S1, S5.
 
 - [x] Schema: `settings`, `categories`, `activities`, `blocks` (plan fields, status
       always `planned` for now), `compass`.
-- [ ] On first sign-in: create settings (time zone from the device) and seed the default
+- [x] On first sign-in: create settings (time zone from the device) and seed the default
       categories.
 - [ ] `shared/blocks.ts` (`effectiveIntent`), `shared/lanes.ts` (`findOverlap`, including
       blocks that cross midnight), `shared/grid.ts` (minutes to pixels, Fit zoom), with tests.

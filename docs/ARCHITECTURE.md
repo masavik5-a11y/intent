@@ -388,6 +388,12 @@ functions to validate and to apply. One implementation, two callers.
 - **Signed-in screens** are children of the `_app` layout route. It renders them only
   while there is a session (`useConvexAuth`), so a screen's queries never run signed
   out, and it sends a signed-out visit to `/signin?redirect=<where it was headed>`.
+- **First visit**: the `_app` layout calls `setup.ensure` with the device's time zone on
+  every signed-in visit (`useEnsureSetup`). The first time it creates the settings row
+  and seeds the default categories; after that it changes nothing. It runs from the
+  client, not from a sign-up hook, because only the device knows its time zone, and so
+  that accounts created before M1 get set up too. Until it has run, `settings.get`
+  returns null and screens wait.
 - **Backend imports** in `src/` go through `src/lib/api.ts`, which re-exports `api` and
   the `Doc` and `Id` types from `convex/_generated/`.
 
@@ -607,11 +613,14 @@ one; delete an entry when it stops being true.
 - `ConvexError` data must be a `type` alias, not an `interface` (see `AppErrorData` in
   `shared/errors.ts`). Throw app errors with `appError(code)` from
   `convex/lib/errors.ts`; add new codes to `shared/errors.ts`.
-- Tests: `convexTest(schema, modules)` with `import.meta.glob("./**/*.ts")` and
-  `/// <reference types="vite/client" />` at the top of the test file. A signed-in caller
-  is `t.withIdentity({ subject: userId + "|session" })`: Convex Auth reads the user id
-  from the part before `|`. `convex/auth.test.ts` shows how to drive the real sign-in
-  action. Files with two dots (`x.test.ts`) are never pushed to Convex.
+- Tests: `convex/test.helpers.ts` has `newTest()`, `signedIn(t)` (a user row and a
+  caller signed in as it) and `expectAppError(call, code)`. Underneath, a signed-in
+  caller is `t.withIdentity({ subject: userId + "|session" })`: Convex Auth reads the
+  user id from the part before `|`. `convex/auth.test.ts` shows how to drive the real
+  sign-in action. Files with two dots (`x.test.ts`, `test.helpers.ts`) are never pushed
+  to Convex.
+- `npx convex data <table>` lists a table on the dev deployment: the quickest way to
+  check what a mutation wrote while verifying a slice.
 - On this PC the Convex CLI often ends with
   `Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)` and exit code 127 after it has
   succeeded. Read its output, not its exit code.
@@ -654,7 +663,12 @@ one; delete an entry when it stops being true.
 
 - The Bash tool is Git Bash and keeps its working directory between calls: use absolute
   paths. Setting `TZ` there does not reach Node; use PowerShell (`$env:TZ = "..."`) to
-  run tests in another time zone. The machine itself is set to America/Los_Angeles.
+  run tests in another time zone. The machine itself is set to Central Europe (Node
+  resolves it as Europe/Budapest).
 - npm warns that esbuild's install script is not approved. Everything works without it.
 - Check `npm run check`'s own exit code before committing; a pipe such as `| tail` hides
   a failure.
+- Verifying in the running app uses the Claude desktop app's Browser pane, which keeps
+  its own sign-ins. It is signed in to the dev deployment as the dev test account from
+  `.env.example`. Filip signs it in himself when needed: the password travels to
+  convex.cloud, not to localhost, so Claude does not type it.

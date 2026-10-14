@@ -194,9 +194,12 @@ Seeded on first run. All are editable.
 | Mind | intentional | coral | flower-2 | Meditation, journaling, reading |
 | Rest on purpose | intentional | pink | coffee | Free time, a film, friends |
 | Events | intentional | amber | party-popper | Wedding, trip, family |
-| Life | maintenance | gray | home | Meals, chores, errands, routine |
+| Life | maintenance | gray | house | Meals, chores, errands, routine |
 | Sleep | maintenance | slate | moon | Sleep, wind down |
 | Drift | drift | red | cloud | Scrolling, unplanned low-value time |
+
+The list lives in `shared/categories.ts` (`DEFAULT_CATEGORIES`). Icons are lucide names
+from the short set in `shared/icons.ts`; "home" is called `house` there.
 
 Each colour key defines three tokens for light and for dark theme: `tint` (block fill),
 `ink` (text on the tint), `solid` (current block, icons). Tokens are CSS variables defined

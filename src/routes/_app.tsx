@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { createFileRoute, Outlet, useRouter } from "@tanstack/react-router";
 import { useConvexAuth } from "convex/react";
 import { signInSearchFor } from "@/features/auth/redirect";
+import { useEnsureSetup } from "@/features/setup/useEnsureSetup";
 import { AppShell } from "@/features/shell/AppShell";
 
 // Pathless layout: every screen inside the app shell is a child of this route, and
@@ -28,5 +29,10 @@ function AppLayout() {
   // is empty: no full-page spinner (docs/DESIGN.md, section 10). Screens mount only
   // with a session, so their queries never run signed out.
   if (signedOut) return null;
-  return <AppShell>{isAuthenticated ? <Outlet /> : null}</AppShell>;
+  return <AppShell>{isAuthenticated ? <SignedIn /> : null}</AppShell>;
+}
+
+function SignedIn() {
+  useEnsureSetup();
+  return <Outlet />;
 }

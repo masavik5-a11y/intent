@@ -13,6 +13,10 @@ import type * as http from "../http.js";
 import type * as lib_allowedEmails from "../lib/allowedEmails.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_errors from "../lib/errors.js";
+import type * as model_categories from "../model/categories.js";
+import type * as model_settings from "../model/settings.js";
+import type * as settings from "../settings.js";
+import type * as setup from "../setup.js";
 import type * as users from "../users.js";
 
 import type {
@@ -27,6 +31,10 @@ declare const fullApi: ApiFromModules<{
   "lib/allowedEmails": typeof lib_allowedEmails;
   "lib/auth": typeof lib_auth;
   "lib/errors": typeof lib_errors;
+  "model/categories": typeof model_categories;
+  "model/settings": typeof model_settings;
+  settings: typeof settings;
+  setup: typeof setup;
   users: typeof users;
 }>;
 
