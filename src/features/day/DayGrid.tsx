@@ -34,6 +34,8 @@ export interface GridCard {
   cutBottom: boolean;
   /** Opens block detail when pressed. */
   openable: boolean;
+  /** The block has a note (PRD A5): a small mark beside the title. */
+  hasNote: boolean;
 }
 
 interface DayGridProps {
@@ -293,6 +295,7 @@ function GridBlock({
         top={box.top}
         height={box.height}
         state={card.state}
+        hasNote={card.hasNote}
         selected={card.selected}
         cutTop={card.cutTop}
         cutBottom={card.cutBottom}

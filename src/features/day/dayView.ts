@@ -1,4 +1,10 @@
-import { hasPlan, isRunning, liveActualLane, planLaneOf } from "@shared/blocks";
+import {
+  blockSpan,
+  hasPlan,
+  isRunning,
+  liveActualLane,
+  planLaneOf,
+} from "@shared/blocks";
 import { gridSegment, type GridSegment } from "@shared/grid";
 import { minuteFrom, untrackedGaps, type LaneSpan } from "@shared/lanes";
 import type { DayTotals } from "@shared/summary";
@@ -168,6 +174,43 @@ export function untrackedStretches(
   }));
 }
 
+export interface DayNote {
+  block: Doc<"blocks">;
+  /** "11:00–12:30": the plan, or for an unplanned entry what happened. */
+  time: string;
+  /** "11:00", where it begins. */
+  start: string;
+  text: string;
+}
+
+/**
+ * The notes written on the day's blocks (PRD A5, R3), in the order of the day. A block
+ * that crosses into the next day's grid is listed on the day it begins.
+ */
+export function dayNotes(
+  blocks: readonly Doc<"blocks">[],
+  date: DateKey,
+  gridStartMin: number,
+): DayNote[] {
+  const notes: (DayNote & { top: number })[] = [];
+  for (const block of blocks) {
+    if (block.note === undefined) continue;
+    const span = blockSpan(block);
+    const segment = gridSegment(date, gridStartMin, span);
+    if (segment === null || segment.startsBefore) continue;
+    notes.push({
+      block,
+      time: formatTimeRange(span.startMin, span.durationMin),
+      start: minutesToLabel(span.startMin),
+      text: block.note,
+      top: segment.top,
+    });
+  }
+  return notes
+    .sort((a, b) => a.top - b.top)
+    .map(({ top: _top, ...note }) => note);
+}
+
 /** The three totals as the day shows them, with their labels (DESIGN.md section 4a). */
 export function totalsItems(
   totals: DayTotals,
@@ -217,7 +260,8 @@ export function actualCardName(item: ActualItem): string {
             ? `partly done, ${formatDuration(span.durationMin)} of ${formatDuration(block.plannedDurationMin)}`
             : "done"
       }`;
-  return [block.title, block.focus, what]
+  const note = block.note === undefined ? undefined : `note: ${block.note}`;
+  return [block.title, block.focus, what, note]
     .filter((part) => part !== undefined && part !== "")
     .join(", ");
 }
@@ -285,6 +329,7 @@ export function cardName(
     block.focus,
     range.replace("–", " to "),
     STATUS_WORDS[block.status],
+    block.note === undefined ? undefined : `note: ${block.note}`,
   ];
   if (segment.startsBefore) {
     parts.push(`continues from ${formatDayLabel(addDays(day, -1))}`);

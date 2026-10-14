@@ -109,6 +109,7 @@ function render(now: LocalMoment): string {
     colorKey: "violet",
     selected: false,
     openable: true,
+    hasNote: item.note !== undefined,
   });
   const cards: GridCard[] = planLane(blocks, TUE, 300).map((item) => ({
     ...look(item.block),

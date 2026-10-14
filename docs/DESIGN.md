@@ -141,7 +141,9 @@ Order, top to bottom. Items appear only when they have content.
 8. **Day totals**: on purpose, drift, untracked. Updated every minute. The running
    block counts up to now. On the phone (and below 1024 px) and on past days they are
    one quiet line above the grid instead: "On purpose 2h 50m Drift 40m Untracked
-   3h 30m".
+   3h 30m". On a past day the notes written on its blocks follow, in the order of the
+   day ("09:30 Script · Hook done, the middle still loose."), each opening its block;
+   a card with a note carries a small note mark.
 9. **Weekly pace** for the current block's category, if it has a target:
    "Deep work 9 of 15h · 3 days left · behind by 1h 30m". Plain text, normal colour.
 10. **Up next**: the following two blocks.
