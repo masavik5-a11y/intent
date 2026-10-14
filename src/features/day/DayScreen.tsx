@@ -17,6 +17,8 @@ import { useNow } from "@/lib/now";
 import { useIsPhone, useMediaQuery } from "@/lib/useMediaQuery";
 import { DayGrid, type GridCard } from "./DayGrid";
 import { DayHeader } from "./DayHeader";
+import { NowPanel } from "@/features/now/NowPanel";
+import { nowView } from "@/features/now/nowView";
 import { cardName, cardTime, dayTense, itemAt, planLane } from "./dayView";
 import { QuickAdd } from "./QuickAdd";
 import { DEFAULT_DURATION_MIN, type NewBlockArgs } from "./QuickAddForm";
@@ -123,6 +125,14 @@ export function DayScreen({
   const saveBlock = (args: NewBlockArgs) => attempt(() => createBlock(args));
 
   const selected = blocks?.find((block) => block._id === selectedBlockId);
+  // The now panel belongs to today (DESIGN.md section 2).
+  const nowPanel =
+    tense === "today" &&
+    blocks !== undefined &&
+    activities !== undefined &&
+    categories !== undefined
+      ? nowView(blocks, activities, categories, now)
+      : null;
 
   const ready =
     blocks !== undefined &&
@@ -149,6 +159,11 @@ export function DayScreen({
     <div className="flex h-full">
       <div className="flex min-w-0 flex-1 flex-col">
         <DayHeader date={date} today={today} onAdd={() => onOpenAdd(null)} />
+        {!isWide && nowPanel !== null && (
+          <div className="border-b">
+            <NowPanel view={nowPanel} compact />
+          </div>
+        )}
         {blocks !== undefined && items.length === 0 && (
           <p className="border-b px-4 py-2 text-sm text-muted-foreground">
             {tense === "past"
@@ -170,9 +185,15 @@ export function DayScreen({
           onEmptySlot={(position) =>
             onOpenAdd(slotStart(position, CLICK_SNAP_MIN))
           }
+          settled={ready}
           onOpenCard={(key) => onSelectBlock(key as Id<"blocks">)}
         />
       </div>
+      {isWide && selected === undefined && nowPanel !== null && (
+        <aside className="w-[340px] shrink-0 overflow-y-auto border-l">
+          <NowPanel view={nowPanel} compact={false} />
+        </aside>
+      )}
       {selected !== undefined &&
         activities !== undefined &&
         categories !== undefined &&

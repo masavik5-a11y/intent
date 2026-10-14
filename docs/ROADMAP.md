@@ -131,7 +131,7 @@ Covers T1–T7 (plan lane), I1–I4, U1, U2, V1, P4, S1, S5.
 - [x] Block detail panel: edit, delete, inherited intent shown as inherited, per-block
       overrides, focus, done-when.
 - [x] Blocks that cross midnight: creation, and the tail at the top of the next day.
-- [ ] Now panel: current block by plan, done-when, why (serif), how, if-then, minimum,
+- [x] Now panel: current block by plan, done-when, why (serif), how, if-then, minimum,
       countdown bar for pressure blocks and plain time left otherwise, up next, and the
       between-blocks state. Uses `shared/pace.ts` `countdown` with tests.
 - [ ] Compass screen (V1): "The life I'm building" and "The life I refuse to drift into",

@@ -1,7 +1,13 @@
 // The two lanes of a day, plan and actual, and the rule that nothing in one lane
 // overlaps (docs/PRD.md, section 7, rule 6).
 
-import { addDays, daysBetween, MINUTES_PER_DAY, type DateKey } from "./time";
+import {
+  addDays,
+  daysBetween,
+  MINUTES_PER_DAY,
+  type DateKey,
+  type LocalMoment,
+} from "./time";
 
 /**
  * A stretch of floating local time: a calendar day and minutes from its midnight. The
@@ -90,4 +96,31 @@ export function firstFreeSpan<Id, E extends LaneEntry<Id>>(
     if (moved > MINUTES_PER_DAY) return null;
   }
   return null;
+}
+
+/** The entry that holds the moment `at`, if any: the current block. */
+export function entryAt<Id, E extends LaneEntry<Id>>(
+  lane: readonly E[],
+  at: LocalMoment,
+): E | null {
+  return (
+    lane.find((entry) => {
+      const { start, end } = spanBounds(at.date, entry);
+      return start <= at.minute && at.minute < end;
+    }) ?? null
+  );
+}
+
+/** Up to `count` entries that start after `at`, soonest first: up next. */
+export function entriesAfter<Id, E extends LaneEntry<Id>>(
+  lane: readonly E[],
+  at: LocalMoment,
+  count: number,
+): E[] {
+  return lane
+    .map((entry) => ({ entry, start: spanBounds(at.date, entry).start }))
+    .filter(({ start }) => start > at.minute)
+    .sort((a, b) => a.start - b.start)
+    .slice(0, count)
+    .map(({ entry }) => entry);
 }

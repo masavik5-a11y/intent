@@ -53,6 +53,8 @@ How the app looks, is laid out, and behaves. Requirement IDs refer to [PRD.md](P
 ### Tablet and narrow desktop (640–1023 px)
 
 Nav rail stays. The side panel becomes a sheet that slides over the grid from the right.
+The now panel is the exception: below 1024 px it is the phone's now card above the grid,
+so it never covers the plan (decided 2026-10-14 while building it).
 
 ### Phone (< 640 px)
 
@@ -137,6 +139,10 @@ Order, top to bottom. Items appear only when they have content.
 9. **Weekly pace** for the current block's category, if it has a target:
    "Deep work 9 of 15h · 3 days left · behind by 1h 30m". Plain text, normal colour.
 10. **Up next**: the following two blocks.
+
+Built in M1: items 1–6 (without the goal chip) and 10. The actions and "Not feeling it"
+arrive in M2, the totals in M2, the pace and the goal chip in M5. On the phone the card
+shows the status, bar, title, done when and the why in two lines; "More" opens the rest.
 
 Blocks without pressure (sleep, meditation, rest, meals) show item 1 as text only, and no
 bar. Between blocks the panel shows "Free until 14:00", the next block, the totals, and a

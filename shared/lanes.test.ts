@@ -1,5 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
+  entriesAfter,
+  entryAt,
   findOverlap,
   firstFreeSpan,
   overlapWindow,
@@ -235,5 +237,49 @@ describe("firstFreeSpan", () => {
       entry("next", WED, "00:00", 1440),
     ];
     expect(firstFreeSpan(span(TUE, "09:00", 60), full)).toBeNull();
+  });
+});
+
+describe("entryAt and entriesAfter", () => {
+  const lane = [
+    entry("sleep-mon", MON, "23:00", 480), // Mon 23:00 – Tue 07:00
+    entry("deep", TUE, "09:00", 120), // 09:00 – 11:00
+    entry("gym", TUE, "12:00", 60),
+    entry("read", TUE, "20:00", 30),
+    entry("sleep-tue", TUE, "23:00", 480), // to Wed 07:00
+    entry("early", WED, "07:30", 30),
+  ];
+
+  test.each([
+    [TUE, 540, "deep"], // its first minute
+    [TUE, 659, "deep"],
+    [TUE, 660, null], // it ended
+    [TUE, 300, "sleep-mon"], // last night's sleep, still running
+    [WED, 60, "sleep-tue"],
+    [TUE, 800, null],
+  ] as const)("on %s at minute %d: %s", (date, minute, id) => {
+    expect(entryAt(lane, { date, minute })?.id ?? null).toBe(id);
+  });
+
+  test("up next: the following entries, soonest first", () => {
+    expect(
+      entriesAfter(lane, { date: TUE, minute: 600 }, 2).map((e) => e.id),
+    ).toEqual(["gym", "read"]);
+  });
+
+  test("up next goes on past midnight", () => {
+    expect(
+      entriesAfter(lane, { date: TUE, minute: 1300 }, 2).map((e) => e.id),
+    ).toEqual(["sleep-tue", "early"]);
+  });
+
+  test("the current entry is not up next", () => {
+    expect(
+      entriesAfter(lane, { date: TUE, minute: 540 }, 1).map((e) => e.id),
+    ).toEqual(["gym"]);
+  });
+
+  test("nothing after the last one", () => {
+    expect(entriesAfter(lane, { date: WED, minute: 480 }, 2)).toEqual([]);
   });
 });

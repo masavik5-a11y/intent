@@ -47,6 +47,11 @@ interface DayGridProps {
   nowPosition: number | null;
   /** From this grid position on, the actual lane is still to come and dimmed. */
   futureFrom: number | null;
+  /**
+   * The day's data has loaded, so nothing above the grid will still appear and push
+   * it down. The first scroll waits for this.
+   */
+  settled: boolean;
   onOpenCard?: (key: string) => void;
   /** A click on the plan lane where there is no block, at this grid position. */
   onEmptySlot?: (position: number) => void;
@@ -62,6 +67,7 @@ export function DayGrid({
   cards,
   nowPosition,
   futureFrom,
+  settled,
   onOpenCard,
   onEmptySlot,
 }: DayGridProps) {
@@ -92,18 +98,30 @@ export function DayGrid({
   // Once per day shown, so the minute ticking never yanks the view.
   useLayoutEffect(() => {
     const scroller = scrollRef.current;
-    if (scroller === null || viewportPx <= 0) return;
+    if (scroller === null || viewportPx <= 0 || !settled) return;
     if (scrolledFor.current === dayKey) return;
     scrolledFor.current = dayKey;
+    // Measured now rather than taken from state: whatever appeared above the grid
+    // in this render has already shrunk it.
+    const height =
+      scroller.clientHeight - (headerRef.current?.offsetHeight ?? 0);
     const wakeTop = wakePosition(gridStartMin, wakeMin) * pxPerMin;
     let top = wakeTop;
     if (nowPosition !== null) {
       const nowTop = nowPosition * pxPerMin;
-      const visible = nowTop >= wakeTop && nowTop <= wakeTop + viewportPx - 48;
-      if (!visible) top = nowTop - viewportPx / 3;
+      const visible = nowTop >= wakeTop && nowTop <= wakeTop + height - 48;
+      if (!visible) top = nowTop - height / 3;
     }
     scroller.scrollTop = Math.max(top, 0);
-  }, [dayKey, viewportPx, pxPerMin, gridStartMin, wakeMin, nowPosition]);
+  }, [
+    dayKey,
+    settled,
+    viewportPx,
+    pxPerMin,
+    gridStartMin,
+    wakeMin,
+    nowPosition,
+  ]);
 
   const gridPx = MINUTES_PER_DAY * pxPerMin;
   const laneClass = isPhone ? "" : "flex-1";
