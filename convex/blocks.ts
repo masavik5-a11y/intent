@@ -51,7 +51,10 @@ export const logEntry = mutation({
   },
 });
 
-/** Changes a block's plan. Fields left out stay as they are; null clears one. */
+/**
+ * Changes a block: its plan, its intent, and for a block that has them, what happened
+ * and the note. Fields left out stay as they are; null clears one.
+ */
 export const update = mutation({
   args: {
     blockId: v.id("blocks"),
@@ -62,6 +65,9 @@ export const update = mutation({
     date: v.optional(vDateKey),
     plannedStartMin: v.optional(v.number()),
     plannedDurationMin: v.optional(v.number()),
+    actualStartMin: v.optional(v.number()),
+    actualDurationMin: v.optional(v.number()),
+    note: clearableText,
     doneWhen: clearableText,
     why: clearableText,
     how: clearableText,

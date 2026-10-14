@@ -8,6 +8,7 @@ import {
   effectiveIntent,
   hasActual,
   hasPlan,
+  actualStartFromClock,
   INTENT_FIELDS,
   isRunning,
   isValidActualStart,
@@ -202,7 +203,17 @@ describe("blockShapeProblem", () => {
       {
         ...base,
         status: "done",
+        ...plan,
         actualStartMin: 1440,
+        actualDurationMin: 1440,
+      },
+    ],
+    [
+      "an unplanned entry until the end of the next day",
+      {
+        ...base,
+        status: "done",
+        actualStartMin: 1435,
         actualDurationMin: 1440,
       },
     ],
@@ -269,7 +280,18 @@ describe("blockShapeProblem", () => {
     ],
     [
       "an actual end past the end of the next day",
-      { ...base, status: "done", actualStartMin: 2400, actualDurationMin: 600 },
+      {
+        ...base,
+        status: "done",
+        ...plan,
+        actualStartMin: 2400,
+        actualDurationMin: 600,
+      },
+      "INVALID_TIME",
+    ],
+    [
+      "an unplanned entry starting on the next day",
+      { ...base, status: "done", actualStartMin: 1450, actualDurationMin: 30 },
       "INVALID_TIME",
     ],
   ])("refuses %s", (_, block, problem) => {
@@ -570,5 +592,17 @@ describe("liveActualLane", () => {
         (entry) => entry.live,
       ),
     ).toBe(false);
+  });
+});
+
+describe("actualStartFromClock", () => {
+  test.each([
+    [690, 660, 690], // 11:30 for a block at 11:00
+    [10, 1410, 1450], // 00:10 for a block that began at 23:30: after midnight
+    [1430, 1450, 1430], // 23:50 for one at 00:10 next day: back before midnight
+    [420, 1380, 1860], // 07:00 for last night's sleep: the next morning
+    [1430, 30, null], // 23:50 for a block at 00:30: the day before, not possible
+  ])("%d near %d is %s", (clock, current, expected) => {
+    expect(actualStartFromClock(clock, current)).toBe(expected);
   });
 });

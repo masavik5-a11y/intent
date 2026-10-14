@@ -925,6 +925,119 @@ describe("blocks.logEntry", () => {
   });
 });
 
+describe("blocks.update: what happened and the note (PRD A2, A5)", () => {
+  const evening = { date: TUE, minute: 1080 };
+
+  test("changes the actual times of a done block, not its plan", async () => {
+    const t = newTest();
+    const { as, deepWork } = await setUp(t);
+    const blockId = await plan(as, deepWork, TUE, "13:00", 60);
+    await as.mutation(api.blocks.setStatus, {
+      blockId,
+      action: { type: "done" },
+      now: evening,
+    });
+    await as.mutation(api.blocks.update, {
+      blockId,
+      actualStartMin: 795,
+      actualDurationMin: 75,
+    });
+    expect(await read(t, blockId)).toMatchObject({
+      plannedStartMin: 780,
+      plannedDurationMin: 60,
+      actualStartMin: 795,
+      actualDurationMin: 75,
+    });
+  });
+
+  test("a block not marked has no actual times to change", async () => {
+    const t = newTest();
+    const { as, deepWork } = await setUp(t);
+    const blockId = await plan(as, deepWork, TUE, "13:00", 60);
+    await expectAppError(
+      as.mutation(api.blocks.update, {
+        blockId,
+        actualStartMin: 780,
+        actualDurationMin: 60,
+      }),
+      "INVALID_INPUT",
+    );
+  });
+
+  test("refuses actual times that collide with something recorded", async () => {
+    const t = newTest();
+    const { as, deepWork } = await setUp(t);
+    const lunch = await plan(as, deepWork, TUE, "12:00", 60, "Lunch");
+    const write = await plan(as, deepWork, TUE, "13:00", 60, "Write");
+    for (const blockId of [lunch, write]) {
+      await as.mutation(api.blocks.setStatus, {
+        blockId,
+        action: { type: "done" },
+        now: evening,
+      });
+    }
+    await expectAppError(
+      as.mutation(api.blocks.update, { blockId: lunch, actualDurationMin: 75 }),
+      "OVERLAP",
+    );
+    await expectAppError(
+      as.mutation(api.blocks.update, { blockId: lunch, actualStartMin: 721 }),
+      "INVALID_TIME",
+    );
+  });
+
+  test("an unplanned entry moves to another day with its times", async () => {
+    const t = newTest();
+    const { as, body } = await setUp(t);
+    const entryId = await as.mutation(api.blocks.logEntry, {
+      date: TUE,
+      title: "Run",
+      categoryId: body,
+      actualStartMin: 1080,
+      actualDurationMin: 40,
+    });
+    await as.mutation(api.blocks.update, {
+      blockId: entryId,
+      date: WED,
+      actualStartMin: 30,
+    });
+    expect(await read(t, entryId)).toMatchObject({
+      date: WED,
+      actualStartMin: 30,
+      actualDurationMin: 40,
+    });
+    // An entry starts on its own day: not "Tuesday, 24:30".
+    await expectAppError(
+      as.mutation(api.blocks.update, {
+        blockId: entryId,
+        date: TUE,
+        actualStartMin: 1470,
+      }),
+      "INVALID_TIME",
+    );
+  });
+
+  test("sets, trims, caps and clears the note", async () => {
+    const t = newTest();
+    const { as, deepWork } = await setUp(t);
+    const blockId = await plan(as, deepWork, TUE, "13:00", 60);
+    await as.mutation(api.blocks.update, {
+      blockId,
+      note: "  Slow start, good finish. ",
+    });
+    expect(await read(t, blockId)).toMatchObject({
+      note: "Slow start, good finish.",
+    });
+    await expectAppError(
+      as.mutation(api.blocks.update, { blockId, note: "x".repeat(201) }),
+      "INVALID_INPUT",
+    );
+    await as.mutation(api.blocks.update, { blockId, note: null });
+    const block = await read(t, blockId);
+    expect(block && "note" in block).toBe(false);
+  });
+});
+
 describe("blocks.remove", () => {
   test("deletes the block and frees its time", async () => {
     const t = newTest();

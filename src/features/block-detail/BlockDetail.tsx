@@ -7,12 +7,14 @@ import {
 import {
   MAX_FOCUS_LENGTH,
   MAX_INTENT_LENGTH,
+  MAX_NOTE_LENGTH,
   MAX_TITLE_LENGTH,
 } from "@shared/text";
 import {
   formatDayLabel,
   formatTimeRange,
   isValidDuration,
+  MINUTES_PER_DAY,
   type DateKey,
   type LocalMoment,
 } from "@shared/time";
@@ -23,21 +25,26 @@ import { TimeInput } from "@/components/TimeInput";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import type { Doc, PlannedBlockDoc } from "@/lib/api";
-import { collidingBlock, overlapMessage } from "@/lib/blockOverlap";
+import type { BlockUpdate, Doc, PlannedBlockDoc } from "@/lib/api";
+import {
+  collidingBlock,
+  collidingEntry,
+  entryOverlapMessage,
+  overlapMessage,
+} from "@/lib/blockOverlap";
 import { COST_OF_SKIPPING_HINT, INTENT_PROMPTS } from "@/lib/intentPrompts";
 import { cn } from "@/lib/utils";
 import { StatusActions } from "@/features/status/StatusActions";
 import { StatusSummary } from "@/features/status/StatusSummary";
 import {
+  actualProblem,
+  actualStartOf,
   draftOf,
   draftProblem,
   inheritedIntent,
   updateArgs,
   type BlockDraft,
 } from "./blockDraft";
-
-export type BlockChanges = ReturnType<typeof updateArgs>;
 
 interface BlockDetailProps {
   /** Block detail edits a plan; an unplanned entry gets its own form (M2). */
@@ -49,7 +56,7 @@ interface BlockDetailProps {
   /** The blocks loaded around the day, for the overlap warning. */
   blocks: readonly Doc<"blocks">[];
   /** Each resolves to an error message, or null when it worked. */
-  onSave: (changes: BlockChanges) => Promise<string | null>;
+  onSave: (changes: BlockUpdate) => Promise<string | null>;
   onDelete: () => Promise<string | null>;
   onCancel: () => void;
   /** The device's minute: whether the block has started, so Done can be offered. */
@@ -100,8 +107,38 @@ export function BlockDetail({
         blocks,
       )
     : undefined;
-  const message =
-    error ?? (blocking === undefined ? null : overlapMessage(blocking));
+  // What happened: shown once the block has actual times, even if they arrived
+  // after the form opened (marked done right here).
+  const hasActualTimes =
+    block.actualStartMin !== undefined && block.actualDurationMin !== undefined;
+  const actualClock =
+    draft.actualClockMin ?? (block.actualStartMin ?? 0) % MINUTES_PER_DAY;
+  const actualLength = draft.actualDurationMin ?? block.actualDurationMin ?? 0;
+  const actualStart = actualStartOf(block, {
+    ...draft,
+    actualClockMin: actualClock,
+  });
+  const entryInTheWay =
+    hasActualTimes &&
+    typeof actualStart === "number" &&
+    isValidDuration(actualLength)
+      ? collidingEntry(
+          {
+            id: block._id,
+            date: block.date,
+            startMin: actualStart,
+            durationMin: actualLength,
+          },
+          blocks,
+        )
+      : undefined;
+  const overlap =
+    blocking !== undefined
+      ? overlapMessage(blocking)
+      : entryInTheWay !== undefined
+        ? entryOverlapMessage(entryInTheWay)
+        : null;
+  const message = error ?? overlap;
 
   function set<K extends keyof BlockDraft>(key: K, value: BlockDraft[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -123,7 +160,8 @@ export function BlockDetail({
     event.preventDefault();
     const problem =
       draftProblem(draft) ??
-      (blocking === undefined ? null : overlapMessage(blocking));
+      (hasActualTimes ? actualProblem(block, draft) : null) ??
+      overlap;
     if (problem !== null) {
       setError(problem);
       return;
@@ -212,6 +250,46 @@ export function BlockDetail({
             </>
           ) : (
             <StatusSummary block={block} onAction={onAction} />
+          )}
+          {hasActualTimes && (
+            <div className="grid grid-cols-[auto_1fr] items-start gap-x-4 gap-y-1.5 pt-1">
+              <label
+                htmlFor={`${ids}-actual-start`}
+                className="text-sm font-medium"
+              >
+                Started
+              </label>
+              <label
+                htmlFor={`${ids}-actual-length`}
+                className="text-sm font-medium"
+              >
+                For
+              </label>
+              <TimeInput
+                id={`${ids}-actual-start`}
+                value={actualClock}
+                onChange={(minute) => set("actualClockMin", minute)}
+                className="h-11 w-24 sm:h-9"
+              />
+              <DurationInput
+                id={`${ids}-actual-length`}
+                value={actualLength}
+                onChange={(minutes) => set("actualDurationMin", minutes)}
+              />
+            </div>
+          )}
+          {(block.status !== "planned" || hasStarted(block, now)) && (
+            <Field id={`${ids}-note`} label="Note">
+              <Input
+                id={`${ids}-note`}
+                value={draft.note}
+                maxLength={MAX_NOTE_LENGTH}
+                autoComplete="off"
+                placeholder="One line, if something is worth remembering"
+                onChange={(event) => set("note", event.target.value)}
+                className="h-11 bg-background sm:h-9"
+              />
+            </Field>
           )}
           {statusError !== null && (
             <p role="alert" className="text-sm text-destructive">

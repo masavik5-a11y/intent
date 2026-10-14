@@ -18,13 +18,13 @@ import {
   cleanText,
   MAX_FOCUS_LENGTH,
   MAX_INTENT_LENGTH,
+  MAX_NOTE_LENGTH,
   MAX_TITLE_LENGTH,
 } from "../../shared/text";
 import type { ErrorCode } from "../../shared/errors";
 import {
   daysBetween,
   isDateKey,
-  isValidMinute,
   MINUTES_PER_DAY,
   type DateKey,
   type LocalMoment,
@@ -78,6 +78,11 @@ export type BlockChanges = { [F in IntentField]?: string | null } & {
   date?: DateKey;
   plannedStartMin?: number;
   plannedDurationMin?: number;
+  /** What happened (PRD A2): only a block that has actual times can change them. */
+  actualStartMin?: number;
+  actualDurationMin?: number;
+  /** The one-line note after the fact (PRD A5). */
+  note?: string | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -174,8 +179,6 @@ export async function logEntry(
 ): Promise<Id<"blocks">> {
   const date = checkDate(input.date);
   const category = await Categories.getOwned(ctx, userId, input.categoryId);
-  // An entry is stored on the day it began, like a planned block.
-  if (!isValidMinute(input.actualStartMin)) throw appError("INVALID_TIME");
   const typed = input.title === undefined ? "" : input.title.trim();
   const fields: BlockFields = {
     date,
@@ -204,6 +207,9 @@ export async function update(
   if (changes.focus !== undefined) {
     patch.focus = clearableText(changes.focus, MAX_FOCUS_LENGTH);
   }
+  if (changes.note !== undefined) {
+    patch.note = clearableText(changes.note, MAX_NOTE_LENGTH);
+  }
   for (const field of INTENT_FIELDS) {
     const change = changes[field];
     if (change !== undefined) {
@@ -228,13 +234,23 @@ export async function update(
   const timesChange =
     changes.date !== undefined ||
     changes.plannedStartMin !== undefined ||
-    changes.plannedDurationMin !== undefined;
+    changes.plannedDurationMin !== undefined ||
+    changes.actualStartMin !== undefined ||
+    changes.actualDurationMin !== undefined;
   if (changes.date !== undefined) patch.date = checkDate(changes.date);
   if (changes.plannedStartMin !== undefined) {
     patch.plannedStartMin = changes.plannedStartMin;
   }
   if (changes.plannedDurationMin !== undefined) {
     patch.plannedDurationMin = changes.plannedDurationMin;
+  }
+  // Setting actual times on a block without them would make a planned or skipped
+  // block look done; the shape check refuses that.
+  if (changes.actualStartMin !== undefined) {
+    patch.actualStartMin = changes.actualStartMin;
+  }
+  if (changes.actualDurationMin !== undefined) {
+    patch.actualDurationMin = changes.actualDurationMin;
   }
 
   const next = { ...fieldsOf(block), ...patch };

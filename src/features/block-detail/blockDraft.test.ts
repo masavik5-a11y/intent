@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import type { DateKey } from "@shared/time";
 import type { Doc, Id, PlannedBlockDoc } from "@/lib/api";
 import {
+  actualProblem,
   draftOf,
   draftProblem,
   inheritedIntent,
@@ -45,6 +46,9 @@ describe("draftOf", () => {
       categoryId: "c-body",
       plannedStartMin: 660,
       plannedDurationMin: 90,
+      actualClockMin: null,
+      actualDurationMin: null,
+      note: "",
       doneWhen: "All four lifts logged.",
       why: "",
       how: "",
@@ -110,5 +114,88 @@ describe("inheritedIntent", () => {
 
   test("without an activity nothing is inherited", () => {
     expect(inheritedIntent(undefined).why).toBeNull();
+  });
+});
+
+describe("what happened and the note", () => {
+  const sleep: PlannedBlockDoc = {
+    ...gymBlock,
+    title: "Sleep",
+    plannedStartMin: 1380, // 23:00
+    plannedDurationMin: 480,
+    status: "done",
+    actualStartMin: 1410, // 23:30
+    actualDurationMin: 450,
+  };
+
+  test("the draft holds the start as a clock time", () => {
+    expect(draftOf(sleep)).toMatchObject({
+      actualClockMin: 1410,
+      actualDurationMin: 450,
+    });
+    expect(draftOf({ ...sleep, actualStartMin: 1450 }).actualClockMin).toBe(10);
+  });
+
+  test("a later start past midnight stays on the right side of it", () => {
+    const draft = {
+      ...draftOf(sleep),
+      actualClockMin: 15,
+      actualDurationMin: 420,
+    };
+    expect(updateArgs(sleep, draft)).toEqual({
+      blockId: "b1",
+      actualStartMin: 1455,
+      actualDurationMin: 420,
+    });
+  });
+
+  test("after Undo, edited actual times are not sent", () => {
+    const undone: PlannedBlockDoc = {
+      ...gymBlock,
+      status: "planned",
+    };
+    const draft = {
+      ...draftOf(undone),
+      actualClockMin: 700,
+      actualDurationMin: 30,
+    };
+    expect(updateArgs(undone, draft)).toEqual({ blockId: "b1" });
+  });
+
+  test("only what changed is sent; the note is trimmed or cleared", () => {
+    expect(
+      updateArgs(sleep, { ...draftOf(sleep), note: "Woke at 4, back by 5." }),
+    ).toEqual({ blockId: "b1", note: "Woke at 4, back by 5." });
+    expect(
+      updateArgs({ ...sleep, note: "Old" }, { ...draftOf(sleep), note: "  " }),
+    ).toEqual({ blockId: "b1", note: null });
+  });
+
+  test.each<[string, Partial<ReturnType<typeof draftOf>>, string | null]>([
+    ["fine", {}, null],
+    [
+      "off the step",
+      { actualClockMin: 1412 },
+      "Use a start time in 5-minute steps.",
+    ],
+    [
+      "no length",
+      { actualDurationMin: 0 },
+      "Use a length from 5 minutes to 24 hours.",
+    ],
+  ])("actualProblem: %s", (_, change, message) => {
+    expect(actualProblem(sleep, { ...draftOf(sleep), ...change })).toBe(
+      message,
+    );
+  });
+
+  test("actualProblem: a start on the day before the block's own", () => {
+    // Read at 00:30, so 23:50 could only be the evening before.
+    const early = { ...sleep, plannedStartMin: 30, actualStartMin: 30 };
+    expect(
+      actualProblem(early, { ...draftOf(early), actualClockMin: 1430 }),
+    ).toBe(
+      "That start would fall on the day before. Pick one closer to the plan.",
+    );
   });
 });

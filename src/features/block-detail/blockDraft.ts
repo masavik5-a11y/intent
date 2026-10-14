@@ -1,9 +1,10 @@
 import {
+  actualStartFromClock,
   effectiveIntent,
   INTENT_FIELDS,
   type IntentField,
 } from "@shared/blocks";
-import { isValidDuration, isValidMinute } from "@shared/time";
+import { isValidDuration, isValidMinute, MINUTES_PER_DAY } from "@shared/time";
 import type { Doc, Id, PlannedBlockDoc } from "@/lib/api";
 
 // The block detail form's state and what it sends. Pure, so it is tested alone.
@@ -16,6 +17,14 @@ export type BlockDraft = { [F in IntentField]: string } & {
   categoryId: Id<"categories">;
   plannedStartMin: number;
   plannedDurationMin: number;
+  /**
+   * What happened, for a block marked done or partly (PRD A2): the start as a clock
+   * time, and the length. Null on a block without actual times.
+   */
+  actualClockMin: number | null;
+  actualDurationMin: number | null;
+  /** The one-line note after the fact (PRD A5). */
+  note: string;
 };
 
 export function draftOf(block: PlannedBlockDoc): BlockDraft {
@@ -26,6 +35,12 @@ export function draftOf(block: PlannedBlockDoc): BlockDraft {
     categoryId: block.categoryId,
     plannedStartMin: block.plannedStartMin,
     plannedDurationMin: block.plannedDurationMin,
+    actualClockMin:
+      block.actualStartMin === undefined
+        ? null
+        : block.actualStartMin % MINUTES_PER_DAY,
+    actualDurationMin: block.actualDurationMin ?? null,
+    note: block.note ?? "",
     doneWhen: block.doneWhen ?? "",
     why: block.why ?? "",
     how: block.how ?? "",
@@ -47,6 +62,42 @@ export function draftProblem(draft: BlockDraft): string | null {
   return null;
 }
 
+/**
+ * The actual start the draft's clock time means, in minutes from the block's day
+ * (shared/blocks.ts, actualStartFromClock). Undefined for a block without actual
+ * times; null when the time cannot be read on that block's day.
+ */
+export function actualStartOf(
+  block: PlannedBlockDoc,
+  draft: BlockDraft,
+): number | null | undefined {
+  if (draft.actualClockMin === null || block.actualStartMin === undefined) {
+    return undefined;
+  }
+  return actualStartFromClock(draft.actualClockMin, block.actualStartMin);
+}
+
+/** What is wrong with the draft's actual times, in the words the form shows, or null. */
+export function actualProblem(
+  block: PlannedBlockDoc,
+  draft: BlockDraft,
+): string | null {
+  if (draft.actualClockMin === null) return null;
+  if (!isValidMinute(draft.actualClockMin)) {
+    return "Use a start time in 5-minute steps.";
+  }
+  if (actualStartOf(block, draft) === null) {
+    return "That start would fall on the day before. Pick one closer to the plan.";
+  }
+  if (
+    draft.actualDurationMin !== null &&
+    !isValidDuration(draft.actualDurationMin)
+  ) {
+    return "Use a length from 5 minutes to 24 hours.";
+  }
+  return null;
+}
+
 /** Arguments for blocks.update: only what changed; emptied text is sent as null. */
 export function updateArgs(block: PlannedBlockDoc, draft: BlockDraft) {
   const before = draftOf(block);
@@ -58,6 +109,9 @@ export function updateArgs(block: PlannedBlockDoc, draft: BlockDraft) {
     categoryId?: Id<"categories">;
     plannedStartMin?: number;
     plannedDurationMin?: number;
+    actualStartMin?: number;
+    actualDurationMin?: number;
+    note?: string | null;
   } = { blockId: block._id };
   if (draft.title !== before.title) args.title = draft.title;
   if (draft.focus !== before.focus) {
@@ -74,6 +128,21 @@ export function updateArgs(block: PlannedBlockDoc, draft: BlockDraft) {
   }
   if (draft.plannedDurationMin !== before.plannedDurationMin) {
     args.plannedDurationMin = draft.plannedDurationMin;
+  }
+  if (draft.actualClockMin !== before.actualClockMin) {
+    const start = actualStartOf(block, draft);
+    if (typeof start === "number") args.actualStartMin = start;
+  }
+  // Only while the block has actual times: after Undo it has none to change.
+  if (
+    block.actualDurationMin !== undefined &&
+    draft.actualDurationMin !== null &&
+    draft.actualDurationMin !== before.actualDurationMin
+  ) {
+    args.actualDurationMin = draft.actualDurationMin;
+  }
+  if (draft.note !== before.note) {
+    args.note = draft.note.trim() === "" ? null : draft.note;
   }
   for (const field of INTENT_FIELDS) {
     if (draft[field] === before[field]) continue;
