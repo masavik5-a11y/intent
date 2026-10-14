@@ -2,8 +2,9 @@
 
 Build order, one milestone at a time. Requirement IDs refer to [PRD.md](PRD.md).
 
-**Current milestone: M0 (one check left: a second email is refused on the live site, see
-the open M0 slice).** Update this line when a milestone is finished.
+**Current milestone: M1 (started 2026-10-14). M0 has one check left: a second email is
+refused on the live site, see the open M0 slice.** Update this line when a milestone is
+finished.
 
 ## How to work
 
@@ -112,7 +113,7 @@ Covers T1–T7 (plan lane), I1–I4, U1, U2, V1, P4, S1, S5.
 
 **Slices:**
 
-- [ ] Schema: `settings`, `categories`, `activities`, `blocks` (plan fields, status
+- [x] Schema: `settings`, `categories`, `activities`, `blocks` (plan fields, status
       always `planned` for now), `compass`.
 - [ ] On first sign-in: create settings (time zone from the device) and seed the default
       categories.

@@ -1,17 +1,6 @@
 import { describe, expect, test } from "vitest";
+import { COLOR_KEYS as KEYS } from "@shared/categories";
 import css from "./theme.css?raw";
-
-// The colour keys from docs/DESIGN.md, section 5.
-const KEYS = [
-  "violet",
-  "teal",
-  "coral",
-  "pink",
-  "amber",
-  "gray",
-  "slate",
-  "red",
-] as const;
 
 const AA_TEXT = 4.5;
 const AA_GRAPHICS = 3;

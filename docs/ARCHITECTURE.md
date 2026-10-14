@@ -131,12 +131,18 @@ This is the decision most likely to cause bugs if it is done loosely, so it is f
 
 ## 5. Data model
 
-Draft Convex schema. Tables marked with a milestone are added in that milestone.
+Draft Convex schema. Tables marked with a milestone are added in that milestone. The
+real one is `convex/schema.ts`; where they differ, it wins. In M1 a block's plan times
+are required and its status can only be `planned`; M2 widens both.
 
 ```ts
 import { defineSchema, defineTable } from "convex/server";
-import { v } from "convex/values";
+import { v, type VString } from "convex/values";
 import { authTables } from "@convex-dev/auth/server";
+
+// A DateKey or ColorKey in a document; the model checks the value (see section 17).
+export const vDateKey = v.string() as VString<DateKey>;
+export const vColorKey = v.string() as VString<ColorKey>;
 
 export const categoryKind = v.union(
   v.literal("intentional"),
@@ -169,6 +175,8 @@ export default defineSchema({
     timeZone: v.string(), // IANA, e.g. "Europe/Prague"
     gridStartMin: v.number(), // default 300
     weekStartsOn: v.number(), // 1 = Monday
+    wakeMin: v.number(), // the waking part of the day, which Fit zoom shows whole
+    sleepMin: v.number(),
     // M4
     notifyBlockStart: v.optional(v.boolean()),
     notifyEndingSoon: v.optional(v.boolean()),
@@ -193,7 +201,7 @@ export default defineSchema({
     userId: v.id("users"),
     name: v.string(),
     kind: categoryKind,
-    colorKey: v.string(),
+    colorKey: vColorKey,
     icon: v.string(),
     sortOrder: v.number(),
     archived: v.boolean(),
@@ -217,7 +225,7 @@ export default defineSchema({
   // M1 (plan fields), M2 (status and actual fields)
   blocks: defineTable({
     userId: v.id("users"),
-    date: v.string(), // DateKey
+    date: vDateKey,
     title: v.string(),
     focus: v.optional(v.string()),
     activityId: v.optional(v.id("activities")),
@@ -244,7 +252,7 @@ export default defineSchema({
   // M3
   days: defineTable({
     userId: v.id("users"),
-    date: v.string(),
+    date: vDateKey,
     mainFocus: v.optional(v.string()),
     wentWell: v.optional(v.string()),
     drifted: v.optional(v.string()),
@@ -264,9 +272,9 @@ export default defineSchema({
     startMin: v.number(),
     durationMin: v.number(),
     weekdays: v.array(v.number()), // 0 = Sunday … 6 = Saturday
-    startDate: v.string(),
-    endDate: v.optional(v.string()),
-    materializedThrough: v.optional(v.string()),
+    startDate: vDateKey,
+    endDate: v.optional(vDateKey),
+    materializedThrough: v.optional(vDateKey),
   }).index("by_userId", ["userId"]),
 
   // M4
@@ -286,7 +294,7 @@ export default defineSchema({
     userId: v.id("users"),
     title: v.string(),
     why: v.optional(v.string()),
-    dueDate: v.optional(v.string()), // DateKey
+    dueDate: v.optional(vDateKey),
     status: v.union(v.literal("active"), v.literal("done"), v.literal("dropped")),
     sortOrder: v.number(),
   }).index("by_userId", ["userId"]),
@@ -580,6 +588,8 @@ Things assumed here that must be confirmed in the milestone that depends on them
 | 2026-10-13 | Phone bottom bar: Today, Week, quick add, Insights, More. | The other four screens need a way in on the phone (DESIGN.md section 2). |
 | 2026-10-13 | A new app version reloads the page once by itself (`autoUpdate`). | Simplest; switch to a prompt if a reload ever interrupts typing. |
 | 2026-10-14 | Index names list every field: `by_userId`, `by_userId_and_date`. | Convex's guidelines (`convex/_generated/ai/guidelines.md`) require it; the draft schema above was renamed before any table exists. |
+| 2026-10-14 | Wake and sleep times live in `settings` (`wakeMin`, `sleepMin`). | First-run setup asks for them, and the grid's Fit zoom needs the waking range. |
+| 2026-10-14 | Date and colour-key fields are typed in the schema (`vDateKey`, `vColorKey`). | The brand reaches every document and argument; the model validates the value. |
 
 ## 17. Implementation notes
 
@@ -605,9 +615,10 @@ one; delete an entry when it stops being true.
 - On this PC the Convex CLI often ends with
   `Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)` and exit code 127 after it has
   succeeded. Read its output, not its exit code.
-- The `date` field could use a typed validator so documents carry `DateKey` instead of
-  `string` (for example `v.string() as VString<DateKey>`). Not tried yet; decide in M1
-  when the `blocks` schema is written.
+- Date fields use `vDateKey` (`v.string() as VString<DateKey>`) and colour keys
+  `vColorKey`, both exported from `convex/schema.ts`, so documents and arguments carry
+  the branded types. The cast checks nothing at run time: a model function that writes
+  one validates it first (`isDateKey`, `isColorKey`). Decided 2026-10-14.
 
 **Frontend**
 
