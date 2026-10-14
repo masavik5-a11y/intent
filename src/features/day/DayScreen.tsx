@@ -221,10 +221,16 @@ export function DayScreen({
       : null;
 
   const feelingTargetId = nowPanel?.feelingTarget?.block._id ?? null;
+  // Only while its block is not marked: once it is (here, in block detail or on the
+  // other device), the view closes rather than offer actions on what happened.
   const feelingBlock =
     notFeelingId === undefined
       ? undefined
-      : blocks?.filter(hasPlan).find((block) => block._id === notFeelingId);
+      : blocks
+          ?.filter(hasPlan)
+          .find(
+            (block) => block._id === notFeelingId && block.status === "planned",
+          );
 
   // N opens quick add, L logs what happened and X opens "Not feeling it" (DESIGN.md
   // section 8), except while typing or in a dialog.
@@ -269,8 +275,11 @@ export function DayScreen({
       durationMin,
       blocks: blocks ?? [],
     });
+  // On a past day whose plan is frozen, the phone's + logs what happened instead of
+  // adding to the plan (the header's primary action there does the same).
+  const logRequest = log ?? (planFrozen ? add : undefined);
   const logSpan =
-    log === undefined || !ready || !canLog
+    logRequest === undefined || !ready || !canLog
       ? null
       : defaultEntrySpan({
           day: date,
@@ -279,7 +288,7 @@ export function DayScreen({
           now,
           isToday: tense === "today",
           blocks,
-          position: log.position,
+          position: logRequest.position,
         });
   const addStart =
     add === undefined || !ready || planFrozen

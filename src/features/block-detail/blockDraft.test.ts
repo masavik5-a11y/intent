@@ -162,6 +162,38 @@ describe("what happened and the note", () => {
     expect(updateArgs(undone, draft)).toEqual({ blockId: "b1" });
   });
 
+  test("re-marked while open (Done, Undo, Partly 30): only the note is sent", () => {
+    const done: PlannedBlockDoc = {
+      ...gymBlock,
+      status: "done",
+      actualStartMin: 660,
+      actualDurationMin: 90,
+    };
+    const opened = draftOf(done);
+    const partly: PlannedBlockDoc = {
+      ...done,
+      status: "partial",
+      actualDurationMin: 30,
+    };
+    // BlockDetail drops the draft's actual times when the block's change.
+    const draft = {
+      ...opened,
+      actualClockMin: null,
+      actualDurationMin: null,
+      note: "Only half.",
+    };
+    expect(updateArgs(partly, draft)).toEqual({
+      blockId: "b1",
+      note: "Only half.",
+    });
+    // Kept, the old length would have overwritten the new mark.
+    expect(updateArgs(partly, { ...opened, note: "Only half." })).toMatchObject(
+      {
+        actualDurationMin: 90,
+      },
+    );
+  });
+
   test("only what changed is sent; the note is trimmed or cleared", () => {
     expect(
       updateArgs(sleep, { ...draftOf(sleep), note: "Woke at 4, back by 5." }),

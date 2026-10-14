@@ -771,6 +771,30 @@ describe("blocks.setStatus", () => {
     expect(block && "minimumChosen" in block).toBe(false);
   });
 
+  test("Start the minimum on a block already done is refused, and keeps what happened", async () => {
+    const t = newTest();
+    const { as, deepWork } = await setUp(t);
+    const blockId = await plan(as, deepWork, TUE, "13:00", 60);
+    await as.mutation(api.blocks.setStatus, {
+      blockId,
+      action: { type: "done" },
+      now: at(TUE, "13:40"),
+    });
+    await expectAppError(
+      as.mutation(api.blocks.setStatus, {
+        blockId,
+        action: { type: "startMinimum" },
+        now: at(TUE, "13:45"),
+      }),
+      "INVALID_INPUT",
+    );
+    expect(await read(t, blockId)).toMatchObject({
+      status: "done",
+      actualStartMin: 780,
+      actualDurationMin: 40,
+    });
+  });
+
   test("a future block can be skipped ahead of time", async () => {
     const t = newTest();
     const { as, deepWork } = await setUp(t);
