@@ -122,7 +122,7 @@ Covers T1–T7 (plan lane), I1–I4, U1, U2, V1, P4, S1, S5.
 - [x] `convex/model/blocks.ts`: create, update, delete, enforcing the invariants in
       ARCHITECTURE.md section 5. convex-test coverage for overlap, foreign documents,
       invalid times.
-- [ ] Activities screen: list by category, create, edit, archive. All intent fields
+- [x] Activities screen: list by category, create, edit, archive. All intent fields
       (why, how, if-then, minimum version, cost of skipping, default done-when), grouped
       as "Intent" and "For hard days"; the pressure switch, default duration, notify switch.
 - [ ] Day screen: header with date navigation, hour grid, plan lane with block cards, an

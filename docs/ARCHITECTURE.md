@@ -663,6 +663,14 @@ one; delete an entry when it stops being true.
   M1 belongs in that file.
 - Signed-in screens render only while there is a session, so their queries may call
   `requireUser` freely. Import the backend API from `@/lib/api`.
+- A sheet opened from the URL (not from its trigger) gets Base UI's default focus, the
+  first field, which pops up the phone's keyboard. Pass `initialFocus` a ref to the
+  sheet's title (`tabIndex={-1}`) when the sheet shows something rather than asks for
+  typing; see `ActivitiesScreen`. Closing such a sheet goes back in history when it
+  can (`useCanGoBack`), so the Android back gesture and Cancel agree.
+- Shared form pieces: `src/components/DurationInput.tsx` (typed or preset lengths,
+  snapped to 5 minutes) and `AppIcon` (an icon by its stored name). Save failures read
+  through `saveErrorMessage` in `src/lib/errorMessages.ts`.
 - Colour: an element takes a category colour with `data-color={colorKey}` and the
   utilities `bg-key-tint`, `text-key-ink`, `bg-key-solid`, `text-on-solid` (DESIGN.md
   section 5). The voice font is `font-voice`.
@@ -680,6 +688,10 @@ one; delete an entry when it stops being true.
 - npm warns that esbuild's install script is not approved. Everything works without it.
 - Check `npm run check`'s own exit code before committing; a pipe such as `| tail` hides
   a failure.
+- The Browser pane is about 375 px wide. `resize_window` with the mobile preset gives
+  sharp phone screenshots; a desktop size (1280×800) is scaled down, so its screenshots
+  are coarse and clicks by `ref` can land in the wrong place. Under emulation, fill text
+  with `form_input` and click by coordinates from a fresh screenshot.
 - Verifying in the running app uses the Claude desktop app's Browser pane, which keeps
   its own sign-ins. It is signed in to the dev deployment as the dev test account from
   `.env.example`. Filip signs it in himself when needed: the password travels to

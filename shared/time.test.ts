@@ -11,6 +11,7 @@ import {
   isValidMinute,
   minutesToLabel,
   parseDateKey,
+  parseDuration,
   parseTimeLabel,
   toDateKey,
   weekdayOf,
@@ -276,6 +277,54 @@ describe("formatTimeRange", () => {
     [1380, 480, "23:00–07:00"], // sleep, crossing midnight
   ])("start %d, duration %d -> %s", (start, duration, expected) => {
     expect(formatTimeRange(start, duration)).toBe(expected);
+  });
+});
+
+describe("parseDuration", () => {
+  test.each([
+    ["90", 90],
+    [" 45 ", 45],
+    ["90m", 90],
+    ["45 min", 45],
+    ["5mins", 5],
+    ["1h", 60],
+    ["2 h", 120],
+    ["1h 30m", 90],
+    ["1h30", 90],
+    ["1h30m", 90],
+    ["1 h 30 min", 90],
+    ["1:30", 90],
+    ["0:45", 45],
+    ["1.5h", 90],
+    ["1,5h", 90],
+    ["0.25h", 15],
+    ["1H 30M", 90],
+    ["24h", 1440],
+    ["0", 0],
+  ])("%j is %d minutes", (text, minutes) => {
+    expect(parseDuration(text)).toBe(minutes);
+  });
+
+  test.each([
+    "",
+    "abc",
+    "1h 30m 20s",
+    "-30",
+    "1:75",
+    "1:5",
+    "1.5h 10m",
+    "1.33h", // 79.8 minutes
+    "h",
+    "30 hours",
+    "1.5",
+  ])("%j is not a length of time", (text) => {
+    expect(parseDuration(text)).toBeNull();
+  });
+
+  test("reads what formatDuration writes", () => {
+    for (const minutes of [5, 45, 60, 90, 125, 1440]) {
+      expect(parseDuration(formatDuration(minutes))).toBe(minutes);
+    }
   });
 });
 

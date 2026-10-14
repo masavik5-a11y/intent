@@ -217,6 +217,35 @@ export function parseTimeLabel(text: string): number | null {
   return hours * MINUTES_PER_HOUR + minutes;
 }
 
+const MINUTES_ONLY = /^(\d{1,4})\s*(?:m|min|mins)?$/;
+const CLOCK_LENGTH = /^(\d{1,2}):([0-5]\d)$/;
+const HOURS_AND_MINUTES =
+  /^(\d{1,2}(?:\.\d+)?)\s*h\s*(?:(\d{1,2})\s*(?:m|min|mins)?)?$/;
+
+/**
+ * Minutes for a typed length of time: "90", "90m", "45 min", "1h", "1h 30m", "1h30",
+ * "1:30", "1.5h" or "1,5h". Null when the text is not one. The result is not checked
+ * against the 5-minute step; use isValidDuration for that.
+ */
+export function parseDuration(text: string): number | null {
+  const value = text.trim().toLowerCase().replace(",", ".");
+  const minutesOnly = MINUTES_ONLY.exec(value);
+  if (minutesOnly !== null) return Number(minutesOnly[1]);
+  const clock = CLOCK_LENGTH.exec(value);
+  if (clock !== null) {
+    return Number(clock[1]) * MINUTES_PER_HOUR + Number(clock[2]);
+  }
+  const hours = HOURS_AND_MINUTES.exec(value);
+  if (hours === null) return null;
+  const [, hourText = "", minuteText] = hours;
+  // "1.5h 10m" mixes two ways of writing it.
+  if (minuteText !== undefined && hourText.includes(".")) return null;
+  const total =
+    Number(hourText) * MINUTES_PER_HOUR +
+    (minuteText === undefined ? 0 : Number(minuteText));
+  return Number.isInteger(total) ? total : null;
+}
+
 /** "11:00–12:30". The end wraps past midnight like minutesToLabel. */
 export function formatTimeRange(startMin: number, durationMin: number): string {
   return `${minutesToLabel(startMin)}–${minutesToLabel(startMin + durationMin)}`;

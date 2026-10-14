@@ -8,8 +8,10 @@
  * @module
  */
 
+import type * as activities from "../activities.js";
 import type * as auth from "../auth.js";
 import type * as blocks from "../blocks.js";
+import type * as categories from "../categories.js";
 import type * as http from "../http.js";
 import type * as lib_allowedEmails from "../lib/allowedEmails.js";
 import type * as lib_auth from "../lib/auth.js";
@@ -29,8 +31,10 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  activities: typeof activities;
   auth: typeof auth;
   blocks: typeof blocks;
+  categories: typeof categories;
   http: typeof http;
   "lib/allowedEmails": typeof lib_allowedEmails;
   "lib/auth": typeof lib_auth;
