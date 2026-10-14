@@ -22,7 +22,17 @@ import { DayGrid, type GridCard } from "./DayGrid";
 import { DayHeader } from "./DayHeader";
 import { NowPanel } from "@/features/now/NowPanel";
 import { nowView } from "@/features/now/nowView";
-import { cardName, cardTime, dayTense, itemAt, planLane } from "./dayView";
+import {
+  actualCardName,
+  actualCardState,
+  actualCardTime,
+  actualLane,
+  cardName,
+  cardTime,
+  dayTense,
+  planCardState,
+  planLane,
+} from "./dayView";
 import { QuickAdd } from "./QuickAdd";
 import { DEFAULT_DURATION_MIN, type NewBlockArgs } from "./QuickAddForm";
 import { suggestedStart } from "./quickAddRules";
@@ -95,11 +105,13 @@ export function DayScreen({
 
   const items =
     blocks === undefined ? [] : planLane(blocks, date, gridStartMin);
-  const current = nowPosition === null ? undefined : itemAt(items, nowPosition);
+  const happened =
+    blocks === undefined ? [] : actualLane(blocks, date, gridStartMin, now);
   const categoryOf = indexById(categories);
   const activityOf = indexById(activities);
 
-  const cards: GridCard[] = items.map(({ block, segment }) => {
+  /** What every card shows of its block, in either lane. */
+  const looksOf = (block: Doc<"blocks">) => {
     const category = categoryOf.get(block.categoryId);
     const activity =
       block.activityId === undefined
@@ -111,16 +123,32 @@ export function DayScreen({
       focus: block.focus,
       icon: activity?.icon ?? category?.icon,
       colorKey: category?.colorKey ?? "gray",
-      time: cardTime(block, segment),
-      name: cardName(block, segment, date),
-      top: segment.top,
-      height: segment.height,
-      current: current?.block._id === block._id,
       selected: block._id === selectedBlockId,
-      cutTop: segment.startsBefore,
-      cutBottom: segment.endsAfter,
     };
-  });
+  };
+  const cards: GridCard[] = items.map(({ block, segment }) => ({
+    ...looksOf(block),
+    time: cardTime(block, segment),
+    name: cardName(block, segment, date),
+    top: segment.top,
+    height: segment.height,
+    state: planCardState(block, now),
+    cutTop: segment.startsBefore,
+    cutBottom: segment.endsAfter,
+    openable: true,
+  }));
+  const actualCards: GridCard[] = happened.map((item) => ({
+    ...looksOf(item.block),
+    time: actualCardTime(item),
+    name: actualCardName(item),
+    top: item.segment.top,
+    height: item.segment.height,
+    state: actualCardState(item),
+    cutTop: item.segment.startsBefore,
+    cutBottom: item.segment.endsAfter,
+    // Block detail edits planned blocks; unplanned entries get theirs next (M2).
+    openable: hasPlan(item.block),
+  }));
 
   /** Runs a change and closes the open panel; a failure becomes its message. */
   async function attempt(
@@ -210,6 +238,7 @@ export function DayScreen({
           sleepMin={sleepMin}
           isPhone={isPhone}
           cards={cards}
+          actualCards={actualCards}
           nowPosition={nowPosition}
           futureFrom={
             tense === "future" ? 0 : tense === "today" ? nowPosition : null
