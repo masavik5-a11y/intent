@@ -1,18 +1,25 @@
 import { describe, expect, test } from "vitest";
 import {
   actualLaneOf,
+  applyStatus,
   blockShapeProblem,
   blockSpan,
+  editTarget,
   effectiveIntent,
   hasActual,
   hasPlan,
   INTENT_FIELDS,
+  isRunning,
   isValidActualStart,
+  liveActualLane,
+  partlyChoices,
   planLaneOf,
   type BlockShape,
   type IntentTexts,
+  type StatusAction,
 } from "./blocks";
-import type { DateKey } from "./time";
+import type { LaneSpan } from "./lanes";
+import type { DateKey, LocalMoment } from "./time";
 
 const gym: IntentTexts = {
   doneWhen: "All four lifts logged.",
@@ -267,5 +274,301 @@ describe("blockShapeProblem", () => {
     ],
   ])("refuses %s", (_, block, problem) => {
     expect(blockShapeProblem(block)).toBe(problem);
+  });
+});
+
+const MON = "2026-10-12" as DateKey;
+const WED = "2026-10-14" as DateKey;
+
+function at(date: DateKey, time: string): LocalMoment {
+  const [hours = 0, mins = 0] = time.split(":").map(Number);
+  return { date, minute: hours * 60 + mins };
+}
+
+function span(date: DateKey, time: string, minutes: number): LaneSpan {
+  return {
+    ...at(date, time),
+    startMin: at(date, time).minute,
+    durationMin: minutes,
+  };
+}
+
+describe("isRunning and editTarget", () => {
+  const write = planned("write", 780, 60); // 13:00–14:00
+
+  test.each([
+    ["12:59", false],
+    ["13:00", true],
+    ["13:59", true],
+    ["14:00", false],
+  ])("a planned block at %s is running: %s", (time, running) => {
+    expect(isRunning(write, at(TUE, time))).toBe(running);
+  });
+
+  test("a block marked early or skipped is no longer running", () => {
+    const now = at(TUE, "13:30");
+    expect(isRunning({ ...write, status: "skipped" }, now)).toBe(false);
+    expect(
+      isRunning(
+        {
+          ...write,
+          status: "done",
+          actualStartMin: 780,
+          actualDurationMin: 30,
+        },
+        now,
+      ),
+    ).toBe(false);
+    expect(isRunning(drift, now)).toBe(false);
+  });
+
+  test("last night's sleep is running after midnight", () => {
+    const sleep = { ...planned("sleep", 1380, 480), date: MON };
+    expect(isRunning(sleep, at(TUE, "03:00"))).toBe(true);
+    expect(isRunning(sleep, at(TUE, "07:00"))).toBe(false);
+  });
+
+  test.each<[string, LocalMoment, "plan" | "actual"]>([
+    ["before it starts, today: the plan", at(TUE, "12:00"), "plan"],
+    ["once it has started: what happened", at(TUE, "13:00"), "actual"],
+    ["after it ended: what happened", at(TUE, "15:00"), "actual"],
+    [
+      "on a later day (the block is past): what happened",
+      at(WED, "09:00"),
+      "actual",
+    ],
+    [
+      "on an earlier day (the block is ahead): the plan",
+      at(MON, "20:00"),
+      "plan",
+    ],
+  ])("edits %s", (_, now, target) => {
+    expect(editTarget(write, now)).toBe(target);
+  });
+
+  test("an unplanned entry is only ever edited as what happened", () => {
+    expect(editTarget(drift, at(MON, "09:00"))).toBe("actual");
+  });
+});
+
+describe("applyStatus", () => {
+  const write = planned("write", 780, 60); // 13:00–14:00
+  const evening = at(TUE, "18:00");
+  const done: StatusAction = { type: "done" };
+
+  test("Done after the block: what was planned", () => {
+    expect(applyStatus(write, done, [], evening)).toEqual({
+      fields: {
+        status: "done",
+        actualStartMin: 780,
+        actualDurationMin: 60,
+        skipReason: undefined,
+      },
+    });
+  });
+
+  test("Done after an overrun: a late start and the planned end", () => {
+    const lunch = span(TUE, "12:00", 75); // until 13:15
+    expect(applyStatus(write, done, [lunch], evening)).toMatchObject({
+      fields: { status: "done", actualStartMin: 795, actualDurationMin: 45 },
+    });
+  });
+
+  test("Done while running: ends now", () => {
+    expect(applyStatus(write, done, [], at(TUE, "13:50"))).toMatchObject({
+      fields: { actualStartMin: 780, actualDurationMin: 50 },
+    });
+  });
+
+  test("Done and Partly wait until the block has started", () => {
+    const early = at(TUE, "12:55");
+    expect(applyStatus(write, done, [], early)).toEqual({
+      problem: "NOT_STARTED",
+    });
+    expect(
+      applyStatus(write, { type: "partial", minutes: 30 }, [], early),
+    ).toEqual({ problem: "NOT_STARTED" });
+  });
+
+  test("Done finds no room when the lane holds the whole plan", () => {
+    expect(
+      applyStatus(write, done, [span(TUE, "12:00", 150)], evening),
+    ).toEqual({ problem: "NO_ROOM" });
+  });
+
+  test("Done on a skipped block replaces the skip", () => {
+    const skipped: TestBlock = {
+      ...write,
+      status: "skipped",
+      skipReason: "tired",
+    };
+    expect(applyStatus(skipped, done, [], evening)).toMatchObject({
+      fields: { status: "done", skipReason: undefined },
+    });
+  });
+
+  test("Partly: the minutes given, from where Done would start", () => {
+    expect(
+      applyStatus(write, { type: "partial", minutes: 25 }, [], evening),
+    ).toEqual({
+      fields: {
+        status: "partial",
+        actualStartMin: 780,
+        actualDurationMin: 25,
+        skipReason: undefined,
+      },
+    });
+    expect(
+      applyStatus(
+        write,
+        { type: "partial", minutes: 25 },
+        [span(TUE, "12:00", 75)],
+        evening,
+      ),
+    ).toMatchObject({ fields: { actualStartMin: 795, actualDurationMin: 25 } });
+  });
+
+  test("Partly refuses a length that runs into the next entry, or is no length", () => {
+    expect(
+      applyStatus(
+        write,
+        { type: "partial", minutes: 45 },
+        [span(TUE, "13:30", 30)],
+        evening,
+      ),
+    ).toEqual({ problem: "NO_ROOM" });
+    for (const minutes of [0, 7, -30]) {
+      expect(
+        applyStatus(write, { type: "partial", minutes }, [], evening),
+      ).toEqual({ problem: "INVALID_TIME" });
+    }
+  });
+
+  test("Skip works at any time, with or without a reason, and clears actual times", () => {
+    const marked: TestBlock = {
+      ...write,
+      status: "done",
+      actualStartMin: 780,
+      actualDurationMin: 60,
+    };
+    expect(
+      applyStatus(marked, { type: "skip", reason: "noTime" }, [], evening),
+    ).toEqual({
+      fields: {
+        status: "skipped",
+        actualStartMin: undefined,
+        actualDurationMin: undefined,
+        skipReason: "noTime",
+      },
+    });
+    // Skipping ahead of time, say tomorrow's block tonight.
+    expect(applyStatus(write, { type: "skip" }, [], at(MON, "21:00"))).toEqual({
+      fields: {
+        status: "skipped",
+        actualStartMin: undefined,
+        actualDurationMin: undefined,
+        skipReason: undefined,
+      },
+    });
+  });
+
+  test("Undo goes back to planned, without actual times or a reason", () => {
+    const skipped: TestBlock = {
+      ...write,
+      status: "skipped",
+      skipReason: "tired",
+    };
+    expect(applyStatus(skipped, { type: "undo" }, [], evening)).toEqual({
+      fields: {
+        status: "planned",
+        actualStartMin: undefined,
+        actualDurationMin: undefined,
+        skipReason: undefined,
+      },
+    });
+  });
+
+  test("an unplanned entry has no status to change", () => {
+    for (const action of [
+      done,
+      { type: "partial", minutes: 10 },
+      { type: "skip" },
+      { type: "undo" },
+    ] satisfies StatusAction[]) {
+      expect(applyStatus(drift, action, [], evening)).toEqual({
+        problem: "UNPLANNED",
+      });
+    }
+  });
+
+  test("every change it makes keeps the block's shape", () => {
+    const actions: StatusAction[] = [
+      done,
+      { type: "partial", minutes: 20 },
+      { type: "skip", reason: "forgot" },
+      { type: "undo" },
+    ];
+    for (const action of actions) {
+      const result = applyStatus(write, action, [], evening);
+      if (!("fields" in result)) throw new Error("expected a change");
+      expect(blockShapeProblem({ ...write, ...result.fields })).toBeNull();
+    }
+  });
+});
+
+describe("partlyChoices", () => {
+  test.each<[number, number | undefined, number[]]>([
+    [180, undefined, [45, 90, 135]],
+    [60, undefined, [15, 30, 45]],
+    [90, undefined, [25, 45, 70]], // 22.5 and 67.5 round up to the step
+    [180, 37, [35, 45, 90, 135]], // and the time so far, while running
+    [60, 30, [15, 30, 45]], // without repeats
+    [10, undefined, [5]],
+    [5, undefined, []],
+    [60, 2, [15, 30, 45]], // under 5 minutes so far is not offered
+  ])("%d minutes planned, %s so far: %o", (planned, soFar, expected) => {
+    expect(partlyChoices(planned, soFar)).toEqual(expected);
+  });
+});
+
+describe("liveActualLane", () => {
+  const write = planned("write", 780, 60);
+  const lunchDone: TestBlock = {
+    ...planned("lunch", 720, 60),
+    status: "done",
+    actualStartMin: 720,
+    actualDurationMin: 75, // ran until 13:15
+  };
+
+  test("what was recorded, and the running block up to now", () => {
+    const lane = liveActualLane([lunchDone, write, drift], at(TUE, "13:40"));
+    expect(
+      lane.map(({ id, startMin, durationMin, live }) => ({
+        id,
+        startMin,
+        durationMin,
+        live,
+      })),
+    ).toEqual([
+      { id: "lunch", startMin: 720, durationMin: 75, live: false },
+      { id: "drift", startMin: 780, durationMin: 45, live: false },
+    ]);
+  });
+
+  test("the running block grows from where Done would start it", () => {
+    const lane = liveActualLane([lunchDone, write], at(TUE, "13:40"));
+    expect(lane.find((entry) => entry.live)).toMatchObject({
+      id: "write",
+      startMin: 795,
+      durationMin: 25,
+    });
+  });
+
+  test("no running block, no live entry", () => {
+    expect(
+      liveActualLane([lunchDone, write], at(TUE, "15:00")).some(
+        (entry) => entry.live,
+      ),
+    ).toBe(false);
   });
 });

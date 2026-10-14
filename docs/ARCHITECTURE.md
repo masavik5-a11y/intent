@@ -362,11 +362,13 @@ All in `shared/`, all pure, all unit-tested. Rules are in PRD.md section 7.
 | Function | Does |
 | --- | --- |
 | `editTarget(block, now)` | Returns `"plan"` or `"actual"`: which set of times an edit changes (rule 4). |
-| `defaultActual(block, laneBefore)` | Actual times when marking Done: the plan, with the start pushed past the previous actual entry (rule 5). |
+| `defaultActual(plan, lane, now)` | Actual times when marking Done: the plan, the start pushed past an overrun keeping the planned end, cut where another entry begins, ending now on a running block (rule 5). |
+| `liveActual(plan, lane, now)` | The running block's growing bar: where Done would start it, up to this minute. `liveActualLane(blocks, now)` is the actual lane with it. |
 | `findOverlap(candidate, lane)` | The block that a candidate would collide with, or none. |
-| `untrackedGaps(actualLane, from, to, minLen)` | Stretches not covered by any actual entry. |
-| `summarizeDay(blocks, categories, now)` | Minutes on purpose, drift, maintenance, untracked; planned versus actual per activity. |
-| `applyStatus(block, action)` | The field changes for Done, Partly, Skip, Undo. |
+| `untrackedGaps(actualLane, window, minLen)` | Stretches not covered by any actual entry. |
+| `summarizeDay(blocks, kindOf, day, gridStart, now)` | Minutes on purpose, drift, maintenance, untracked for a day's grid, counting the running block. Planned versus actual per activity joins it in M8. |
+| `applyStatus(block, action, lane, now)` | The field changes for Done, Partly, Skip, Undo, or why it cannot be done. |
+| `partlyChoices(plannedMin, soFarMin)` | Quick lengths for Partly. |
 | `countdown(block, now)` | Minutes left, fraction remaining, minutes over. Drives the draining bar. |
 | `weeklyPace(targetMin, actualMin, completedDays, daysLeft)` | Progress, ahead or behind against expected, minutes per remaining day (PRD "Pace rules"). |
 | `daysLeft(dueDate, today)` | Calendar days to a goal's due date; negative when over. |
@@ -663,6 +665,8 @@ Things assumed here that must be confirmed in the milestone that depends on them
 | 2026-10-14 | Vercel builds `main` only; pull requests get no preview (Filip's choice). | Cloud sessions work through pull requests; previews would need their own Convex deployments. The Check workflow gates a PR; screens are checked after the merge. |
 | 2026-10-14 | An actual start may run to 2880 (the end of the next day); a plan start stays below 1440. | A block planned at 23:30 can begin at 00:10. Keeping every span of a block dated D inside D and D+1 keeps the three-day read window. |
 | 2026-10-14 | Skip reasons are a fixed union in the schema, not free text. | PRD A1 lists five; a typed value can be counted in insights (R4, R7). Free words go in the note. |
+| 2026-10-14 | Done on a running block ends it now; Done after an overrun keeps the planned end (Filip's choice). | Nothing is recorded in the future, and a late start never pushes into the next block. PRD section 7, rule 5. |
+| 2026-10-14 | The running block's growing bar is exactly what Done would record at that minute. | One rule (`freeStretch` in `shared/lanes.ts`) for the bar, the totals and the tap, so they never disagree. |
 
 ## 17. Implementation notes
 

@@ -4,6 +4,7 @@
 import {
   addDays,
   daysBetween,
+  MINUTE_STEP,
   MINUTES_PER_DAY,
   type DateKey,
   type LocalMoment,
@@ -123,4 +124,129 @@ export function entriesAfter<Id, E extends LaneEntry<Id>>(
     .sort((a, b) => a.start - b.start)
     .slice(0, count)
     .map(({ entry }) => entry);
+}
+
+/** Where a moment sits in minutes from the midnight of `origin`. */
+export function minuteFrom(origin: DateKey, at: LocalMoment): number {
+  return daysBetween(origin, at.date) * MINUTES_PER_DAY + at.minute;
+}
+
+/**
+ * The stretch of a planned span that is still free in the actual lane: its start
+ * pushed past any entry that covers it, and its end brought forward to the first
+ * entry that starts inside it. In minutes from the midnight of `plan.date`. Null when
+ * the lane already covers the whole plan.
+ */
+function freeStretch(
+  plan: LaneSpan,
+  lane: readonly LaneSpan[],
+): { start: number; end: number } | null {
+  const taken = lane
+    .map((entry) => spanBounds(plan.date, entry))
+    .sort((a, b) => a.start - b.start);
+  let start = plan.startMin;
+  const planEnd = plan.startMin + plan.durationMin;
+  // Sorted by start, so a chain of entries pushes the start past each in turn.
+  for (const entry of taken) {
+    if (entry.start <= start && start < entry.end) start = entry.end;
+  }
+  let end = planEnd;
+  for (const entry of taken) {
+    if (start < entry.start && entry.start < end) end = entry.start;
+  }
+  return start < end ? { start, end } : null;
+}
+
+/**
+ * Where an actual entry for a planned span begins: its planned start, pushed past
+ * whatever already ran into it in the actual lane. Null when the lane covers the whole
+ * plan. In minutes from the midnight of `plan.date`.
+ */
+export function actualStartFor(
+  plan: LaneSpan,
+  lane: readonly LaneSpan[],
+): number | null {
+  return freeStretch(plan, lane)?.start ?? null;
+}
+
+/**
+ * The actual times Done records for a planned span (PRD section 7, rule 5): the plan,
+ * with the start pushed past whatever already ran into it in the actual lane, keeping
+ * the planned end; ended early where another entry begins inside it; and on a block
+ * still running at `now`, ending now, at the 5-minute mark below it (at least 5
+ * minutes long). Null when no 5 minutes of the plan are free. `lane` is the actual
+ * lane around the span without the block itself, as for findOverlap.
+ */
+export function defaultActual(
+  plan: LaneSpan,
+  lane: readonly LaneSpan[],
+  now: LocalMoment,
+): LaneSpan | null {
+  const free = freeStretch(plan, lane);
+  if (free === null) return null;
+  const nowStep =
+    Math.floor(minuteFrom(plan.date, now) / MINUTE_STEP) * MINUTE_STEP;
+  const end = Math.min(free.end, Math.max(nowStep, free.start + MINUTE_STEP));
+  if (end - free.start < MINUTE_STEP) return null;
+  return {
+    date: plan.date,
+    startMin: free.start,
+    durationMin: end - free.start,
+  };
+}
+
+/**
+ * What a running block has recorded so far, minute by minute: where Done would start
+ * it, up to `now` (not rounded, so the bar grows every minute). Null before it has
+ * any time of its own. Done at this moment records the same, rounded.
+ */
+export function liveActual(
+  plan: LaneSpan,
+  lane: readonly LaneSpan[],
+  now: LocalMoment,
+): LaneSpan | null {
+  const free = freeStretch(plan, lane);
+  if (free === null) return null;
+  const end = Math.min(free.end, minuteFrom(plan.date, now));
+  if (end <= free.start) return null;
+  return {
+    date: plan.date,
+    startMin: free.start,
+    durationMin: end - free.start,
+  };
+}
+
+/**
+ * Untracked time (PRD section 7, rule 8): the stretches of `window` that no entry of
+ * the actual lane covers, at least `minLength` minutes long. In minutes from the
+ * midnight of `window.date`, so a stretch after midnight starts from 1440 on.
+ */
+export function untrackedGaps(
+  lane: readonly LaneSpan[],
+  window: LaneSpan,
+  minLength = 0,
+): LaneSpan[] {
+  const windowEnd = window.startMin + window.durationMin;
+  const taken = lane
+    .map((entry) => spanBounds(window.date, entry))
+    .sort((a, b) => a.start - b.start);
+  const gaps: LaneSpan[] = [];
+  const addGap = (start: number, end: number) => {
+    if (end - start > 0 && end - start >= minLength) {
+      gaps.push({
+        date: window.date,
+        startMin: start,
+        durationMin: end - start,
+      });
+    }
+  };
+  let cursor = window.startMin;
+  for (const entry of taken) {
+    if (cursor >= windowEnd) break;
+    if (entry.end <= cursor) continue;
+    if (entry.start > cursor) addGap(cursor, Math.min(entry.start, windowEnd));
+    cursor = Math.max(cursor, entry.end);
+  }
+  if (cursor < windowEnd) addGap(cursor, windowEnd);
+  return gaps;
 }

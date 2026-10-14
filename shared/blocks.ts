@@ -1,12 +1,21 @@
 // Blocks and their intent (docs/PRD.md, section 4; docs/ARCHITECTURE.md, section 5).
 
-import type { LaneEntry, LaneSpan } from "./lanes";
+import {
+  actualStartFor,
+  defaultActual,
+  liveActual,
+  minuteFrom,
+  spansOverlap,
+  type LaneEntry,
+  type LaneSpan,
+} from "./lanes";
 import {
   isValidDuration,
   isValidMinute,
   MINUTE_STEP,
   MINUTES_PER_DAY,
   type DateKey,
+  type LocalMoment,
 } from "./time";
 
 /**
@@ -262,4 +271,196 @@ export function effectiveIntent(
     minimumVersion: pick("minimumVersion"),
     costOfSkipping: pick("costOfSkipping"),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Plan versus actual (docs/PRD.md, section 7; docs/ARCHITECTURE.md, section 6)
+// ---------------------------------------------------------------------------
+
+/** A block's plan as a span. */
+export function planSpan(block: WithPlan<BlockTimes>): LaneSpan {
+  return {
+    date: block.date,
+    startMin: block.plannedStartMin,
+    durationMin: block.plannedDurationMin,
+  };
+}
+
+/** Whether a planned block has begun by `now`: from then on it can be marked. */
+export function hasStarted(
+  block: WithPlan<BlockTimes>,
+  now: LocalMoment,
+): boolean {
+  return minuteFrom(block.date, now) >= block.plannedStartMin;
+}
+
+/**
+ * Whether a block is the one running at `now`: still `planned`, and its plan holds
+ * this minute. A block marked done or skipped early is no longer running.
+ */
+export function isRunning(block: BlockTimes, now: LocalMoment): boolean {
+  if (block.status !== "planned" || !hasPlan(block)) return false;
+  const at = minuteFrom(block.date, now);
+  return (
+    at >= block.plannedStartMin &&
+    at < block.plannedStartMin + block.plannedDurationMin
+  );
+}
+
+/**
+ * Which times an edit changes (PRD section 7, rule 4): the plan while a block has not
+ * started, what happened once it has. An unplanned entry only has what happened. On a
+ * past day every block has started, so its plan is frozen unless the screen offers
+ * "Edit plan"; on a future day nothing has, so there is only the plan.
+ */
+export function editTarget(
+  block: BlockTimes,
+  now: LocalMoment,
+): "plan" | "actual" {
+  return hasPlan(block) && !hasStarted(block, now) ? "plan" : "actual";
+}
+
+export type StatusAction =
+  | { type: "done" }
+  | { type: "partial"; minutes: number }
+  | { type: "skip"; reason?: SkipReason | undefined }
+  | { type: "undo" };
+
+/** What a status change writes. Undefined removes the field. */
+export interface StatusFields {
+  status: BlockStatus;
+  actualStartMin: number | undefined;
+  actualDurationMin: number | undefined;
+  skipReason: SkipReason | undefined;
+}
+
+/**
+ * Why a status change cannot be made: the block is an unplanned entry (it is deleted,
+ * not unmarked); it has not started, so it cannot be done yet; the actual lane has no
+ * room for it; or Partly was given a length that is not one.
+ */
+export type StatusProblem =
+  "UNPLANNED" | "NOT_STARTED" | "NO_ROOM" | "INVALID_TIME";
+
+/**
+ * The fields Done, Partly, Skip or Undo writes on a block (PRD A1, A4, and section 7).
+ *
+ * - Done: once the block has started. The actual is defaultActual: the plan, its
+ *   start pushed past an overrun keeping the planned end, ending now if it is still
+ *   running.
+ * - Partly: once started. The given minutes from where Done would start.
+ * - Skip: at any time, with an optional reason. No actual times.
+ * - Undo: back to planned, without actual times or a skip reason.
+ *
+ * `lane` is the actual lane around the block without the block itself.
+ */
+export function applyStatus(
+  block: BlockTimes,
+  action: StatusAction,
+  lane: readonly LaneSpan[],
+  now: LocalMoment,
+): { fields: StatusFields } | { problem: StatusProblem } {
+  if (!hasPlan(block)) return { problem: "UNPLANNED" };
+  const plan = planSpan(block);
+  const cleared = {
+    actualStartMin: undefined,
+    actualDurationMin: undefined,
+    skipReason: undefined,
+  };
+  switch (action.type) {
+    case "skip":
+      return {
+        fields: { ...cleared, status: "skipped", skipReason: action.reason },
+      };
+    case "undo":
+      return { fields: { ...cleared, status: "planned" } };
+    case "done": {
+      if (!hasStarted(block, now)) return { problem: "NOT_STARTED" };
+      const actual = defaultActual(plan, lane, now);
+      if (actual === null) return { problem: "NO_ROOM" };
+      return {
+        fields: {
+          ...cleared,
+          status: "done",
+          actualStartMin: actual.startMin,
+          actualDurationMin: actual.durationMin,
+        },
+      };
+    }
+    case "partial": {
+      if (!hasStarted(block, now)) return { problem: "NOT_STARTED" };
+      if (!isValidDuration(action.minutes)) return { problem: "INVALID_TIME" };
+      const start = actualStartFor(plan, lane);
+      if (start === null) return { problem: "NO_ROOM" };
+      const actual = {
+        date: block.date,
+        startMin: start,
+        durationMin: action.minutes,
+      };
+      if (start + action.minutes > 2 * MINUTES_PER_DAY) {
+        return { problem: "INVALID_TIME" };
+      }
+      if (lane.some((entry) => spansOverlap(actual, entry))) {
+        return { problem: "NO_ROOM" };
+      }
+      return {
+        fields: {
+          ...cleared,
+          status: "partial",
+          actualStartMin: actual.startMin,
+          actualDurationMin: actual.durationMin,
+        },
+      };
+    }
+  }
+}
+
+/**
+ * Quick choices for Partly (PRD A1): a quarter, half and three quarters of the plan
+ * on the 5-minute step, and, while the block runs, the time it has had so far. Each
+ * at least 5 minutes and shorter than the plan, shortest first, without repeats.
+ */
+export function partlyChoices(
+  plannedDurationMin: number,
+  soFarMin?: number,
+): number[] {
+  const fractions = [0.25, 0.5, 0.75].map(
+    (fraction) =>
+      Math.round((plannedDurationMin * fraction) / MINUTE_STEP) * MINUTE_STEP,
+  );
+  const soFar =
+    soFarMin === undefined
+      ? []
+      : [Math.floor(soFarMin / MINUTE_STEP) * MINUTE_STEP];
+  return [...new Set([...soFar, ...fractions])]
+    .filter((minutes) => minutes >= MINUTE_STEP && minutes < plannedDurationMin)
+    .sort((a, b) => a - b);
+}
+
+/** An entry of the live actual lane; `live` marks the running block's growing bar. */
+export type LiveEntry<B extends BlockTimes & { _id: unknown }> = LaneEntry<
+  B["_id"]
+> & { block: B; live: boolean };
+
+/**
+ * The actual lane as it stands at `now`: every recorded entry, and the running block
+ * up to this minute (liveActual), so the growing bar and the totals count it before
+ * it is marked (PRD U4, and section 7, pace rule 1).
+ */
+export function liveActualLane<B extends BlockTimes & { _id: unknown }>(
+  blocks: readonly B[],
+  now: LocalMoment,
+): LiveEntry<B>[] {
+  const lane: LiveEntry<B>[] = actualLaneOf(blocks).map((entry) => ({
+    ...entry,
+    live: false,
+  }));
+  const running = blocks.find((block) => isRunning(block, now));
+  if (running !== undefined && hasPlan(running)) {
+    const live = liveActual(planSpan(running), lane, now);
+    if (live !== null) {
+      lane.push({ ...live, id: running._id, block: running, live: true });
+    }
+  }
+  return lane;
 }
