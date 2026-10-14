@@ -177,7 +177,7 @@ recurrence, notifications.
       with a "+"; opening them comes with the next slice.
 - [x] Log an unplanned entry (Drift first, `L`), defaulting to "from the last entry until
       now". Also from a click in the actual lane and "Log what I'm doing" between blocks.
-- [ ] Edit actual times on any block, and its one-line note (A2, A5). Unplanned entries
+- [x] Edit actual times on any block, and its one-line note (A2, A5). Unplanned entries
       open in their own detail panel. (Split from the slice above, 2026-10-14.)
 - [ ] Untracked time drawn as a hatch that grows with the now line; day totals (on
       purpose, drift, untracked) updating every minute.

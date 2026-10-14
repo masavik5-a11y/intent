@@ -332,7 +332,8 @@ export default defineSchema({
    set or unset together.
 2. `planned` and `skipped` blocks have no actual times. `done` and `partial` blocks have
    actual times.
-3. An unplanned entry has no plan times and status `done`.
+3. An unplanned entry has no plan times and status `done`, and starts on its own day
+   (`actualStartMin < 1440`), as a plan start does.
 4. Minutes are integers, multiples of 5, within the ranges in section 4. A skip reason
    only on a skipped block. Invariants 1 to 4 are one pure function,
    `blockShapeProblem` in `shared/blocks.ts`, run on the fields a block is about to

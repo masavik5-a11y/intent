@@ -1,6 +1,5 @@
-import { useEffect, useRef, type ComponentProps } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { XIcon } from "lucide-react";
-import { formatTimeRange } from "@shared/time";
 import { Button } from "@/components/ui/button";
 import { SheetCloseButton } from "@/components/SheetCloseButton";
 import {
@@ -10,26 +9,29 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { BlockDetail } from "./BlockDetail";
-
-type BlockDetailPanelProps = ComponentProps<typeof BlockDetail> & {
+interface BlockDetailPanelProps {
   /** From 1024 px the panel sits beside the grid; narrower, it is a sheet. */
   wide: boolean;
-};
+  title: string;
+  /** Under the title: the planned time, or for an entry what was logged. */
+  subtitle: string;
+  onCancel: () => void;
+  /** The form: block detail, or entry detail for an unplanned entry. */
+  children: ReactNode;
+}
 
 /**
  * Where block detail lives (DESIGN.md section 2): the side panel on desktop, a sheet
  * on tablet and phone. Esc closes it in both.
  */
-export function BlockDetailPanel({ wide, ...detail }: BlockDetailPanelProps) {
-  const { block, onCancel } = detail;
+export function BlockDetailPanel({
+  wide,
+  title,
+  subtitle,
+  onCancel,
+  children: form,
+}: BlockDetailPanelProps) {
   const titleRef = useRef<HTMLHeadingElement>(null);
-  const range = formatTimeRange(
-    block.plannedStartMin,
-    block.plannedDurationMin,
-  );
-  // Remount the form when another block is chosen, so it starts from that block.
-  const form = <BlockDetail key={block._id} {...detail} />;
 
   // The sheet handles Esc itself; the side panel needs it here.
   useEffect(() => {
@@ -55,9 +57,9 @@ export function BlockDetailPanel({ wide, ...detail }: BlockDetailPanelProps) {
               id="block-detail-title"
               className="truncate text-lg font-medium"
             >
-              {block.title}
+              {title}
             </h2>
-            <p className="text-sm text-muted-foreground">{range}</p>
+            <p className="text-sm text-muted-foreground">{subtitle}</p>
           </div>
           <Button
             variant="ghost"
@@ -93,9 +95,9 @@ export function BlockDetailPanel({ wide, ...detail }: BlockDetailPanelProps) {
             tabIndex={-1}
             className="text-xl outline-none"
           >
-            {block.title}
+            {title}
           </SheetTitle>
-          <SheetDescription>{range}</SheetDescription>
+          <SheetDescription>{subtitle}</SheetDescription>
         </SheetHeader>
         {form}
         <SheetCloseButton />

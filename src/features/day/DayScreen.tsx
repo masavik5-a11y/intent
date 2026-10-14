@@ -10,10 +10,12 @@ import {
 } from "@shared/grid";
 import { minuteFrom } from "@shared/lanes";
 import { DEFAULT_SETTINGS } from "@shared/settings";
-import type { DateKey, LocalMoment } from "@shared/time";
+import { formatTimeRange, type DateKey, type LocalMoment } from "@shared/time";
 import { BlockDetailPanel } from "@/features/block-detail/BlockDetailPanel";
-import type { BlockChanges } from "@/features/block-detail/BlockDetail";
-import { api, type Doc, type Id } from "@/lib/api";
+import { BlockDetail } from "@/features/block-detail/BlockDetail";
+import { EntryDetail } from "@/features/block-detail/EntryDetail";
+import { statusLine } from "@/features/status/statusLabels";
+import { api, type BlockUpdate, type Doc, type Id } from "@/lib/api";
 import { useSetStatus } from "@/lib/blockStatus";
 import { saveErrorMessage } from "@/lib/errorMessages";
 import { useNow } from "@/lib/now";
@@ -163,8 +165,7 @@ export function DayScreen({
     state: actualCardState(item),
     cutTop: item.segment.startsBefore,
     cutBottom: item.segment.endsAfter,
-    // Block detail edits planned blocks; unplanned entries get theirs next (M2).
-    openable: hasPlan(item.block),
+    openable: true,
   }));
 
   /** Runs a change and closes the open panel; a failure becomes its message. */
@@ -181,6 +182,8 @@ export function DayScreen({
   }
   const saveBlock = (args: NewBlockArgs) => attempt(() => createBlock(args));
   const saveEntry = (args: NewEntryArgs) => attempt(() => logEntry(args));
+  const saveChanges = (changes: BlockUpdate) =>
+    attempt(() => updateBlock(changes));
 
   /** Done, Partly, Skip or Undo. The screen changes at once; a refusal is shown. */
   function mark(blockId: Id<"blocks">, action: StatusAction) {
@@ -194,9 +197,7 @@ export function DayScreen({
       ? blocks?.find((block) => block._id === marked.id)
       : undefined;
 
-  const selected = blocks
-    ?.filter(hasPlan)
-    .find((block) => block._id === selectedBlockId);
+  const selected = blocks?.find((block) => block._id === selectedBlockId);
   // The now panel belongs to today (DESIGN.md section 2).
   const nowPanel =
     tense === "today" &&
@@ -304,22 +305,54 @@ export function DayScreen({
         blocks !== undefined && (
           <BlockDetailPanel
             wide={isWide}
-            block={selected}
-            viewedDay={date}
-            activities={activities}
-            categories={categories}
-            blocks={blocks}
-            onSave={(changes: BlockChanges) =>
-              attempt(() => updateBlock(changes))
+            title={
+              hasPlan(selected)
+                ? selected.title
+                : entryTitle(selected, categoryOf.get(selected.categoryId))
             }
-            onDelete={() =>
-              attempt(() => removeBlock({ blockId: selected._id }))
+            subtitle={
+              hasPlan(selected)
+                ? formatTimeRange(
+                    selected.plannedStartMin,
+                    selected.plannedDurationMin,
+                  )
+                : statusLine(selected)
             }
-            now={now}
-            statusError={statusError}
-            onAction={(action) => mark(selected._id, action)}
             onCancel={onCloseOverlay}
-          />
+          >
+            {hasPlan(selected) ? (
+              // Keyed, so choosing another block starts the form afresh.
+              <BlockDetail
+                key={selected._id}
+                block={selected}
+                viewedDay={date}
+                activities={activities}
+                categories={categories}
+                blocks={blocks}
+                onSave={saveChanges}
+                onDelete={() =>
+                  attempt(() => removeBlock({ blockId: selected._id }))
+                }
+                onCancel={onCloseOverlay}
+                now={now}
+                statusError={statusError}
+                onAction={(action) => mark(selected._id, action)}
+              />
+            ) : (
+              <EntryDetail
+                key={selected._id}
+                entry={selected}
+                gridStartMin={gridStartMin}
+                categories={categories}
+                blocks={blocks}
+                onSave={saveChanges}
+                onDelete={() =>
+                  attempt(() => removeBlock({ blockId: selected._id }))
+                }
+                onCancel={onCloseOverlay}
+              />
+            )}
+          </BlockDetailPanel>
         )}
       {ready && (
         <LogEntry

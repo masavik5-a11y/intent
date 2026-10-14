@@ -157,6 +157,33 @@ export function isValidActualStart(value: number): boolean {
   );
 }
 
+/**
+ * The actual start a typed clock time means for a block whose actual start is now
+ * `current` (minutes from its day's midnight): the reading of that clock time, on the
+ * block's day or the next, nearest to `current`. Null when even that is more than 12
+ * hours away, which would mean a start before the block's own day.
+ */
+export function actualStartFromClock(
+  clockMin: number,
+  current: number,
+): number | null {
+  const candidates = [clockMin, clockMin + MINUTES_PER_DAY].filter(
+    isValidActualStart,
+  );
+  let best: number | null = null;
+  for (const candidate of candidates) {
+    if (
+      best === null ||
+      Math.abs(candidate - current) < Math.abs(best - current)
+    ) {
+      best = candidate;
+    }
+  }
+  return best !== null && Math.abs(best - current) <= MINUTES_PER_DAY / 2
+    ? best
+    : null;
+}
+
 /** Everything about a block that its shape rules look at. */
 export type BlockShape = BlockTimes & { skipReason?: SkipReason | undefined };
 
@@ -164,7 +191,8 @@ export type BlockShape = BlockTimes & { skipReason?: SkipReason | undefined };
  * What is wrong with a block's fields as they would be stored, or null when they keep
  * the invariants in docs/ARCHITECTURE.md, section 5 (1 to 4): plan or actual times or
  * both, never neither; start and duration set together; `planned` and `skipped`
- * without actual times, `done` and `partial` with them; an unplanned entry `done`;
+ * without actual times, `done` and `partial` with them; an unplanned entry `done`,
+ * starting on its own day;
  * minutes on the 5-minute step and in range; a skip reason only on a skipped block.
  */
 export function blockShapeProblem(
@@ -195,6 +223,10 @@ export function blockShapeProblem(
       break;
   }
   if (!planned && block.status !== "done") return "INVALID_INPUT";
+  // An unplanned entry is stored on the day it began, like a plan.
+  if (!planned && happened && actualStart >= MINUTES_PER_DAY) {
+    return "INVALID_TIME";
+  }
   if (block.skipReason !== undefined && block.status !== "skipped") {
     return "INVALID_INPUT";
   }
