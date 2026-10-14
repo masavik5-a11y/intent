@@ -120,6 +120,21 @@ export function actualLane(
   return items.sort((a, b) => a.segment.top - b.segment.top);
 }
 
+/**
+ * The title an actual card shows. An unplanned entry in a drift category names the
+ * category first, "Drift · phone" (DESIGN.md section 4); one without a title of its
+ * own is just "Drift".
+ */
+export function entryTitle(
+  block: Doc<"blocks">,
+  category: Doc<"categories"> | undefined,
+): string {
+  if (hasPlan(block) || category?.kind !== "drift") return block.title;
+  return block.title === category.name
+    ? block.title
+    : `${category.name} · ${block.title}`;
+}
+
 /** An actual-lane card's state. */
 export function actualCardState(item: ActualItem): CardState {
   if (item.live) return "live";

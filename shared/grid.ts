@@ -58,6 +58,22 @@ export function momentAt(
   };
 }
 
+/**
+ * The moment a clock time means on `day`'s grid. The grid runs from its start time to
+ * the same time next morning, so a time before the start belongs to the next calendar
+ * day: on Tuesday's grid, 01:00 is Wednesday 01:00, at the bottom.
+ */
+export function momentOnGrid(
+  day: DateKey,
+  gridStartMin: number,
+  minuteOfDay: number,
+): LocalMoment {
+  const position =
+    (((minuteOfDay - gridStartMin) % MINUTES_PER_DAY) + MINUTES_PER_DAY) %
+    MINUTES_PER_DAY;
+  return momentAt(day, gridStartMin, position);
+}
+
 /** The day whose grid shows a moment: before gridStartMin, the grid of the day before. */
 export function gridDayOf(at: LocalMoment, gridStartMin: number): DateKey {
   return at.minute < gridStartMin ? addDays(at.date, -1) : at.date;

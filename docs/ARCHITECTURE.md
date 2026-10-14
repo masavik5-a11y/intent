@@ -738,6 +738,9 @@ one; delete an entry when it stops being true.
   today depends on the grid's start, then redirects to `/day/<today>`, or to
   `/welcome` (first-run setup) while `settings.setupCompletedAt` is unset. `/?add=now`
   (the phone's +) lands on the day and then opens quick add as its own history entry.
+- Logging an unplanned entry is `?log=now` or `?log=<grid position>`, like quick add.
+  An entry is stored on the calendar day it began (`blocks.logEntry`), with its start
+  below 1440, like a plan start.
 - Quick add is `?add=now` or `?add=<grid position>` on `/day/$date`. TanStack Router
   writes a string that looks like a number with quotes (`?add=%22930%22`), so keep
   such values numbers in `validateSearch`.

@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import type { StatusAction } from "@shared/blocks";
 import { AppIcon } from "@/components/AppIcon";
+import { Button } from "@/components/ui/button";
 import type { Doc, Id } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { StatusActions } from "@/features/status/StatusActions";
@@ -30,6 +31,7 @@ export function NowPanel({
   lastMarked,
   error,
   onAction,
+  onLog,
 }: {
   view: NowView;
   compact: boolean;
@@ -38,6 +40,8 @@ export function NowPanel({
   /** Why the last mark did not save. */
   error: string | null;
   onAction: (blockId: Id<"blocks">, action: StatusAction) => void;
+  /** Opens logging an unplanned entry, "from the last entry until now". */
+  onLog: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const showAll = !compact || expanded;
@@ -90,6 +94,14 @@ export function NowPanel({
               />
             </div>
           )}
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 self-start sm:h-9"
+            onClick={onLog}
+          >
+            Log what I'm doing
+          </Button>
         </>
       ) : (
         <CurrentBlock

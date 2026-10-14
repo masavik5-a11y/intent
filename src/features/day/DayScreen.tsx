@@ -21,6 +21,9 @@ import { useIsPhone, useMediaQuery } from "@/lib/useMediaQuery";
 import { DayGrid, type GridCard } from "./DayGrid";
 import { DayHeader } from "./DayHeader";
 import { NowPanel } from "@/features/now/NowPanel";
+import { LogEntry } from "@/features/log/LogEntry";
+import type { NewEntryArgs } from "@/features/log/LogEntryForm";
+import { defaultEntrySpan, logCategories } from "@/features/log/logRules";
 import { nowView } from "@/features/now/nowView";
 import {
   actualCardName,
@@ -30,6 +33,7 @@ import {
   cardName,
   cardTime,
   dayTense,
+  entryTitle,
   planCardState,
   planLane,
 } from "./dayView";
@@ -48,6 +52,9 @@ interface DayScreenProps {
   /** Quick add is open (it lives in the URL, so the back gesture closes it). */
   add: AddRequest | undefined;
   onOpenAdd: (position: number | null) => void;
+  /** Logging an unplanned entry is open (also in the URL). */
+  log: AddRequest | undefined;
+  onOpenLog: (position: number | null) => void;
   /** The block whose detail is open, also from the URL. */
   selectedBlockId: string | undefined;
   onSelectBlock: (blockId: Id<"blocks">) => void;
@@ -60,6 +67,8 @@ export function DayScreen({
   date,
   add,
   onOpenAdd,
+  log,
+  onOpenLog,
   selectedBlockId,
   onSelectBlock,
   onCloseOverlay,
@@ -71,6 +80,7 @@ export function DayScreen({
   const createBlock = useMutation(api.blocks.create);
   const updateBlock = useMutation(api.blocks.update);
   const removeBlock = useMutation(api.blocks.remove);
+  const logEntry = useMutation(api.blocks.logEntry);
   const setStatus = useSetStatus();
   const now = useNow();
   const [marked, setMarked] = useState<{
@@ -81,25 +91,31 @@ export function DayScreen({
   const isPhone = useIsPhone();
   const isWide = useMediaQuery("(min-width: 1024px)");
 
-  // N opens quick add (DESIGN.md section 8), except while typing or in a dialog.
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key !== "n" && event.key !== "N") return;
-      if (event.ctrlKey || event.metaKey || event.altKey) return;
-      if (isTyping(event.target) || document.querySelector("[role=dialog]")) {
-        return;
-      }
-      event.preventDefault();
-      onOpenAdd(null);
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onOpenAdd]);
-
   // Until the first visit has created settings, the defaults stand in.
   const { gridStartMin, wakeMin, sleepMin } = settings ?? DEFAULT_SETTINGS;
   const today = gridDayOf(now, gridStartMin);
   const tense = dayTense(date, today);
+  // Nothing has happened yet on a day still to come.
+  const canLog = tense !== "future";
+
+  // N opens quick add and L logs what happened (DESIGN.md section 8), except while
+  // typing or in a dialog.
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      const key = event.key.toLowerCase();
+      if (key !== "n" && key !== "l") return;
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      if (isTyping(event.target) || document.querySelector("[role=dialog]")) {
+        return;
+      }
+      if (key === "l" && !canLog) return;
+      event.preventDefault();
+      if (key === "n") onOpenAdd(null);
+      else onOpenLog(null);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onOpenAdd, onOpenLog, canLog]);
   const nowPosition =
     tense === "today" ? gridPosition(date, gridStartMin, now) : null;
 
@@ -139,6 +155,7 @@ export function DayScreen({
   }));
   const actualCards: GridCard[] = happened.map((item) => ({
     ...looksOf(item.block),
+    title: entryTitle(item.block, categoryOf.get(item.block.categoryId)),
     time: actualCardTime(item),
     name: actualCardName(item),
     top: item.segment.top,
@@ -163,6 +180,7 @@ export function DayScreen({
     }
   }
   const saveBlock = (args: NewBlockArgs) => attempt(() => createBlock(args));
+  const saveEntry = (args: NewEntryArgs) => attempt(() => logEntry(args));
 
   /** Done, Partly, Skip or Undo. The screen changes at once; a refusal is shown. */
   function mark(blockId: Id<"blocks">, action: StatusAction) {
@@ -202,6 +220,18 @@ export function DayScreen({
       durationMin,
       blocks: blocks ?? [],
     });
+  const logSpan =
+    log === undefined || !ready || !canLog
+      ? null
+      : defaultEntrySpan({
+          day: date,
+          gridStartMin,
+          wakeMin,
+          now,
+          isToday: tense === "today",
+          blocks,
+          position: log.position,
+        });
   const addStart =
     add === undefined || !ready
       ? null
@@ -221,6 +251,7 @@ export function DayScreen({
               lastMarked={lastMarked}
               error={statusError}
               onAction={mark}
+              onLog={() => onOpenLog(null)}
             />
           </div>
         )}
@@ -246,6 +277,11 @@ export function DayScreen({
           onEmptySlot={(position) =>
             onOpenAdd(slotStart(position, CLICK_SNAP_MIN))
           }
+          onEmptyActualSlot={
+            canLog
+              ? (position) => onOpenLog(slotStart(position, CLICK_SNAP_MIN))
+              : undefined
+          }
           settled={ready}
           onOpenCard={(key) => onSelectBlock(key as Id<"blocks">)}
         />
@@ -258,6 +294,7 @@ export function DayScreen({
             lastMarked={lastMarked}
             error={statusError}
             onAction={mark}
+            onLog={() => onOpenLog(null)}
           />
         </aside>
       )}
@@ -284,6 +321,20 @@ export function DayScreen({
             onCancel={onCloseOverlay}
           />
         )}
+      {ready && (
+        <LogEntry
+          open={logSpan !== null}
+          isPhone={isPhone}
+          onClose={onCloseOverlay}
+          day={date}
+          gridStartMin={gridStartMin}
+          start={logSpan?.start ?? { date, minute: wakeMin }}
+          durationMin={logSpan?.durationMin ?? 30}
+          categories={logCategories(categories)}
+          blocks={blocks}
+          onSave={saveEntry}
+        />
+      )}
       {ready && (
         <QuickAdd
           open={addStart !== null}

@@ -18,7 +18,8 @@ import { Label } from "@/components/ui/label";
 import type { Doc, Id } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { collidingBlock, overlapMessage } from "@/lib/blockOverlap";
-import { matchActivities, momentOnGrid } from "./quickAddRules";
+import { momentOnGrid } from "@shared/grid";
+import { matchActivities } from "./quickAddRules";
 
 /** A new block's length until an activity says otherwise. */
 export const DEFAULT_DURATION_MIN = 60;

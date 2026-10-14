@@ -803,6 +803,128 @@ describe("blocks.setStatus", () => {
   });
 });
 
+describe("blocks.logEntry", () => {
+  async function driftOf(t: TestConvex, userId: Id<"users">) {
+    return await t.run(async (ctx) => {
+      const categories = await ctx.db
+        .query("categories")
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
+        .take(20);
+      const drift = categories.find((category) => category.kind === "drift");
+      if (drift === undefined) throw new Error("no drift category");
+      return drift._id;
+    });
+  }
+
+  test("logs what happened: done, no plan, the category's name by default", async () => {
+    const t = newTest();
+    const { userId, as } = await setUp(t);
+    const drift = await driftOf(t, userId);
+    const entryId = await as.mutation(api.blocks.logEntry, {
+      date: TUE,
+      categoryId: drift,
+      actualStartMin: 780,
+      actualDurationMin: 45,
+    });
+    const entry = await read(t, entryId);
+    expect(entry).toMatchObject({
+      title: "Drift",
+      status: "done",
+      categoryId: drift,
+      actualStartMin: 780,
+      actualDurationMin: 45,
+    });
+    expect(entry && "plannedStartMin" in entry).toBe(false);
+  });
+
+  test("keeps a title of its own, trimmed", async () => {
+    const t = newTest();
+    const { as, body } = await setUp(t);
+    const entryId = await as.mutation(api.blocks.logEntry, {
+      date: TUE,
+      title: "  Run with Tom ",
+      categoryId: body,
+      actualStartMin: 1080,
+      actualDurationMin: 40,
+    });
+    expect(await read(t, entryId)).toMatchObject({ title: "Run with Tom" });
+  });
+
+  test("takes no room in the plan, and refuses an overlap in what happened", async () => {
+    const t = newTest();
+    const { userId, as, deepWork } = await setUp(t);
+    const drift = await driftOf(t, userId);
+    const write = await plan(as, deepWork, TUE, "13:00", 60);
+    // Over a planned block that is not marked: fine, the plan lane is apart.
+    await as.mutation(api.blocks.logEntry, {
+      date: TUE,
+      categoryId: drift,
+      actualStartMin: 780,
+      actualDurationMin: 30,
+    });
+    await expectAppError(
+      as.mutation(api.blocks.logEntry, {
+        date: TUE,
+        categoryId: drift,
+        actualStartMin: 795,
+        actualDurationMin: 30,
+      }),
+      "OVERLAP",
+    );
+    // Done on the block now starts after the entry.
+    await as.mutation(api.blocks.setStatus, {
+      blockId: write,
+      action: { type: "done" },
+      now: { date: TUE, minute: 1080 },
+    });
+    expect(await read(t, write)).toMatchObject({
+      actualStartMin: 810,
+      actualDurationMin: 30,
+    });
+  });
+
+  test("refuses times off the step, a start past midnight, someone else's category", async () => {
+    const t = newTest();
+    const me = await setUp(t, "me@intent.test");
+    const other = await setUp(t, "other@intent.test");
+    const drift = await driftOf(t, me.userId);
+    for (const [start, length] of [
+      [781, 30],
+      [1440, 30],
+      [780, 0],
+      [780, 1445],
+    ] as const) {
+      await expectAppError(
+        me.as.mutation(api.blocks.logEntry, {
+          date: TUE,
+          categoryId: drift,
+          actualStartMin: start,
+          actualDurationMin: length,
+        }),
+        "INVALID_TIME",
+      );
+    }
+    await expectAppError(
+      me.as.mutation(api.blocks.logEntry, {
+        date: TUE,
+        categoryId: other.body,
+        actualStartMin: 780,
+        actualDurationMin: 30,
+      }),
+      "NOT_FOUND",
+    );
+    await expectAppError(
+      t.mutation(api.blocks.logEntry, {
+        date: TUE,
+        categoryId: drift,
+        actualStartMin: 780,
+        actualDurationMin: 30,
+      }),
+      "UNAUTHENTICATED",
+    );
+  });
+});
+
 describe("blocks.remove", () => {
   test("deletes the block and frees its time", async () => {
     const t = newTest();

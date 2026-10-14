@@ -7,6 +7,7 @@ import {
   MAX_FIT_PX_PER_MIN,
   MIN_FIT_PX_PER_MIN,
   momentAt,
+  momentOnGrid,
   pxBox,
   pxToMinutes,
   slotStart,
@@ -215,5 +216,21 @@ describe("snapMinutes and slotStart", () => {
     [1439, 15, 1425],
   ])("slotStart(%d, %d) = %d", (minutes, step, expected) => {
     expect(slotStart(minutes, step)).toBe(expected);
+  });
+});
+
+describe("momentOnGrid", () => {
+  test.each([
+    [540, { date: TUE, minute: 540 }], // 09:00
+    [300, { date: TUE, minute: 300 }], // 05:00, the grid's first minute
+    [1435, { date: TUE, minute: 1435 }],
+    [60, { date: WED, minute: 60 }], // 01:00 is next calendar day's, at the bottom
+    [295, { date: WED, minute: 295 }],
+  ])("%d on Tuesday's 05:00 grid is %o", (minute, moment) => {
+    expect(momentOnGrid(TUE, 300, minute)).toEqual(moment);
+  });
+
+  test("with a midnight grid start every time is the day itself", () => {
+    expect(momentOnGrid(TUE, 0, 60)).toEqual({ date: TUE, minute: 60 });
   });
 });
