@@ -84,19 +84,17 @@ how to restrict sign-up in Convex Auth.
       **Left:** confirm the first "Check" run on GitHub is green (Actions tab).
 - [ ] Production: Convex production deployment and Vercel project, deploying from `main`.
       *Status 2026-10-14:* Convex project `intent` exists; the production deployment
-      `diligent-hawk-428` has `JWT_PRIVATE_KEY`, `JWKS` and `ALLOWED_EMAILS`. Vercel has
-      imported the repository, but after the push the production deployment still had no
-      functions, so the Vercel build has not deployed to it. **Left, in order:**
-      1. In Vercel, project settings, Environment Variables: `CONVEX_DEPLOY_KEY` must be
-         the **production** deploy key (Convex dashboard, production deployment, Settings,
-         "Generate production deploy key"; it starts with `prod:`). A key starting with
-         `dev:` makes `convex deploy` push to the development backend instead. Redeploy.
-      2. Check: the Vercel build log ends without errors, and `npx convex data --prod`
-         lists the auth tables.
-      3. Record the site address in ARCHITECTURE.md section 14, then
+      `diligent-hawk-428` has `JWT_PRIVATE_KEY`, `JWKS` and `ALLOWED_EMAILS`. Vercel holds
+      the production deploy key and the site is live; production has the auth tables and
+      functions (checked with `npx convex data --prod`). The first Vercel build had a
+      `dev:` key and deployed to the development backend instead; the key was replaced.
+      **Left, in order:**
+      1. Record the site address in ARCHITECTURE.md section 14 (the Frontend row), then
          `npx convex env set SITE_URL https://<site address> --prod`.
-      4. Filip opens the site, creates the account, installs it on the PC and the phone.
+      2. Filip opens the site, creates the account, installs it on the PC and the phone.
          Another email must get "Sign-up is closed for this address."
+      3. Delete the two development deploy keys ("df" and "intent") in the Convex
+         dashboard if not done yet: nothing uses them, and one was pasted into a chat.
 
 **Done when:** you are signed in to the deployed app on the PC and on the phone, it is
 installed as an app on both, a second email cannot sign up, and `npm run check` is green

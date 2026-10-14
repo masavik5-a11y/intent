@@ -510,7 +510,7 @@ As set up on 2026-10-14. Secrets are never written here.
 | Convex project | team `masavik`, project `intent`, region eu-west-1. Dashboard: https://dashboard.convex.dev/t/masavik/intent | |
 | Convex dev | deployment `befitting-trout-81`, selected in `.env.local` with `npx convex deployment select befitting-trout-81` | `SITE_URL=http://localhost:5173`, `JWT_PRIVATE_KEY`, `JWKS`, `ALLOWED_EMAILS` = the dev test address from `.env.example` and Filip's address |
 | Convex prod | deployment `diligent-hawk-428` (`--prod` in CLI commands) | `JWT_PRIVATE_KEY`, `JWKS`, `ALLOWED_EMAILS` = Filip's address. `SITE_URL`: not set yet, needs the site address |
-| Frontend | Vercel project imported from the repository. Site address: **not recorded yet** | `CONVEX_DEPLOY_KEY` = the production deploy key |
+| Frontend | Vercel project imported from the repository; live since 2026-10-14. Site address: **not recorded yet** | `CONVEX_DEPLOY_KEY` = the production deploy key (`prod:`) |
 
 The Convex CLI on this PC is logged in, so commands reach both deployments without a
 deploy key. Check which deployment a command targets before running it; production
