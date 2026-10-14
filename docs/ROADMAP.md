@@ -88,17 +88,15 @@ how to restrict sign-up in Convex Auth.
       the production deploy key and the site is live; production has the auth tables and
       functions (checked with `npx convex data --prod`). The first Vercel build had a
       `dev:` key and deployed to the development backend instead; the key was replaced.
-      **Left, in order:**
-      1. Done: the site is https://intent-asda-3b4a.vercel.app, recorded in
-         ARCHITECTURE.md section 14, and production's `SITE_URL` points at it. Installed
-         on the PC. On the phone Chrome offered only a shortcut, because Vercel's
-         Deployment Protection hid the manifest behind a vercel.com sign-in; Filip is
-         turning it off for production. Check afterwards that
-         `curl -I https://intent-asda-3b4a.vercel.app/manifest.webmanifest` answers 200.
-      2. Filip opens the site, creates the account, installs it on the PC and the phone.
-         Another email must get "Sign-up is closed for this address."
-      3. Delete the two development deploy keys ("df" and "intent") in the Convex
-         dashboard if not done yet: nothing uses them, and one was pasted into a chat.
+      Done: the site is https://intent-asda-3b4a.vercel.app (recorded in ARCHITECTURE.md
+      section 14) and production's `SITE_URL` points at it. Vercel's Deployment
+      Protection is off, so the manifest, icons and service worker answer 200 (checked
+      with curl), and the bundle talks to `diligent-hawk-428`. Filip's account exists
+      (production has exactly one user and one account) and the app is installed on the
+      PC and the phone.
+      **Left:** Filip confirms that creating an account with any other email on the live
+      site answers "Sign-up is closed for this address", and that the two development
+      deploy keys ("df" and "intent") are deleted in the Convex dashboard.
 
 **Done when:** you are signed in to the deployed app on the PC and on the phone, it is
 installed as an app on both, a second email cannot sign up, and `npm run check` is green
