@@ -21,6 +21,7 @@ npm-debug.log*
 
 # Tool caches
 .eslintcache
+.tanstack/tmp
 *.tsbuildinfo
 .vercel
 

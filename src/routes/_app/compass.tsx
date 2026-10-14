@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ScreenPlaceholder } from "@/features/shell/ScreenPlaceholder";
+import { CompassScreen } from "@/features/compass/CompassScreen";
 
 export const Route = createFileRoute("/_app/compass")({
-  component: () => <ScreenPlaceholder title="Compass" milestone="M1" />,
+  component: CompassScreen,
 });
