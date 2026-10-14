@@ -25,10 +25,12 @@ export function statusLine(block: Doc<"blocks">): string {
       return block.skipReason === undefined
         ? "Skipped"
         : `Skipped · ${SKIP_REASON_LABELS[block.skipReason].toLowerCase()}`;
-    case "partial":
+    case "partial": {
+      const minimum = block.minimumChosen === true ? " · the minimum" : "";
       return hasActual(block) && hasPlan(block)
-        ? `Partly · ${formatDuration(block.actualDurationMin)} of ${formatDuration(block.plannedDurationMin)}`
-        : "Partly";
+        ? `Partly${minimum} · ${formatDuration(block.actualDurationMin)} of ${formatDuration(block.plannedDurationMin)}`
+        : `Partly${minimum}`;
+    }
     case "done": {
       if (!hasActual(block)) return "Done";
       const range = formatTimeRange(

@@ -17,7 +17,10 @@ import { readNow } from "./now";
 
 type SetStatusArgs = FunctionArgs<typeof api.blocks.setStatus>;
 
-/** A block with a status change applied; actual times and reason removed when unset. */
+/**
+ * A block with a status change applied; actual times, reason and the minimum removed
+ * when unset.
+ */
 export function withStatus(
   block: Doc<"blocks">,
   fields: StatusFields,
@@ -26,6 +29,7 @@ export function withStatus(
     actualStartMin: _start,
     actualDurationMin: _length,
     skipReason: _reason,
+    minimumChosen: _minimum,
     ...rest
   } = block;
   const next: Doc<"blocks"> = { ...rest, status: fields.status };
@@ -36,6 +40,9 @@ export function withStatus(
     next.actualDurationMin = fields.actualDurationMin;
   }
   if (fields.skipReason !== undefined) next.skipReason = fields.skipReason;
+  if (fields.minimumChosen !== undefined) {
+    next.minimumChosen = fields.minimumChosen;
+  }
   return next;
 }
 

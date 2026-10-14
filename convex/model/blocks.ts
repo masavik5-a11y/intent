@@ -260,7 +260,8 @@ export async function update(
 }
 
 /**
- * Done, Partly, Skip or Undo (PRD A1, A4), as shared/blocks.ts applyStatus decides.
+ * Done, Partly, Skip, Undo (PRD A1, A4) or Start the minimum (PRD V3), as
+ * shared/blocks.ts applyStatus decides.
  * `now` is the device's local day and minute: Done on a running block ends then, and
  * the device's clock is the one the screen showed when the button was pressed.
  */

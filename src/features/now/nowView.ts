@@ -43,6 +43,8 @@ export interface NowCurrent extends NowBlock {
   soFarMin: number;
   /** The activity asks for a draining bar (PRD U2). */
   pressure: boolean;
+  /** "Start the minimum" was chosen for it (PRD V3). */
+  minimumChosen: boolean;
   intent: NowIntent;
 }
 
@@ -108,6 +110,7 @@ export function nowView(
       ...current,
       countdown: countdown(running, now),
       soFarMin: soFar?.durationMin ?? 0,
+      minimumChosen: running.block.minimumChosen === true,
       pressure: current.activity?.pressure ?? false,
       intent: {
         doneWhen: intent.doneWhen?.text ?? null,

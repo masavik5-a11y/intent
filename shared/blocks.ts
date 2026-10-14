@@ -185,7 +185,10 @@ export function actualStartFromClock(
 }
 
 /** Everything about a block that its shape rules look at. */
-export type BlockShape = BlockTimes & { skipReason?: SkipReason | undefined };
+export type BlockShape = BlockTimes & {
+  skipReason?: SkipReason | undefined;
+  minimumChosen?: boolean | undefined;
+};
 
 /**
  * What is wrong with a block's fields as they would be stored, or null when they keep
@@ -193,7 +196,8 @@ export type BlockShape = BlockTimes & { skipReason?: SkipReason | undefined };
  * both, never neither; start and duration set together; `planned` and `skipped`
  * without actual times, `done` and `partial` with them; an unplanned entry `done`,
  * starting on its own day;
- * minutes on the 5-minute step and in range; a skip reason only on a skipped block.
+ * minutes on the 5-minute step and in range; a skip reason only on a skipped block;
+ * the minimum chosen only on a planned or partly done block.
  */
 export function blockShapeProblem(
   block: BlockShape,
@@ -228,6 +232,15 @@ export function blockShapeProblem(
     return "INVALID_TIME";
   }
   if (block.skipReason !== undefined && block.status !== "skipped") {
+    return "INVALID_INPUT";
+  }
+  // The minimum is chosen on a block still planned and ends as partly done: never
+  // done in full, never a skip (PRD V3).
+  if (
+    block.minimumChosen === true &&
+    block.status !== "planned" &&
+    block.status !== "partial"
+  ) {
     return "INVALID_INPUT";
   }
 
@@ -356,7 +369,8 @@ export type StatusAction =
   | { type: "done" }
   | { type: "partial"; minutes: number }
   | { type: "skip"; reason?: SkipReason | undefined }
-  | { type: "undo" };
+  | { type: "undo" }
+  | { type: "startMinimum" };
 
 /** What a status change writes. Undefined removes the field. */
 export interface StatusFields {
@@ -364,6 +378,7 @@ export interface StatusFields {
   actualStartMin: number | undefined;
   actualDurationMin: number | undefined;
   skipReason: SkipReason | undefined;
+  minimumChosen: true | undefined;
 }
 
 /**
@@ -381,31 +396,54 @@ export type StatusProblem =
  *   start pushed past an overrun keeping the planned end, ending now if it is still
  *   running.
  * - Partly: once started. The given minutes from where Done would start.
- * - Skip: at any time, with an optional reason. No actual times.
- * - Undo: back to planned, without actual times or a skip reason.
+ * - Skip: at any time, with an optional reason. No actual times. A minimum chosen is
+ *   let go.
+ * - Undo: back to planned, without actual times or a skip reason. On a block not
+ *   marked yet, it takes back "Start the minimum" instead.
+ * - Start the minimum (PRD V3): the block stays planned and remembers the choice;
+ *   Done on it then records Partly with the minimum noted, never a skip.
  *
  * `lane` is the actual lane around the block without the block itself.
  */
 export function applyStatus(
-  block: BlockTimes,
+  block: BlockShape,
   action: StatusAction,
   lane: readonly LaneSpan[],
   now: LocalMoment,
 ): { fields: StatusFields } | { problem: StatusProblem } {
   if (!hasPlan(block)) return { problem: "UNPLANNED" };
   const plan = planSpan(block);
+  const minimum: true | undefined =
+    block.minimumChosen === true ? true : undefined;
   const cleared = {
     actualStartMin: undefined,
     actualDurationMin: undefined,
     skipReason: undefined,
+    minimumChosen: minimum,
   };
   switch (action.type) {
     case "skip":
       return {
-        fields: { ...cleared, status: "skipped", skipReason: action.reason },
+        fields: {
+          ...cleared,
+          status: "skipped",
+          skipReason: action.reason,
+          minimumChosen: undefined,
+        },
       };
     case "undo":
-      return { fields: { ...cleared, status: "planned" } };
+      return {
+        fields: {
+          ...cleared,
+          status: "planned",
+          // Unmarking keeps the choice; undoing on a block not marked drops it.
+          minimumChosen: block.status === "planned" ? undefined : minimum,
+        },
+      };
+    case "startMinimum":
+      return {
+        fields: { ...cleared, status: "planned", minimumChosen: true },
+      };
     case "done": {
       if (!hasStarted(block, now)) return { problem: "NOT_STARTED" };
       const actual = defaultActual(plan, lane, now);
@@ -413,7 +451,8 @@ export function applyStatus(
       return {
         fields: {
           ...cleared,
-          status: "done",
+          // Finishing the minimum is partly done, with the minimum noted.
+          status: minimum === true ? "partial" : "done",
           actualStartMin: actual.startMin,
           actualDurationMin: actual.durationMin,
         },

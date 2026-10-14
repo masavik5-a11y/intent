@@ -606,3 +606,96 @@ describe("actualStartFromClock", () => {
     expect(actualStartFromClock(clock, current)).toBe(expected);
   });
 });
+
+describe("Start the minimum (PRD V3)", () => {
+  const write = planned("write", 780, 60); // 13:00–14:00
+  const evening = at(TUE, "18:00");
+  const chosen: TestBlock & { minimumChosen?: boolean } = {
+    ...write,
+    minimumChosen: true,
+  };
+
+  test("keeps the block planned and remembers the choice, even ahead of time", () => {
+    expect(
+      applyStatus(write, { type: "startMinimum" }, [], at(MON, "20:00")),
+    ).toEqual({
+      fields: {
+        status: "planned",
+        actualStartMin: undefined,
+        actualDurationMin: undefined,
+        skipReason: undefined,
+        minimumChosen: true,
+      },
+    });
+  });
+
+  test("finishing it counts as Partly with the minimum noted, never Done", () => {
+    expect(applyStatus(chosen, { type: "done" }, [], at(TUE, "13:25"))).toEqual(
+      {
+        fields: {
+          status: "partial",
+          actualStartMin: 780,
+          actualDurationMin: 25,
+          skipReason: undefined,
+          minimumChosen: true,
+        },
+      },
+    );
+    expect(
+      applyStatus(chosen, { type: "partial", minutes: 20 }, [], evening),
+    ).toMatchObject({ fields: { status: "partial", minimumChosen: true } });
+  });
+
+  test("never a skip: skipping on purpose lets the minimum go", () => {
+    expect(
+      applyStatus(chosen, { type: "skip", reason: "tired" }, [], evening),
+    ).toMatchObject({
+      fields: { status: "skipped", minimumChosen: undefined },
+    });
+  });
+
+  test("Undo unmarks and keeps the choice; on a block not marked, it drops it", () => {
+    const marked = {
+      ...chosen,
+      status: "partial" as const,
+      actualStartMin: 780,
+      actualDurationMin: 25,
+    };
+    expect(applyStatus(marked, { type: "undo" }, [], evening)).toMatchObject({
+      fields: { status: "planned", minimumChosen: true },
+    });
+    expect(applyStatus(chosen, { type: "undo" }, [], evening)).toMatchObject({
+      fields: { status: "planned", minimumChosen: undefined },
+    });
+  });
+
+  test("every change keeps the block's shape", () => {
+    const actions: StatusAction[] = [
+      { type: "startMinimum" },
+      { type: "done" },
+      { type: "partial", minutes: 10 },
+      { type: "skip" },
+      { type: "undo" },
+    ];
+    for (const action of actions) {
+      const result = applyStatus(chosen, action, [], evening);
+      if (!("fields" in result)) throw new Error("expected a change");
+      expect(blockShapeProblem({ ...chosen, ...result.fields })).toBeNull();
+    }
+  });
+
+  test.each<[string, BlockShape["status"], boolean]>([
+    ["planned", "planned", true],
+    ["partly done", "partial", true],
+    ["done", "done", false],
+    ["skipped", "skipped", false],
+  ])("the minimum on a %s block is %s", (_, status, allowed) => {
+    const happened =
+      status === "done" || status === "partial"
+        ? { actualStartMin: 780, actualDurationMin: 20 }
+        : {};
+    expect(
+      blockShapeProblem({ ...write, ...happened, status, minimumChosen: true }),
+    ).toBe(allowed ? null : "INVALID_INPUT");
+  });
+});

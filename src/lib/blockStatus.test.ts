@@ -117,6 +117,7 @@ describe("withStatus", () => {
       actualStartMin: undefined,
       actualDurationMin: undefined,
       skipReason: undefined,
+      minimumChosen: undefined,
     });
     expect(next.status).toBe("planned");
     expect("skipReason" in next).toBe(false);
