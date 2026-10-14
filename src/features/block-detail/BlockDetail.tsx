@@ -1,5 +1,6 @@
 import { useId, useState, type FormEvent } from "react";
 import {
+  editTarget,
   hasStarted,
   type IntentField,
   type StatusAction,
@@ -65,6 +66,8 @@ interface BlockDetailProps {
   onAction: (action: StatusAction) => void;
   /** Why the last of those did not save. */
   statusError: string | null;
+  /** "Edit plan" was chosen for the whole (past) day. */
+  dayPlanUnlocked: boolean;
 }
 
 /**
@@ -84,12 +87,19 @@ export function BlockDetail({
   now,
   onAction,
   statusError,
+  dayPlanUnlocked,
 }: BlockDetailProps) {
   const ids = useId();
   const [draft, setDraft] = useState(() => draftOf(block));
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [planUnlockedHere, setPlanUnlockedHere] = useState(false);
+  // The past is edited as actual: a started block's plan is frozen behind "Edit plan".
+  const planFrozen =
+    editTarget(block, now) === "actual" &&
+    !dayPlanUnlocked &&
+    !planUnlockedHere;
 
   const activity = activities.find((item) => item._id === draft.activityId);
   const inherited = inheritedIntent(activity);
@@ -345,31 +355,57 @@ export function BlockDetail({
 
         {intentArea("doneWhen")}
 
-        <div className="grid grid-cols-[auto_1fr] items-start gap-x-4 gap-y-1.5">
-          <label htmlFor={`${ids}-start`} className="text-sm font-medium">
-            Start
-          </label>
-          <label htmlFor={`${ids}-length`} className="text-sm font-medium">
-            Length
-          </label>
-          <TimeInput
-            id={`${ids}-start`}
-            value={draft.plannedStartMin}
-            onChange={(minute) => set("plannedStartMin", minute)}
-            className="h-11 w-24 sm:h-9"
-          />
-          <DurationInput
-            id={`${ids}-length`}
-            value={draft.plannedDurationMin}
-            onChange={(minutes) => set("plannedDurationMin", minutes)}
-          />
-        </div>
-        {isValidDuration(draft.plannedDurationMin) && (
-          <p className="-mt-2 text-sm text-muted-foreground">
-            {formatTimeRange(draft.plannedStartMin, draft.plannedDurationMin)}
-            {block.date !== viewedDay &&
-              ` · starts ${formatDayLabel(block.date)}`}
-          </p>
+        {planFrozen ? (
+          // PRD section 7, rule 4: once a block has started, what changes is what
+          // happened (above); the plan stays as it was unless asked for.
+          <div className="flex items-center gap-2">
+            <p className="flex-1 text-sm">
+              <span className="text-muted-foreground">Planned </span>
+              {formatTimeRange(block.plannedStartMin, block.plannedDurationMin)}
+              {block.date !== viewedDay &&
+                ` · starts ${formatDayLabel(block.date)}`}
+            </p>
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-11 sm:h-8"
+              onClick={() => setPlanUnlockedHere(true)}
+            >
+              Edit plan
+            </Button>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-[auto_1fr] items-start gap-x-4 gap-y-1.5">
+              <label htmlFor={`${ids}-start`} className="text-sm font-medium">
+                Start
+              </label>
+              <label htmlFor={`${ids}-length`} className="text-sm font-medium">
+                Length
+              </label>
+              <TimeInput
+                id={`${ids}-start`}
+                value={draft.plannedStartMin}
+                onChange={(minute) => set("plannedStartMin", minute)}
+                className="h-11 w-24 sm:h-9"
+              />
+              <DurationInput
+                id={`${ids}-length`}
+                value={draft.plannedDurationMin}
+                onChange={(minutes) => set("plannedDurationMin", minutes)}
+              />
+            </div>
+            {isValidDuration(draft.plannedDurationMin) && (
+              <p className="-mt-2 text-sm text-muted-foreground">
+                {formatTimeRange(
+                  draft.plannedStartMin,
+                  draft.plannedDurationMin,
+                )}
+                {block.date !== viewedDay &&
+                  ` · starts ${formatDayLabel(block.date)}`}
+              </p>
+            )}
+          </>
         )}
 
         <section className="flex flex-col gap-4">

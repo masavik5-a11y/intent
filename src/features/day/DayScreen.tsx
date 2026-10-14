@@ -102,6 +102,10 @@ export function DayScreen({
   const tense = dayTense(date, today);
   // Nothing has happened yet on a day still to come.
   const canLog = tense !== "future";
+  // A past day's plan is frozen until "Edit plan" (PRD section 7, rule 4). Day screens
+  // are keyed by date, so this resets on another day.
+  const [planUnlocked, setPlanUnlocked] = useState(false);
+  const planFrozen = tense === "past" && !planUnlocked;
 
   // N opens quick add and L logs what happened (DESIGN.md section 8), except while
   // typing or in a dialog.
@@ -114,13 +118,14 @@ export function DayScreen({
         return;
       }
       if (key === "l" && !canLog) return;
+      if (key === "n" && planFrozen) return;
       event.preventDefault();
       if (key === "n") onOpenAdd(null);
       else onOpenLog(null);
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onOpenAdd, onOpenLog, canLog]);
+  }, [onOpenAdd, onOpenLog, canLog, planFrozen]);
   const nowPosition =
     tense === "today" ? gridPosition(date, gridStartMin, now) : null;
 
@@ -252,7 +257,7 @@ export function DayScreen({
           position: log.position,
         });
   const addStart =
-    add === undefined || !ready
+    add === undefined || !ready || planFrozen
       ? null
       : add.position === null
         ? suggest(DEFAULT_DURATION_MIN)
@@ -261,7 +266,14 @@ export function DayScreen({
   return (
     <div className="flex h-full">
       <div className="flex min-w-0 flex-1 flex-col">
-        <DayHeader date={date} today={today} onAdd={() => onOpenAdd(null)} />
+        <DayHeader
+          date={date}
+          today={today}
+          onAdd={() => onOpenAdd(null)}
+          planFrozen={planFrozen}
+          onEditPlan={() => setPlanUnlocked(true)}
+          onLog={() => onOpenLog(null)}
+        />
         {!isWide && nowPanel !== null && (
           <div className="border-b">
             <NowPanel
@@ -300,8 +312,10 @@ export function DayScreen({
           futureFrom={
             tense === "future" ? 0 : tense === "today" ? nowPosition : null
           }
-          onEmptySlot={(position) =>
-            onOpenAdd(slotStart(position, CLICK_SNAP_MIN))
+          onEmptySlot={
+            planFrozen
+              ? undefined
+              : (position) => onOpenAdd(slotStart(position, CLICK_SNAP_MIN))
           }
           onEmptyActualSlot={
             canLog
@@ -363,6 +377,7 @@ export function DayScreen({
                 now={now}
                 statusError={statusError}
                 onAction={(action) => mark(selected._id, action)}
+                dayPlanUnlocked={planUnlocked}
               />
             ) : (
               <EntryDetail
