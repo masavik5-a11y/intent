@@ -14,6 +14,8 @@ import {
   hourMarks,
   planCardState,
   planLane,
+  totalsItems,
+  untrackedStretches,
 } from "./dayView";
 
 const MON = "2026-10-12" as DateKey;
@@ -317,5 +319,67 @@ describe("entryTitle", () => {
     expect(entryTitle(block("Phone", TUE, 780, 30), driftCategory)).toBe(
       "Phone",
     );
+  });
+});
+
+describe("untrackedStretches (PRD U4)", () => {
+  const blocks = [
+    block("Gym", TUE, 480, 60, {
+      status: "done",
+      actualStartMin: 480,
+      actualDurationMin: 60,
+    }),
+    block("Write", TUE, 600, 120), // running from 10:00
+  ];
+
+  test("today: before now, around what was recorded and the running bar", () => {
+    expect(
+      untrackedStretches(blocks, TUE, 300, { date: TUE, minute: 637 }),
+    ).toEqual([
+      { top: 0, height: 180 }, // 05:00–08:00
+      { top: 240, height: 60 }, // 09:00–10:00
+    ]);
+  });
+
+  test("it grows with the clock between blocks", () => {
+    const later = untrackedStretches(blocks, TUE, 300, {
+      date: TUE,
+      minute: 727, // Write has ended, not marked
+    });
+    expect(later.at(-1)).toEqual({ top: 240, height: 187 }); // 09:00–12:07
+  });
+
+  test("a past day: wherever nothing was recorded, to the grid's end", () => {
+    const past = untrackedStretches(blocks, TUE, 300, {
+      date: WED,
+      minute: 600,
+    });
+    expect(past).toEqual([
+      { top: 0, height: 180 },
+      { top: 240, height: 1200 },
+    ]);
+  });
+
+  test("a day still to come has none", () => {
+    expect(
+      untrackedStretches(blocks, WED, 300, { date: TUE, minute: 637 }),
+    ).toEqual([]);
+  });
+});
+
+describe("totalsItems", () => {
+  test("on purpose, drift, untracked, in that order", () => {
+    expect(
+      totalsItems({
+        onPurposeMin: 200,
+        driftMin: 45,
+        maintenanceMin: 90,
+        untrackedMin: 7,
+      }),
+    ).toEqual([
+      { label: "On purpose", value: "3h 20m" },
+      { label: "Drift", value: "45m" },
+      { label: "Untracked", value: "7m" },
+    ]);
   });
 });

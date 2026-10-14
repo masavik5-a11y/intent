@@ -7,6 +7,8 @@ import type { Doc, Id } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { StatusActions } from "@/features/status/StatusActions";
 import { StatusSummary } from "@/features/status/StatusSummary";
+import { DayTotals } from "@/features/day/DayTotals";
+import type { DayTotals as DayTotalsData } from "@shared/summary";
 import {
   endedText,
   freeText,
@@ -32,6 +34,7 @@ export function NowPanel({
   error,
   onAction,
   onLog,
+  totals,
 }: {
   view: NowView;
   compact: boolean;
@@ -42,6 +45,8 @@ export function NowPanel({
   onAction: (blockId: Id<"blocks">, action: StatusAction) => void;
   /** Opens logging an unplanned entry, "from the last entry until now". */
   onLog: () => void;
+  /** The day's totals, shown in the full panel; the phone shows them above the grid. */
+  totals: DayTotalsData | null;
 }) {
   const [expanded, setExpanded] = useState(false);
   const showAll = !compact || expanded;
@@ -109,6 +114,10 @@ export function NowPanel({
           showAll={showAll}
           onAction={(action) => onAction(current.block._id, action)}
         />
+      )}
+
+      {!compact && totals !== null && (
+        <DayTotals totals={totals} variant="panel" />
       )}
 
       {showAll && next.length > 0 && (

@@ -1,6 +1,7 @@
 import { hasPlan, isRunning, liveActualLane, planLaneOf } from "@shared/blocks";
 import { gridSegment, type GridSegment } from "@shared/grid";
-import type { LaneSpan } from "@shared/lanes";
+import { minuteFrom, untrackedGaps, type LaneSpan } from "@shared/lanes";
+import type { DayTotals } from "@shared/summary";
 import {
   addDays,
   dateKeyParts,
@@ -133,6 +134,49 @@ export function entryTitle(
   return block.title === category.name
     ? block.title
     : `${category.name} · ${block.title}`;
+}
+
+/** A stretch of the actual lane in grid minutes, such as untracked time. */
+export interface GridStretch {
+  top: number;
+  height: number;
+}
+
+/**
+ * Untracked time in `date`'s grid (PRD U4, section 7 rule 8): the stretches before now
+ * that nothing in the actual lane covers, the running block's bar counting as covered.
+ * On today it ends at this minute, so it grows with the now line; a past day is
+ * untracked wherever nothing was recorded; a day to come has none.
+ */
+export function untrackedStretches(
+  blocks: readonly Doc<"blocks">[],
+  date: DateKey,
+  gridStartMin: number,
+  now: LocalMoment,
+): GridStretch[] {
+  const elapsed = Math.min(
+    Math.max(minuteFrom(date, now) - gridStartMin, 0),
+    MINUTES_PER_DAY,
+  );
+  return untrackedGaps(liveActualLane(blocks, now), {
+    date,
+    startMin: gridStartMin,
+    durationMin: elapsed,
+  }).map((gap) => ({
+    top: gap.startMin - gridStartMin,
+    height: gap.durationMin,
+  }));
+}
+
+/** The three totals as the day shows them, with their labels (DESIGN.md section 4a). */
+export function totalsItems(
+  totals: DayTotals,
+): { label: string; value: string }[] {
+  return [
+    { label: "On purpose", value: formatDuration(totals.onPurposeMin) },
+    { label: "Drift", value: formatDuration(totals.driftMin) },
+    { label: "Untracked", value: formatDuration(totals.untrackedMin) },
+  ];
 }
 
 /** An actual-lane card's state. */
