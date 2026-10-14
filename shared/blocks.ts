@@ -1,5 +1,26 @@
 // Blocks and their intent (docs/PRD.md, section 4; docs/ARCHITECTURE.md, section 5).
 
+import type { LaneEntry } from "./lanes";
+import type { DateKey } from "./time";
+
+/** The plan fields of a block, as stored. */
+export interface PlannedBlock<Id> {
+  _id: Id;
+  date: DateKey;
+  plannedStartMin: number;
+  plannedDurationMin: number;
+}
+
+/** A block's place in the plan lane. */
+export function planEntry<Id>(block: PlannedBlock<Id>): LaneEntry<Id> {
+  return {
+    id: block._id,
+    date: block.date,
+    startMin: block.plannedStartMin,
+    durationMin: block.plannedDurationMin,
+  };
+}
+
 /**
  * The intent fields, in the order the now panel shows them. Activities hold the
  * standing text; a block may override any of them for that day.

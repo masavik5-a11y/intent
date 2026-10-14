@@ -119,7 +119,7 @@ Covers T1–T7 (plan lane), I1–I4, U1, U2, V1, P4, S1, S5.
       categories.
 - [x] `shared/blocks.ts` (`effectiveIntent`), `shared/lanes.ts` (`findOverlap`, including
       blocks that cross midnight), `shared/grid.ts` (minutes to pixels, Fit zoom), with tests.
-- [ ] `convex/model/blocks.ts`: create, update, delete, enforcing the invariants in
+- [x] `convex/model/blocks.ts`: create, update, delete, enforcing the invariants in
       ARCHITECTURE.md section 5. convex-test coverage for overlap, foreign documents,
       invalid times.
 - [ ] Activities screen: list by category, create, edit, archive. All intent fields

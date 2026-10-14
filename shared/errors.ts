@@ -16,6 +16,12 @@ export const ERROR_CODES = [
    * colour key or icon. Means a bug or a hand-made call, not a user mistake.
    */
   "INVALID_INPUT",
+  /** The document does not exist, or belongs to someone else: the two look the same. */
+  "NOT_FOUND",
+  /** The change would make two blocks share time in one lane (PRD section 7, rule 6). */
+  "OVERLAP",
+  /** A start or duration off the 5-minute step or out of range (ARCHITECTURE section 4). */
+  "INVALID_TIME",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

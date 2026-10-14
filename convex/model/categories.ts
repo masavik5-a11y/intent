@@ -1,6 +1,7 @@
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { DEFAULT_CATEGORIES } from "../../shared/categories";
+import { appError } from "../lib/errors";
 
 // The only module that writes the categories table (CLAUDE.md, rule 4).
 
@@ -16,6 +17,19 @@ export async function listForUser(
     .query("categories")
     .withIndex("by_userId", (q) => q.eq("userId", userId))
     .take(MAX_CATEGORIES);
+}
+
+/** The user's category, or NOT_FOUND when it is missing or someone else's. */
+export async function getOwned(
+  ctx: QueryCtx,
+  userId: Id<"users">,
+  categoryId: Id<"categories">,
+): Promise<Doc<"categories">> {
+  const category = await ctx.db.get("categories", categoryId);
+  if (category === null || category.userId !== userId) {
+    throw appError("NOT_FOUND");
+  }
+  return category;
 }
 
 /**

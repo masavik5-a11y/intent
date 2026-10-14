@@ -319,7 +319,8 @@ export default defineSchema({
 5. No two blocks of the same user overlap within the plan lane, and none within the
    actual lane, taking midnight-crossing tails from the previous day into account.
 6. `date` is a valid `DateKey`. `categoryId` and `activityId` belong to the same user.
-7. `title` is 1–80 characters after trimming; text fields are capped (e.g. 500).
+7. `title` is 1–80 characters after trimming; text is trimmed, blank means unset, and
+   lengths are capped (`shared/text.ts`: focus 120, intent fields 1000, compass 10,000).
 
 The schema validates shapes; the model validates rules. Violations throw a `ConvexError`
 with a stable `code` (`"OVERLAP"`, `"INVALID_TIME"`, `"NOT_FOUND"`, …) that the UI maps to
@@ -625,7 +626,13 @@ one; delete an entry when it stops being true.
   sign-in action. Files with two dots (`x.test.ts`, `test.helpers.ts`) are never pushed
   to Convex.
 - `npx convex data <table>` lists a table on the dev deployment: the quickest way to
-  check what a mutation wrote while verifying a slice.
+  check what a mutation wrote while verifying a slice. To call a signed-in function
+  on dev from the shell, pass an identity:
+  `npx convex run blocks:listForDay '{"date":"2026-10-14"}' --identity '{"subject":"<userId>|x"}'`.
+  Never add `--prod` to that without Filip's say-so.
+- Model write helpers build documents field by field and leave unset fields out; in a
+  `patch`, a field set to `undefined` is removed. Update arguments use "left out keeps,
+  `null` clears" for optional text (`clearableText` in `convex/blocks.ts`).
 - On this PC the Convex CLI often ends with
   `Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)` and exit code 127 after it has
   succeeded. Read its output, not its exit code.
