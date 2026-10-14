@@ -2,8 +2,8 @@
 
 Build order, one milestone at a time. Requirement IDs refer to [PRD.md](PRD.md).
 
-**Current milestone: M0 (in progress: only deployment and installing are left, see the
-two open M0 slices).** Update this line when a milestone is finished.
+**Current milestone: M0 (one check left: a second email is refused on the live site, see
+the open M0 slice).** Update this line when a milestone is finished.
 
 ## How to work
 
@@ -77,11 +77,9 @@ how to restrict sign-up in Convex Auth.
 - [x] Auth: sign-in screen, password provider, sign-up limited to `ALLOWED_EMAILS`,
       `requireUser(ctx)`, protected routes, sign out.
 - [x] PWA: manifest, icons, service worker that precaches the shell. No push yet.
-- [ ] Private GitHub repository and an Actions workflow that runs `npm run check`.
-      *Status 2026-10-14:* repository created and `main` pushed
-      (github.com/masavik5-a11y/intent, private); the workflow is
-      `.github/workflows/check.yml`, and the same steps pass on a fresh local clone.
-      **Left:** confirm the first "Check" run on GitHub is green (Actions tab).
+- [x] Private GitHub repository and an Actions workflow that runs `npm run check`.
+      Repository github.com/masavik5-a11y/intent (private); the workflow is
+      `.github/workflows/check.yml`. The "Check" run for 820ad99 is green (2026-10-14).
 - [ ] Production: Convex production deployment and Vercel project, deploying from `main`.
       *Status 2026-10-14:* Convex project `intent` exists; the production deployment
       `diligent-hawk-428` has `JWT_PRIVATE_KEY`, `JWKS` and `ALLOWED_EMAILS`. Vercel holds
@@ -94,9 +92,10 @@ how to restrict sign-up in Convex Auth.
       with curl), and the bundle talks to `diligent-hawk-428`. Filip's account exists
       (production has exactly one user and one account) and the app is installed on the
       PC and the phone.
+      The two development deploy keys ("df" and "intent") are deleted in the Convex
+      dashboard.
       **Left:** Filip confirms that creating an account with any other email on the live
-      site answers "Sign-up is closed for this address", and that the two development
-      deploy keys ("df" and "intent") are deleted in the Convex dashboard.
+      site answers "Sign-up is closed for this address".
 
 **Done when:** you are signed in to the deployed app on the PC and on the phone, it is
 installed as an app on both, a second email cannot sign up, and `npm run check` is green
