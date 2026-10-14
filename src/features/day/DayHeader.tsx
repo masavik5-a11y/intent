@@ -13,17 +13,27 @@ const ICON_BUTTON = cn(
 
 /**
  * Date navigation (PRD T6): previous, next, today, and any date from a picker. On
- * wider screens it also holds the screen's one primary action, adding a block; the
- * phone has that in its bottom bar.
+ * wider screens it also holds the screen's one primary action, adding a block (on a
+ * past day, logging what happened); the phone has that in its bottom bar.
  */
 export function DayHeader({
   date,
   today,
   onAdd,
+  planFrozen,
+  onEditPlan,
+  onLog,
 }: {
   date: DateKey;
   today: DateKey;
   onAdd: () => void;
+  /**
+   * A past day whose plan is frozen (PRD section 7, rule 4): the primary action logs
+   * what happened, and "Edit plan" opens the plan for changes.
+   */
+  planFrozen: boolean;
+  onEditPlan: () => void;
+  onLog: () => void;
 }) {
   const navigate = useNavigate();
   const pickerRef = useRef<HTMLInputElement>(null);
@@ -95,10 +105,26 @@ export function DayHeader({
           className="pointer-events-none absolute inset-0 opacity-0"
         />
       </span>
-      <Button className="ml-1 hidden h-9 sm:inline-flex" onClick={onAdd}>
-        <Plus aria-hidden="true" />
-        Add block
-      </Button>
+      {planFrozen ? (
+        <>
+          <Button
+            variant="ghost"
+            className="ml-1 h-11 sm:h-9"
+            onClick={onEditPlan}
+          >
+            Edit plan
+          </Button>
+          <Button className="ml-1 hidden h-9 sm:inline-flex" onClick={onLog}>
+            <Plus aria-hidden="true" />
+            Log what happened
+          </Button>
+        </>
+      ) : (
+        <Button className="ml-1 hidden h-9 sm:inline-flex" onClick={onAdd}>
+          <Plus aria-hidden="true" />
+          Add block
+        </Button>
+      )}
     </header>
   );
 }

@@ -181,7 +181,7 @@ recurrence, notifications.
       open in their own detail panel. (Split from the slice above, 2026-10-14.)
 - [x] Untracked time drawn as a hatch that grows with the now line; day totals (on
       purpose, drift, untracked) updating every minute.
-- [ ] The edit rule in the UI: past is edited as actual, future as plan; on past days the
+- [x] The edit rule in the UI: past is edited as actual, future as plan; on past days the
       plan is frozen behind an explicit "Edit plan".
 - [ ] "Not feeling it" view (V2, DESIGN.md section 4b), opened from the now panel or `X`:
       if-then, minimum version, cost of skipping, anti-vision, vision, in that order,
