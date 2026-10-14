@@ -8,6 +8,8 @@ export const MAX_TITLE_LENGTH = 80;
 export const MAX_FOCUS_LENGTH = 120;
 /** One intent field: why, how, if-then, minimum version, cost of skipping, done when. */
 export const MAX_INTENT_LENGTH = 1000;
+/** The one-line note on a block, added after the fact (PRD A5). */
+export const MAX_NOTE_LENGTH = 200;
 /** The vision or the anti-vision. */
 export const MAX_COMPASS_LENGTH = 10_000;
 

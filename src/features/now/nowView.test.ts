@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { DateKey } from "@shared/time";
-import type { Doc, Id } from "@/lib/api";
+import type { Doc, Id, PlannedBlockDoc } from "@/lib/api";
 import {
   formatLeft,
   freeText,
@@ -45,8 +45,8 @@ function block(
   date: DateKey,
   startMin: number,
   durationMin: number,
-  extra: Partial<Doc<"blocks">> = {},
-): Doc<"blocks"> {
+  extra: Partial<PlannedBlockDoc> = {},
+): PlannedBlockDoc {
   return {
     _id: title as Id<"blocks">,
     _creationTime: 0,
@@ -156,7 +156,7 @@ describe("status and free text", () => {
 
   test("between blocks it names when the free time ends", () => {
     const next = {
-      block: blocks[1] as Doc<"blocks">,
+      block: blocks[1] as PlannedBlockDoc,
       activity: undefined,
       category: body,
     };

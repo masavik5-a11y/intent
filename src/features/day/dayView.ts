@@ -1,4 +1,4 @@
-import { planEntry } from "@shared/blocks";
+import { planLaneOf } from "@shared/blocks";
 import { gridSegment, type GridSegment } from "@shared/grid";
 import {
   addDays,
@@ -10,7 +10,7 @@ import {
   minutesToLabel,
   type DateKey,
 } from "@shared/time";
-import type { Doc } from "@/lib/api";
+import type { Doc, PlannedBlockDoc } from "@/lib/api";
 
 // What the day view shows, worked out without React so it can be tested.
 
@@ -35,7 +35,7 @@ export function dayTense(
 }
 
 export interface LaneItem {
-  block: Doc<"blocks">;
+  block: PlannedBlockDoc;
   segment: GridSegment;
 }
 
@@ -49,10 +49,9 @@ export function planLane(
   gridStartMin: number,
 ): LaneItem[] {
   const items: LaneItem[] = [];
-  for (const block of blocks) {
-    const entry = planEntry(block);
+  for (const entry of planLaneOf(blocks)) {
     const segment = gridSegment(date, gridStartMin, entry);
-    if (segment !== null) items.push({ block, segment });
+    if (segment !== null) items.push({ block: entry.block, segment });
   }
   return items.sort((a, b) => a.segment.top - b.segment.top);
 }
@@ -97,7 +96,7 @@ export function hourMarks(gridStartMin: number, every = 1): HourMark[] {
  * reads "until 07:00", so it is clearly the rest of something; every other block shows
  * its whole range, "23:00–07:00" included.
  */
-export function cardTime(block: Doc<"blocks">, segment: GridSegment): string {
+export function cardTime(block: PlannedBlockDoc, segment: GridSegment): string {
   const end = block.plannedStartMin + block.plannedDurationMin;
   return segment.startsBefore
     ? `until ${minutesToLabel(end)}`
@@ -110,7 +109,7 @@ export function cardTime(block: Doc<"blocks">, segment: GridSegment): string {
  * from or goes on into.
  */
 export function cardName(
-  block: Doc<"blocks">,
+  block: PlannedBlockDoc,
   segment: GridSegment,
   day: DateKey,
 ): string {

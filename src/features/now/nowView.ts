@@ -1,4 +1,4 @@
-import { effectiveIntent, planEntry } from "@shared/blocks";
+import { effectiveIntent, planLaneOf } from "@shared/blocks";
 import { entriesAfter, entryAt } from "@shared/lanes";
 import { countdown, type Countdown } from "@shared/pace";
 import {
@@ -8,13 +8,13 @@ import {
   minutesToLabel,
   type LocalMoment,
 } from "@shared/time";
-import type { Doc } from "@/lib/api";
+import type { Doc, PlannedBlockDoc } from "@/lib/api";
 
 // What the now panel shows (DESIGN.md section 4a), worked out without React.
 
 /** A block with what it needs to be drawn: its activity and category. */
 export interface NowBlock {
-  block: Doc<"blocks">;
+  block: PlannedBlockDoc;
   activity: Doc<"activities"> | undefined;
   category: Doc<"categories"> | undefined;
 }
@@ -54,8 +54,8 @@ export function nowView(
   categories: readonly Doc<"categories">[],
   now: LocalMoment,
 ): NowView {
-  const lane = blocks.map((block) => ({ ...planEntry(block), block }));
-  const describe = (block: Doc<"blocks">): NowBlock => ({
+  const lane = planLaneOf(blocks);
+  const describe = (block: PlannedBlockDoc): NowBlock => ({
     block,
     activity: activities.find((item) => item._id === block.activityId),
     category: categories.find((item) => item._id === block.categoryId),

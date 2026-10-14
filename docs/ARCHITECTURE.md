@@ -113,6 +113,10 @@ This is the decision most likely to cause bugs if it is done loosely, so it is f
   `DateKey`).
 - Times are **integer minutes from local midnight of that date**. `plannedStartMin` is in
   `[0, 1440)`. Start + duration may exceed 1440: that is a block crossing midnight.
+  `actualStartMin` is in `[0, 2880)`, because a block planned before midnight can begin
+  after it, and its end stays within the next day (`actualStartMin + actualDurationMin
+  <= 2880`). So every span of a block dated D, plan or actual, lies inside
+  `[D 00:00, D+2 00:00)`, which is what keeps the three-day window below sufficient.
 - All minutes are multiples of 5. Durations are `[5, 1440]`.
 - Block times are **floating local time**. A block at 15:00 is at 15:00 wherever the user
   is. No UTC timestamps are stored for block times, and none are derived and stored.
@@ -141,8 +145,8 @@ This is the decision most likely to cause bugs if it is done loosely, so it is f
 ## 5. Data model
 
 Draft Convex schema. Tables marked with a milestone are added in that milestone. The
-real one is `convex/schema.ts`; where they differ, it wins. In M1 a block's plan times
-are required and its status can only be `planned`; M2 widens both.
+real one is `convex/schema.ts`; where they differ, it wins. M2 made the plan times
+optional (unplanned entries) and added the statuses and actual fields.
 
 ```ts
 import { defineSchema, defineTable } from "convex/server";
@@ -164,6 +168,15 @@ export const blockStatus = v.union(
   v.literal("done"),
   v.literal("partial"),
   v.literal("skipped"),
+);
+
+// PRD A1's optional reasons; shared/blocks.ts, SKIP_REASONS.
+export const skipReason = v.union(
+  v.literal("tired"),
+  v.literal("noTime"),
+  v.literal("choseOther"),
+  v.literal("forgot"),
+  v.literal("other"),
 );
 
 const intentFields = {
@@ -247,7 +260,7 @@ export default defineSchema({
     status: blockStatus,
     actualStartMin: v.optional(v.number()),
     actualDurationMin: v.optional(v.number()),
-    skipReason: v.optional(v.string()),
+    skipReason: v.optional(skipReason),
     note: v.optional(v.string()),
     minimumChosen: v.optional(v.boolean()), // "Start the minimum" was used (PRD V3)
 
@@ -320,12 +333,16 @@ export default defineSchema({
 2. `planned` and `skipped` blocks have no actual times. `done` and `partial` blocks have
    actual times.
 3. An unplanned entry has no plan times and status `done`.
-4. Minutes are integers, multiples of 5, within the ranges in section 4.
+4. Minutes are integers, multiples of 5, within the ranges in section 4. A skip reason
+   only on a skipped block. Invariants 1 to 4 are one pure function,
+   `blockShapeProblem` in `shared/blocks.ts`, run on the fields a block is about to
+   have before every write.
 5. No two blocks of the same user overlap within the plan lane, and none within the
    actual lane, taking midnight-crossing tails from the previous day into account.
 6. `date` is a valid `DateKey`. `categoryId` and `activityId` belong to the same user.
 7. `title` is 1–80 characters after trimming; text is trimmed, blank means unset, and
-   lengths are capped (`shared/text.ts`: focus 120, intent fields 1000, compass 10,000).
+   lengths are capped (`shared/text.ts`: focus 120, intent fields 1000, note 200,
+   compass 10,000).
 
 The schema validates shapes; the model validates rules. Violations throw a `ConvexError`
 with a stable `code` (`"OVERLAP"`, `"INVALID_TIME"`, `"NOT_FOUND"`, …) that the UI maps to
@@ -644,6 +661,8 @@ Things assumed here that must be confirmed in the milestone that depends on them
 | 2026-10-14 | Date and colour-key fields are typed in the schema (`vDateKey`, `vColorKey`). | The brand reaches every document and argument; the model validates the value. |
 | 2026-10-14 | Between midnight and the grid's start, "Today" is still the day that is ending (Filip's choice). | The grid runs 05:00 to 05:00, so only that day shows the now line after midnight. |
 | 2026-10-14 | Vercel builds `main` only; pull requests get no preview (Filip's choice). | Cloud sessions work through pull requests; previews would need their own Convex deployments. The Check workflow gates a PR; screens are checked after the merge. |
+| 2026-10-14 | An actual start may run to 2880 (the end of the next day); a plan start stays below 1440. | A block planned at 23:30 can begin at 00:10. Keeping every span of a block dated D inside D and D+1 keeps the three-day read window. |
+| 2026-10-14 | Skip reasons are a fixed union in the schema, not free text. | PRD A1 lists five; a typed value can be counted in insights (R4, R7). Free words go in the note. |
 
 ## 17. Implementation notes
 

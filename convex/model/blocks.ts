@@ -1,11 +1,15 @@
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import {
+  actualLaneOf,
+  blockShapeProblem,
+  hasActual,
+  hasPlan,
   INTENT_FIELDS,
-  planEntry,
+  planLaneOf,
   type IntentField,
 } from "../../shared/blocks";
-import { findOverlap, overlapWindow, type LaneSpan } from "../../shared/lanes";
+import { findOverlap, overlapWindow } from "../../shared/lanes";
 import {
   cleanName,
   cleanText,
@@ -13,20 +17,14 @@ import {
   MAX_INTENT_LENGTH,
   MAX_TITLE_LENGTH,
 } from "../../shared/text";
-import {
-  daysBetween,
-  isDateKey,
-  isValidDuration,
-  isValidMinute,
-  type DateKey,
-} from "../../shared/time";
+import { daysBetween, isDateKey, type DateKey } from "../../shared/time";
 import { appError } from "../lib/errors";
 import * as Activities from "./activities";
 import * as Categories from "./categories";
 
 // The only module that writes the blocks table (CLAUDE.md, rule 4). It enforces the
-// invariants in docs/ARCHITECTURE.md, section 5. In M1 every block is planned and
-// every edit changes the plan; M2 adds actual times and the edit rule.
+// invariants in docs/ARCHITECTURE.md, section 5: every write checks the fields the
+// block will have (shared/blocks.ts, blockShapeProblem) and that it fits both lanes.
 
 /** One lane holds at most 288 five-minute blocks a day, so this never cuts a day short. */
 const MAX_BLOCKS_PER_DAY = 600;
@@ -115,7 +113,6 @@ export async function create(
   input: NewBlock,
 ): Promise<Id<"blocks">> {
   const date = checkDate(input.date);
-  checkPlanTimes(input.plannedStartMin, input.plannedDurationMin);
   const activity =
     input.activityId === undefined
       ? null
@@ -141,11 +138,8 @@ export async function create(
     if (text !== undefined) fields[field] = text;
   }
 
-  await assertFreeInPlan(ctx, userId, {
-    date,
-    startMin: fields.plannedStartMin,
-    durationMin: fields.plannedDurationMin,
-  });
+  checkShape(fields);
+  await assertFree(ctx, userId, fields);
   return await ctx.db.insert("blocks", { userId, ...fields });
 }
 
@@ -184,27 +178,21 @@ export async function update(
     patch.categoryId = changes.categoryId;
   }
 
-  if (
+  const timesChange =
     changes.date !== undefined ||
     changes.plannedStartMin !== undefined ||
-    changes.plannedDurationMin !== undefined
-  ) {
-    const date =
-      changes.date === undefined ? block.date : checkDate(changes.date);
-    const startMin = changes.plannedStartMin ?? block.plannedStartMin;
-    const durationMin = changes.plannedDurationMin ?? block.plannedDurationMin;
-    checkPlanTimes(startMin, durationMin);
-    await assertFreeInPlan(ctx, userId, {
-      id: block._id,
-      date,
-      startMin,
-      durationMin,
-    });
-    patch.date = date;
-    patch.plannedStartMin = startMin;
-    patch.plannedDurationMin = durationMin;
+    changes.plannedDurationMin !== undefined;
+  if (changes.date !== undefined) patch.date = checkDate(changes.date);
+  if (changes.plannedStartMin !== undefined) {
+    patch.plannedStartMin = changes.plannedStartMin;
+  }
+  if (changes.plannedDurationMin !== undefined) {
+    patch.plannedDurationMin = changes.plannedDurationMin;
   }
 
+  const next = { ...fieldsOf(block), ...patch };
+  checkShape(next);
+  if (timesChange) await assertFree(ctx, userId, next, block._id);
   await ctx.db.patch("blocks", block._id, patch);
 }
 
@@ -227,11 +215,16 @@ function checkDate(date: string): DateKey {
   return date;
 }
 
-/** Invariant 4: minutes on the 5-minute step, start in a day, 5 minutes to a day long. */
-function checkPlanTimes(startMin: number, durationMin: number): void {
-  if (!isValidMinute(startMin) || !isValidDuration(durationMin)) {
-    throw appError("INVALID_TIME");
-  }
+/** Invariants 1 to 4, on the fields a block is about to have. */
+function checkShape(fields: BlockFields): void {
+  const problem = blockShapeProblem(fields);
+  if (problem !== null) throw appError(problem);
+}
+
+/** A stored block without the fields the database owns. */
+function fieldsOf(block: Doc<"blocks">): BlockFields {
+  const { _id: _, _creationTime: __, userId: ___, ...fields } = block;
+  return fields;
 }
 
 /** Invariant 7: a title of 1 to 80 characters after trimming. */
@@ -258,15 +251,39 @@ function clearableText(value: string | null, max: number): string | undefined {
 }
 
 /**
- * Invariant 5: no two blocks share time in the plan lane, including the tails of
- * blocks that cross midnight from the day before, or into the day after.
+ * Invariant 5: in neither lane does a block share time with another, including the
+ * tails of blocks that cross midnight from the day before, or into the day after.
+ * `blockId` is the block being changed, which may stay where it is.
  */
-async function assertFreeInPlan(
+async function assertFree(
   ctx: QueryCtx,
   userId: Id<"users">,
-  candidate: LaneSpan & { id?: Id<"blocks"> },
+  block: BlockFields,
+  blockId?: Id<"blocks">,
 ): Promise<void> {
-  const [first, , last] = overlapWindow(candidate.date);
-  const lane = (await listBetween(ctx, userId, first, last)).map(planEntry);
-  if (findOverlap(candidate, lane) !== null) throw appError("OVERLAP");
+  const [first, , last] = overlapWindow(block.date);
+  const others = (await listBetween(ctx, userId, first, last)).filter(
+    (other) => other._id !== blockId,
+  );
+  const inPlan =
+    hasPlan(block) &&
+    findOverlap(
+      {
+        date: block.date,
+        startMin: block.plannedStartMin,
+        durationMin: block.plannedDurationMin,
+      },
+      planLaneOf(others),
+    ) !== null;
+  const inActual =
+    hasActual(block) &&
+    findOverlap(
+      {
+        date: block.date,
+        startMin: block.actualStartMin,
+        durationMin: block.actualDurationMin,
+      },
+      actualLaneOf(others),
+    ) !== null;
+  if (inPlan || inActual) throw appError("OVERLAP");
 }

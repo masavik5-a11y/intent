@@ -18,7 +18,7 @@ import { TimeInput } from "@/components/TimeInput";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import type { Doc } from "@/lib/api";
+import type { Doc, PlannedBlockDoc } from "@/lib/api";
 import { collidingBlock, overlapMessage } from "@/lib/blockOverlap";
 import { COST_OF_SKIPPING_HINT, INTENT_PROMPTS } from "@/lib/intentPrompts";
 import { cn } from "@/lib/utils";
@@ -33,7 +33,8 @@ import {
 export type BlockChanges = ReturnType<typeof updateArgs>;
 
 interface BlockDetailProps {
-  block: Doc<"blocks">;
+  /** Block detail edits a plan; an unplanned entry gets its own form (M2). */
+  block: PlannedBlockDoc;
   /** The day being viewed; a block from another day says which day it is on. */
   viewedDay: DateKey;
   activities: readonly Doc<"activities">[];

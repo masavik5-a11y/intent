@@ -163,7 +163,9 @@ recurrence, notifications.
 
 **Slices:**
 
-- [ ] Schema: status, actual times, `skipReason`, `note`, `minimumChosen`.
+- [x] Schema: status, actual times, `skipReason`, `note`, `minimumChosen`. Plan times
+      are optional (unplanned entries); every write runs `blockShapeProblem` and checks
+      both lanes.
 - [ ] `shared/`: `applyStatus`, `defaultActual`, `editTarget`, `untrackedGaps`,
       `summarizeDay`, each with tests for the rules in PRD section 7.
 - [ ] Done, Partly, Skip and Undo from the now panel and block detail, with optimistic

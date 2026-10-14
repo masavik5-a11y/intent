@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useMutation, useQuery } from "convex/react";
+import { hasPlan } from "@shared/blocks";
 import {
   CLICK_SNAP_MIN,
   gridDayOf,
@@ -124,7 +125,9 @@ export function DayScreen({
   }
   const saveBlock = (args: NewBlockArgs) => attempt(() => createBlock(args));
 
-  const selected = blocks?.find((block) => block._id === selectedBlockId);
+  const selected = blocks
+    ?.filter(hasPlan)
+    .find((block) => block._id === selectedBlockId);
   // The now panel belongs to today (DESIGN.md section 2).
   const nowPanel =
     tense === "today" &&

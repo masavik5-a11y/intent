@@ -450,6 +450,111 @@ describe("blocks.update", () => {
   });
 });
 
+describe("plan and actual are two lanes (M2 shapes)", () => {
+  /** A block as later slices will store it: done, or an unplanned entry. */
+  async function insertDone(
+    t: TestConvex,
+    userId: Id<"users">,
+    categoryId: Id<"categories">,
+    fields: {
+      date: DateKey;
+      plannedStartMin?: number;
+      plannedDurationMin?: number;
+      actualStartMin: number;
+      actualDurationMin: number;
+    },
+  ) {
+    return await t.run((ctx) =>
+      ctx.db.insert("blocks", {
+        userId,
+        title: "Done",
+        categoryId,
+        status: "done",
+        ...fields,
+      }),
+    );
+  }
+
+  test("an unplanned entry takes no room in the plan lane", async () => {
+    const t = newTest();
+    const { userId, as, deepWork } = await setUp(t);
+    await insertDone(t, userId, deepWork, {
+      date: TUE,
+      actualStartMin: 780,
+      actualDurationMin: 45,
+    });
+    await plan(as, deepWork, TUE, "13:00", 60);
+  });
+
+  test("a done block still holds its plan time", async () => {
+    const t = newTest();
+    const { userId, as, deepWork } = await setUp(t);
+    await insertDone(t, userId, deepWork, {
+      date: TUE,
+      plannedStartMin: 540,
+      plannedDurationMin: 60,
+      actualStartMin: 600,
+      actualDurationMin: 60,
+    });
+    await expectAppError(plan(as, deepWork, TUE, "09:30", 30), "OVERLAP");
+    // Its actual time is in the other lane, so the plan lane is free there.
+    await plan(as, deepWork, TUE, "10:00", 60);
+  });
+
+  test("moving a done block to another date checks the actual lane there", async () => {
+    const t = newTest();
+    const { userId, as, deepWork } = await setUp(t);
+    const blockId = await insertDone(t, userId, deepWork, {
+      date: TUE,
+      plannedStartMin: 540,
+      plannedDurationMin: 60,
+      actualStartMin: 540,
+      actualDurationMin: 60,
+    });
+    await insertDone(t, userId, deepWork, {
+      date: WED,
+      actualStartMin: 540,
+      actualDurationMin: 30,
+    });
+    await expectAppError(
+      as.mutation(api.blocks.update, { blockId, date: WED }),
+      "OVERLAP",
+    );
+    expect(await read(t, blockId)).toMatchObject({ date: TUE });
+  });
+
+  test("an unplanned entry cannot get half a plan", async () => {
+    const t = newTest();
+    const { userId, as, deepWork } = await setUp(t);
+    const blockId = await insertDone(t, userId, deepWork, {
+      date: TUE,
+      actualStartMin: 780,
+      actualDurationMin: 45,
+    });
+    await expectAppError(
+      as.mutation(api.blocks.update, { blockId, plannedStartMin: 780 }),
+      "INVALID_INPUT",
+    );
+    // Text edits are fine.
+    await as.mutation(api.blocks.update, { blockId, title: "Phone" });
+    expect(await read(t, blockId)).toMatchObject({ title: "Phone" });
+  });
+
+  test("listForDay returns unplanned entries with the rest", async () => {
+    const t = newTest();
+    const { userId, as, deepWork } = await setUp(t);
+    await insertDone(t, userId, deepWork, {
+      date: TUE,
+      actualStartMin: 780,
+      actualDurationMin: 45,
+    });
+    const blocks = await as.query(api.blocks.listForDay, { date: TUE });
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0]).toMatchObject({ status: "done", actualStartMin: 780 });
+    expect(blocks[0] && "plannedStartMin" in blocks[0]).toBe(false);
+  });
+});
+
 describe("blocks.remove", () => {
   test("deletes the block and frees its time", async () => {
     const t = newTest();
