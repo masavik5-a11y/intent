@@ -183,7 +183,7 @@ recurrence, notifications.
       purpose, drift, untracked) updating every minute.
 - [x] The edit rule in the UI: past is edited as actual, future as plan; on past days the
       plan is frozen behind an explicit "Edit plan".
-- [ ] "Not feeling it" view (V2, DESIGN.md section 4b), opened from the now panel or `X`:
+- [x] "Not feeling it" view (V2, DESIGN.md section 4b), opened from the now panel or `X`:
       if-then, minimum version, cost of skipping, anti-vision, vision, in that order,
       then Start, Start the minimum, Skip on purpose.
 - [ ] "Start the minimum" (V3): sets `minimumChosen`; finishing records Partly with the

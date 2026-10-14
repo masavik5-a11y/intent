@@ -34,6 +34,7 @@ export function NowPanel({
   error,
   onAction,
   onLog,
+  onNotFeeling,
   totals,
 }: {
   view: NowView;
@@ -45,6 +46,8 @@ export function NowPanel({
   onAction: (blockId: Id<"blocks">, action: StatusAction) => void;
   /** Opens logging an unplanned entry, "from the last entry until now". */
   onLog: () => void;
+  /** Opens "Not feeling it" for a block (PRD V2). */
+  onNotFeeling: (blockId: Id<"blocks">) => void;
   /** The day's totals, shown in the full panel; the phone shows them above the grid. */
   totals: DayTotalsData | null;
 }) {
@@ -113,6 +116,7 @@ export function NowPanel({
           current={current}
           showAll={showAll}
           onAction={(action) => onAction(current.block._id, action)}
+          onNotFeeling={() => onNotFeeling(current.block._id)}
         />
       )}
 
@@ -128,6 +132,15 @@ export function NowPanel({
               <UpNextItem key={item.block._id} item={item} />
             ))}
           </ul>
+          {current === null && view.feelingTarget !== null && (
+            <NotFeelingLink
+              onClick={() => {
+                if (view.feelingTarget !== null) {
+                  onNotFeeling(view.feelingTarget.block._id);
+                }
+              }}
+            />
+          )}
         </div>
       )}
 
@@ -156,10 +169,12 @@ function CurrentBlock({
   current,
   showAll,
   onAction,
+  onNotFeeling,
 }: {
   current: NowCurrent;
   showAll: boolean;
   onAction: (action: StatusAction) => void;
+  onNotFeeling: () => void;
 }) {
   const { block, intent, countdown, pressure, soFarMin } = current;
   const strong = pressure && inLastTenMinutes(countdown);
@@ -230,7 +245,21 @@ function CurrentBlock({
         soFarMin={soFarMin}
         onAction={onAction}
       />
+      <NotFeelingLink onClick={onNotFeeling} />
     </div>
+  );
+}
+
+/** The quiet way in to "Not feeling it" (DESIGN.md section 4a, item 7). */
+function NotFeelingLink({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex min-h-11 items-center self-start rounded-sm text-sm text-muted-foreground underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 sm:min-h-8"
+    >
+      Not feeling it
+    </button>
   );
 }
 

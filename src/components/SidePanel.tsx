@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SheetCloseButton } from "@/components/SheetCloseButton";
+import { SheetCloseButton } from "./SheetCloseButton";
 import {
   Sheet,
   SheetContent,
@@ -9,28 +9,29 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-interface BlockDetailPanelProps {
+interface SidePanelProps {
   /** From 1024 px the panel sits beside the grid; narrower, it is a sheet. */
   wide: boolean;
   title: string;
   /** Under the title: the planned time, or for an entry what was logged. */
   subtitle: string;
   onCancel: () => void;
-  /** The form: block detail, or entry detail for an unplanned entry. */
+  /** What the panel holds: block detail, entry detail, "Not feeling it". */
   children: ReactNode;
 }
 
 /**
- * Where block detail lives (DESIGN.md section 2): the side panel on desktop, a sheet
- * on tablet and phone. Esc closes it in both.
+ * The side panel (DESIGN.md section 2): 340 px beside the grid on desktop, where it
+ * takes the now panel's place; a full sheet on tablet and phone. Esc closes it in both.
+ * Block detail and "Not feeling it" open in it.
  */
-export function BlockDetailPanel({
+export function SidePanel({
   wide,
   title,
   subtitle,
   onCancel,
   children: form,
-}: BlockDetailPanelProps) {
+}: SidePanelProps) {
   const titleRef = useRef<HTMLHeadingElement>(null);
 
   // The sheet handles Esc itself; the side panel needs it here.
@@ -48,15 +49,12 @@ export function BlockDetailPanel({
   if (wide) {
     return (
       <aside
-        aria-labelledby="block-detail-title"
+        aria-labelledby="side-panel-title"
         className="flex w-[340px] shrink-0 flex-col border-l"
       >
         <header className="flex items-start gap-2 px-4 pt-3 pb-2 sm:px-5">
           <div className="flex min-w-0 flex-1 flex-col">
-            <h2
-              id="block-detail-title"
-              className="truncate text-lg font-medium"
-            >
+            <h2 id="side-panel-title" className="truncate text-lg font-medium">
               {title}
             </h2>
             <p className="text-sm text-muted-foreground">{subtitle}</p>

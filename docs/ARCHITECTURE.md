@@ -760,6 +760,11 @@ one; delete an entry when it stops being true.
   sheet's title (`tabIndex={-1}`) when the sheet shows something rather than asks for
   typing; see `ActivitiesScreen`. Closing such a sheet goes back in history when it
   can (`useCanGoBack`), so the Android back gesture and Cancel agree.
+- The side panel (`src/components/SidePanel.tsx`) holds block detail, entry detail and
+  "Not feeling it": 340 px beside the grid from 1024 px, where it replaces the now
+  panel, and a full sheet below that.
+- The compass is queried only inside `NotFeelingIt`, which mounts only when it is
+  opened, so the anti-vision is never loaded for the Today screen (PRD V4).
 - A sheet's generated close button is 28 px. Pass `showCloseButton={false}` and put
   `<SheetCloseButton />` last in the content (44 px on the phone; last, so a form's
   first field still gets the initial focus).
