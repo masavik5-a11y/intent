@@ -12,7 +12,9 @@ import {
   type StatusAction,
   type StatusProblem,
 } from "../../shared/blocks";
-import { findOverlap, overlapWindow } from "../../shared/lanes";
+import { findOverlap, overlapWindow, placeSpans } from "../../shared/lanes";
+import { copyablePlan, shiftedPlan } from "../../shared/planning";
+import { DEFAULT_SETTINGS } from "../../shared/settings";
 import {
   cleanName,
   cleanText,
@@ -23,6 +25,7 @@ import {
 } from "../../shared/text";
 import type { ErrorCode } from "../../shared/errors";
 import {
+  addDays,
   daysBetween,
   isDateKey,
   MINUTES_PER_DAY,
@@ -32,6 +35,7 @@ import {
 import { appError } from "../lib/errors";
 import * as Activities from "./activities";
 import * as Categories from "./categories";
+import * as Settings from "./settings";
 
 // The only module that writes the blocks table (CLAUDE.md, rule 4). It enforces the
 // invariants in docs/ARCHITECTURE.md, section 5: every write checks the fields the
@@ -300,6 +304,77 @@ const STATUS_ERRORS: Record<StatusProblem, ErrorCode> = {
   INVALID_TIME: "INVALID_TIME",
   MARKED: "INVALID_INPUT",
 };
+
+/** What "Copy from a date" did: how many it copied, and what did not fit. */
+export interface CopyResult {
+  copied: number;
+  /** Each with what stood in its way. */
+  skipped: { title: string; startMin: number; blockedBy: string }[];
+}
+
+/**
+ * Copies the plan of `from`'s grid onto `to` (PRD P2; decided 2026-10-15): the plan
+ * lane only (times, title, activity, category, focus, done-when and the other
+ * overrides), as plain blocks still to do. Blocks a rule made are left out, since the
+ * rule puts them there itself. A block that would overlap anything on `to` is left
+ * out and listed; nothing already there moves.
+ */
+export async function copyPlan(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  from: DateKey,
+  to: DateKey,
+): Promise<CopyResult> {
+  checkDate(from);
+  checkDate(to);
+  if (from === to) throw appError("INVALID_INPUT");
+  const settings = await Settings.getForUser(ctx, userId);
+  const gridStartMin = settings?.gridStartMin ?? DEFAULT_SETTINGS.gridStartMin;
+  const source = copyablePlan(
+    await listForDay(ctx, userId, from),
+    from,
+    gridStartMin,
+  );
+  if (source.length === 0) return { copied: 0, skipped: [] };
+
+  // A copy lands on `to` or, after midnight, the day after: read what can collide.
+  const around = await listBetween(
+    ctx,
+    userId,
+    addDays(to, -1),
+    addDays(to, 2),
+  );
+  const { placed, blocked } = placeSpans(
+    source.map((block) => ({ ...shiftedPlan(block, from, to), block })),
+    planLaneOf(around),
+  );
+  for (const { block, date, startMin, durationMin } of placed) {
+    const fields: BlockFields = {
+      date,
+      title: block.title,
+      categoryId: block.categoryId,
+      plannedStartMin: startMin,
+      plannedDurationMin: durationMin,
+      status: "planned",
+    };
+    if (block.activityId !== undefined) fields.activityId = block.activityId;
+    if (block.focus !== undefined) fields.focus = block.focus;
+    for (const field of INTENT_FIELDS) {
+      const text = block[field];
+      if (text !== undefined) fields[field] = text;
+    }
+    checkShape(fields);
+    await ctx.db.insert("blocks", { userId, ...fields });
+  }
+  return {
+    copied: placed.length,
+    skipped: blocked.map(({ candidate, by }) => ({
+      title: candidate.block.title,
+      startMin: candidate.startMin,
+      blockedBy: "block" in by ? by.block.title : "",
+    })),
+  };
+}
 
 export async function remove(
   ctx: MutationCtx,

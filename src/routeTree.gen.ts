@@ -20,6 +20,7 @@ import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppWeekRouteImport } from './routes/_app/week'
 import { Route as AppWelcomeRouteImport } from './routes/_app/welcome'
 import { Route as AppDayDateRouteImport } from './routes/_app/day.$date'
+import { Route as AppPlanDateRouteImport } from './routes/_app/plan.$date'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -75,6 +76,11 @@ const AppDayDateRoute = AppDayDateRouteImport.update({
   path: '/day/$date',
   getParentRoute: () => AppRoute,
 } as any)
+const AppPlanDateRoute = AppPlanDateRouteImport.update({
+  id: '/plan/$date',
+  path: '/plan/$date',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
@@ -87,6 +93,7 @@ export interface FileRoutesByFullPath {
   '/week': typeof AppWeekRoute
   '/welcome': typeof AppWelcomeRoute
   '/day/$date': typeof AppDayDateRoute
+  '/plan/$date': typeof AppPlanDateRoute
 }
 export interface FileRoutesByTo {
   '/signin': typeof SigninRoute
@@ -99,6 +106,7 @@ export interface FileRoutesByTo {
   '/welcome': typeof AppWelcomeRoute
   '/': typeof AppIndexRoute
   '/day/$date': typeof AppDayDateRoute
+  '/plan/$date': typeof AppPlanDateRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -113,6 +121,7 @@ export interface FileRoutesById {
   '/_app/welcome': typeof AppWelcomeRoute
   '/_app/': typeof AppIndexRoute
   '/_app/day/$date': typeof AppDayDateRoute
+  '/_app/plan/$date': typeof AppPlanDateRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -127,6 +136,7 @@ export interface FileRouteTypes {
     | '/week'
     | '/welcome'
     | '/day/$date'
+    | '/plan/$date'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/signin'
@@ -139,6 +149,7 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/'
     | '/day/$date'
+    | '/plan/$date'
   id:
     | '__root__'
     | '/_app'
@@ -152,6 +163,7 @@ export interface FileRouteTypes {
     | '/_app/welcome'
     | '/_app/'
     | '/_app/day/$date'
+    | '/_app/plan/$date'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -238,6 +250,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDayDateRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/plan/$date': {
+      id: '/_app/plan/$date'
+      path: '/plan/$date'
+      fullPath: '/plan/$date'
+      preLoaderRoute: typeof AppPlanDateRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -251,6 +270,7 @@ interface AppRouteChildren {
   AppWelcomeRoute: typeof AppWelcomeRoute
   AppIndexRoute: typeof AppIndexRoute
   AppDayDateRoute: typeof AppDayDateRoute
+  AppPlanDateRoute: typeof AppPlanDateRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -263,6 +283,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppWelcomeRoute: AppWelcomeRoute,
   AppIndexRoute: AppIndexRoute,
   AppDayDateRoute: AppDayDateRoute,
+  AppPlanDateRoute: AppPlanDateRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

@@ -11,12 +11,9 @@ import {
 import { minuteFrom } from "@shared/lanes";
 import { summarizeDay } from "@shared/summary";
 import { DEFAULT_SETTINGS } from "@shared/settings";
-import { formatTimeRange, type DateKey, type LocalMoment } from "@shared/time";
-import { SidePanel } from "@/components/SidePanel";
-import { BlockDetail } from "@/features/block-detail/BlockDetail";
-import { EntryDetail } from "@/features/block-detail/EntryDetail";
-import { statusLine } from "@/features/status/statusLabels";
-import { api, type BlockUpdate, type Doc, type Id } from "@/lib/api";
+import { addDays, type DateKey, type LocalMoment } from "@shared/time";
+import { BlockPanel } from "@/features/block-detail/BlockPanel";
+import { api, type Doc, type Id } from "@/lib/api";
 import { useSetStatus } from "@/lib/blockStatus";
 import { saveErrorMessage } from "@/lib/errorMessages";
 import { useNow } from "@/lib/now";
@@ -40,15 +37,13 @@ import {
   actualCardState,
   actualCardTime,
   actualLane,
-  cardName,
-  cardTime,
   dayNotes,
   dayTense,
   entryTitle,
-  planCardState,
   planLane,
   untrackedStretches,
 } from "./dayView";
+import { cardLooks, planCards } from "./gridCards";
 import { DayNotes } from "./DayNotes";
 import { DayReview } from "./DayReview";
 import { DayTotals } from "./DayTotals";
@@ -109,8 +104,6 @@ export function DayScreen({
   const activities = useQuery(api.activities.list);
   const day = useQuery(api.days.get, { date });
   const createBlock = useMutation(api.blocks.create);
-  const updateBlock = useMutation(api.blocks.update);
-  const removeBlock = useMutation(api.blocks.remove);
   const logEntry = useMutation(api.blocks.logEntry);
   const setStatus = useSetStatus();
   const now = useNow();
@@ -158,36 +151,25 @@ export function DayScreen({
           now,
         );
 
-  /** What every card shows of its block, in either lane. */
-  const looksOf = (block: Doc<"blocks">) => {
-    const category = categoryOf.get(block.categoryId);
-    const activity =
-      block.activityId === undefined
-        ? undefined
-        : activityOf.get(block.activityId);
-    return {
-      key: block._id,
-      title: block.title,
-      focus: block.focus,
-      icon: activity?.icon ?? category?.icon,
-      colorKey: category?.colorKey ?? "gray",
-      selected: block._id === selectedBlockId,
-      hasNote: block.note !== undefined,
-    };
-  };
-  const cards: GridCard[] = items.map(({ block, segment }) => ({
-    ...looksOf(block),
-    time: cardTime(block, segment),
-    name: cardName(block, segment, date),
-    top: segment.top,
-    height: segment.height,
-    state: planCardState(block, now),
-    cutTop: segment.startsBefore,
-    cutBottom: segment.endsAfter,
-    openable: true,
-  }));
+  const cards: GridCard[] =
+    blocks === undefined
+      ? []
+      : planCards({
+          blocks,
+          date,
+          gridStartMin,
+          now,
+          categories: categories ?? [],
+          activities: activities ?? [],
+          selectedId: selectedBlockId,
+        });
   const actualCards: GridCard[] = happened.map((item) => ({
-    ...looksOf(item.block),
+    ...cardLooks(
+      item.block,
+      categories ?? [],
+      activities ?? [],
+      selectedBlockId,
+    ),
     title: entryTitle(item.block, categoryOf.get(item.block.categoryId)),
     time: actualCardTime(item),
     name: actualCardName(item),
@@ -213,8 +195,6 @@ export function DayScreen({
   }
   const saveBlock = (args: NewBlockArgs) => attempt(() => createBlock(args));
   const saveEntry = (args: NewEntryArgs) => attempt(() => logEntry(args));
-  const saveChanges = (changes: BlockUpdate) =>
-    attempt(() => updateBlock(changes));
 
   /** Done, Partly, Skip or Undo. The screen changes at once; a refusal is shown. */
   function mark(blockId: Id<"blocks">, action: StatusAction) {
@@ -343,6 +323,13 @@ export function DayScreen({
           onEditPlan={() => setPlanUnlocked(true)}
           onLog={() => onOpenLog(null)}
           onReview={tense === "today" ? onOpenReview : undefined}
+          plan={
+            tense === "today"
+              ? { date: addDays(today, 1), label: "Plan tomorrow" }
+              : tense === "future"
+                ? { date, label: "Plan this day" }
+                : undefined
+          }
         />
         {!isWide && nowPanel !== null && (
           <div className="border-b">
@@ -435,57 +422,20 @@ export function DayScreen({
         activities !== undefined &&
         categories !== undefined &&
         blocks !== undefined && (
-          <SidePanel
+          <BlockPanel
+            block={selected}
+            viewedDay={date}
             wide={isWide}
-            title={
-              hasPlan(selected)
-                ? selected.title
-                : entryTitle(selected, categoryOf.get(selected.categoryId))
-            }
-            subtitle={
-              hasPlan(selected)
-                ? formatTimeRange(
-                    selected.plannedStartMin,
-                    selected.plannedDurationMin,
-                  )
-                : statusLine(selected)
-            }
-            onCancel={onCloseOverlay}
-          >
-            {hasPlan(selected) ? (
-              // Keyed, so choosing another block starts the form afresh.
-              <BlockDetail
-                key={selected._id}
-                block={selected}
-                viewedDay={date}
-                activities={activities}
-                categories={categories}
-                blocks={blocks}
-                onSave={saveChanges}
-                onDelete={() =>
-                  attempt(() => removeBlock({ blockId: selected._id }))
-                }
-                onCancel={onCloseOverlay}
-                now={now}
-                statusError={statusError}
-                onAction={(action) => mark(selected._id, action)}
-                dayPlanUnlocked={planUnlocked}
-              />
-            ) : (
-              <EntryDetail
-                key={selected._id}
-                entry={selected}
-                gridStartMin={gridStartMin}
-                categories={categories}
-                blocks={blocks}
-                onSave={saveChanges}
-                onDelete={() =>
-                  attempt(() => removeBlock({ blockId: selected._id }))
-                }
-                onCancel={onCloseOverlay}
-              />
-            )}
-          </SidePanel>
+            activities={activities}
+            categories={categories}
+            blocks={blocks}
+            gridStartMin={gridStartMin}
+            now={now}
+            statusError={statusError}
+            onAction={(action) => mark(selected._id, action)}
+            dayPlanUnlocked={planUnlocked}
+            onClose={onCloseOverlay}
+          />
         )}
       {reviewOpen &&
         review !== undefined &&
