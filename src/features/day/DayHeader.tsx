@@ -1,6 +1,12 @@
 import { useRef } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  MoonStar,
+  Plus,
+} from "lucide-react";
 import { addDays, parseDateKey, type DateKey } from "@shared/time";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -23,6 +29,7 @@ export function DayHeader({
   planFrozen,
   onEditPlan,
   onLog,
+  onReview,
 }: {
   date: DateKey;
   today: DateKey;
@@ -34,6 +41,8 @@ export function DayHeader({
   planFrozen: boolean;
   onEditPlan: () => void;
   onLog: () => void;
+  /** Opens the evening review (PRD R1): on today, always within reach. */
+  onReview?: (() => void) | undefined;
 }) {
   const navigate = useNavigate();
   const pickerRef = useRef<HTMLInputElement>(null);
@@ -105,6 +114,17 @@ export function DayHeader({
           className="pointer-events-none absolute inset-0 opacity-0"
         />
       </span>
+      {onReview !== undefined && (
+        <Button
+          variant="ghost"
+          className="ml-1 h-11 px-2.5 sm:h-9"
+          aria-label="Review the day"
+          onClick={onReview}
+        >
+          <MoonStar aria-hidden="true" />
+          <span className="hidden sm:inline">Review the day</span>
+        </Button>
+      )}
       {planFrozen ? (
         <>
           <Button

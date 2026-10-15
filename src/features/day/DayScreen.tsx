@@ -29,6 +29,12 @@ import { NotFeelingIt } from "@/features/not-feeling/NotFeelingIt";
 import type { NewEntryArgs } from "@/features/log/LogEntryForm";
 import { defaultEntrySpan, logCategories } from "@/features/log/logRules";
 import { nowView } from "@/features/now/nowView";
+import { EveningReview } from "@/features/review/EveningReview";
+import {
+  reviewNotes,
+  reviewOffered,
+  type ReviewStep,
+} from "@/features/review/reviewView";
 import {
   actualCardName,
   actualCardState,
@@ -44,6 +50,7 @@ import {
   untrackedStretches,
 } from "./dayView";
 import { DayNotes } from "./DayNotes";
+import { DayReview } from "./DayReview";
 import { DayTotals } from "./DayTotals";
 import { QuickAdd } from "./QuickAdd";
 import { DEFAULT_DURATION_MIN, type NewBlockArgs } from "./QuickAddForm";
@@ -71,6 +78,12 @@ interface DayScreenProps {
   onSelectBlock: (blockId: Id<"blocks">) => void;
   /** Closes quick add or the block detail. */
   onCloseOverlay: () => void;
+  /** The evening review is open at this step (also in the URL). */
+  review: ReviewStep | undefined;
+  onOpenReview: () => void;
+  onReviewStep: (step: ReviewStep) => void;
+  /** The review hands over to planning this day (PRD P1). */
+  onPlanDay: (date: DateKey) => void;
 }
 
 /** The day view (DESIGN.md section 2): header, the two-lane grid, quick add. */
@@ -85,11 +98,16 @@ export function DayScreen({
   selectedBlockId,
   onSelectBlock,
   onCloseOverlay,
+  review,
+  onOpenReview,
+  onReviewStep,
+  onPlanDay,
 }: DayScreenProps) {
   const settings = useQuery(api.settings.get);
   const blocks = useQuery(api.blocks.listForDay, { date });
   const categories = useQuery(api.categories.list);
   const activities = useQuery(api.activities.list);
+  const day = useQuery(api.days.get, { date });
   const createBlock = useMutation(api.blocks.create);
   const updateBlock = useMutation(api.blocks.update);
   const removeBlock = useMutation(api.blocks.remove);
@@ -221,6 +239,18 @@ export function DayScreen({
       : null;
 
   const feelingTargetId = nowPanel?.feelingTarget?.block._id ?? null;
+
+  // The evening review: R or "Review the day" on any day that has begun, and offered
+  // by the now panel in the evening until the day is reviewed (PRD R1).
+  const canReview = tense !== "future";
+  const reviewed = day?.reviewedAt !== undefined;
+  const offerReview =
+    nowPanel !== null &&
+    day !== undefined &&
+    !reviewed &&
+    blocks !== undefined &&
+    reviewOffered({ blocks, date, gridStartMin, sleepMin, now });
+  const reviewOpen = review !== undefined && canReview;
   // Only while its block is not marked: once it is (here, in block detail or on the
   // other device), the view closes rather than offer actions on what happened.
   const feelingBlock =
@@ -237,7 +267,7 @@ export function DayScreen({
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       const key = event.key.toLowerCase();
-      if (key !== "n" && key !== "l" && key !== "x") return;
+      if (key !== "n" && key !== "l" && key !== "x" && key !== "r") return;
       if (event.ctrlKey || event.metaKey || event.altKey) return;
       if (isTyping(event.target) || document.querySelector("[role=dialog]")) {
         return;
@@ -245,8 +275,10 @@ export function DayScreen({
       if (key === "l" && !canLog) return;
       if (key === "n" && planFrozen) return;
       if (key === "x" && feelingTargetId === null) return;
+      if (key === "r" && (!canReview || reviewOpen)) return;
       event.preventDefault();
-      if (key === "n") onOpenAdd(null);
+      if (key === "r") onOpenReview();
+      else if (key === "n") onOpenAdd(null);
       else if (key === "l") onOpenLog(null);
       else if (feelingTargetId !== null) onOpenNotFeeling(feelingTargetId);
     }
@@ -256,7 +288,10 @@ export function DayScreen({
     onOpenAdd,
     onOpenLog,
     onOpenNotFeeling,
+    onOpenReview,
     canLog,
+    canReview,
+    reviewOpen,
     planFrozen,
     feelingTargetId,
   ]);
@@ -307,6 +342,7 @@ export function DayScreen({
           planFrozen={planFrozen}
           onEditPlan={() => setPlanUnlocked(true)}
           onLog={() => onOpenLog(null)}
+          onReview={tense === "today" ? onOpenReview : undefined}
         />
         {!isWide && nowPanel !== null && (
           <div className="border-b">
@@ -318,6 +354,7 @@ export function DayScreen({
               onAction={mark}
               onLog={() => onOpenLog(null)}
               onNotFeeling={onOpenNotFeeling}
+              onReview={offerReview ? onOpenReview : undefined}
               totals={null}
             />
           </div>
@@ -325,7 +362,14 @@ export function DayScreen({
         {totals !== null && (tense === "past" || !isWide) && (
           <div className="flex flex-col gap-2 border-b px-4 py-2">
             <DayTotals totals={totals} variant="strip" />
-            {/* Looking back at a past day: its notes too (PRD R3). */}
+            {/* Looking back at a past day: its review and its notes (PRD R3). */}
+            {tense === "past" && day !== undefined && (
+              <DayReview
+                notes={reviewNotes(day)}
+                reviewed={reviewed}
+                onReview={reviewOpen ? undefined : onOpenReview}
+              />
+            )}
             {tense === "past" && blocks !== undefined && (
               <DayNotes
                 notes={dayNotes(blocks, date, gridStartMin)}
@@ -364,13 +408,14 @@ export function DayScreen({
               ? (position) => onOpenLog(slotStart(position, CLICK_SNAP_MIN))
               : undefined
           }
-          settled={ready}
+          settled={ready && day !== undefined}
           onOpenCard={(key) => onSelectBlock(key as Id<"blocks">)}
         />
       </div>
       {isWide &&
         selected === undefined &&
         feelingBlock === undefined &&
+        !reviewOpen &&
         nowPanel !== null && (
           <aside className="w-[340px] shrink-0 overflow-y-auto border-l">
             <NowPanel
@@ -381,6 +426,7 @@ export function DayScreen({
               onAction={mark}
               onLog={() => onOpenLog(null)}
               onNotFeeling={onOpenNotFeeling}
+              onReview={offerReview ? onOpenReview : undefined}
               totals={totals}
             />
           </aside>
@@ -440,6 +486,30 @@ export function DayScreen({
               />
             )}
           </SidePanel>
+        )}
+      {reviewOpen &&
+        review !== undefined &&
+        selected === undefined &&
+        ready &&
+        day !== undefined && (
+          <EveningReview
+            date={date}
+            today={today}
+            step={review}
+            onStep={onReviewStep}
+            onClose={onCloseOverlay}
+            onPlanNext={onPlanDay}
+            wide={isWide}
+            blocks={blocks}
+            activities={activities}
+            categories={categories}
+            gridStartMin={gridStartMin}
+            now={now}
+            totals={totals}
+            day={day}
+            onAction={mark}
+            statusError={statusError}
+          />
         )}
       {feelingBlock !== undefined && (
         <NotFeelingIt

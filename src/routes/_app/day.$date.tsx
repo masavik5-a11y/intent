@@ -5,8 +5,9 @@ import {
   useCanGoBack,
   useRouter,
 } from "@tanstack/react-router";
-import { MINUTES_PER_DAY, parseDateKey } from "@shared/time";
+import { MINUTES_PER_DAY, parseDateKey, type DateKey } from "@shared/time";
 import { DayScreen, type AddRequest } from "@/features/day/DayScreen";
+import { isReviewStep, type ReviewStep } from "@/features/review/reviewView";
 
 interface DaySearch {
   /** Quick add is open: "now" for a suggested time, or the clicked grid position. */
@@ -20,6 +21,11 @@ interface DaySearch {
   log?: "now" | number;
   /** "Not feeling it" is open for this block (PRD V2). */
   notFeeling?: string;
+  /**
+   * The evening review is open at this step (PRD R1). It stays while a block, quick
+   * add or logging is opened from it, so closing those returns to the review.
+   */
+  review?: ReviewStep;
 }
 
 export const Route = createFileRoute("/_app/day/$date")({
@@ -30,18 +36,19 @@ export const Route = createFileRoute("/_app/day/$date")({
     return { date };
   },
   validateSearch: (search: Record<string, unknown>): DaySearch => {
-    const { add, block, log, notFeeling } = search;
-    if (typeof block === "string") return { block };
+    const { add, block, log, notFeeling, review } = search;
+    const base: DaySearch = isReviewStep(review) ? { review } : {};
+    if (typeof block === "string") return { ...base, block };
     if (typeof notFeeling === "string") return { notFeeling };
-    if (add === "now") return { add };
+    if (add === "now") return { ...base, add };
     if (typeof add === "number" && add >= 0 && add < MINUTES_PER_DAY) {
-      return { add };
+      return { ...base, add };
     }
-    if (log === "now") return { log };
+    if (log === "now") return { ...base, log };
     if (typeof log === "number" && log >= 0 && log < MINUTES_PER_DAY) {
-      return { log };
+      return { ...base, log };
     }
-    return {};
+    return base;
   },
   component: DayRoute,
 });
@@ -56,20 +63,24 @@ function positionRequest(
 
 function DayRoute() {
   const { date } = Route.useRouteContext();
-  const { add, block, log, notFeeling } = Route.useSearch();
+  const { add, block, log, notFeeling, review } = Route.useSearch();
   const navigate = Route.useNavigate();
   const router = useRouter();
   const canGoBack = useCanGoBack();
 
   const openAdd = useCallback(
     (position: number | null) =>
-      void navigate({ search: { add: position ?? "now" } }),
+      void navigate({
+        search: (prev) => ({ review: prev.review, add: position ?? "now" }),
+      }),
     [navigate],
   );
 
   const openLog = useCallback(
     (position: number | null) =>
-      void navigate({ search: { log: position ?? "now" } }),
+      void navigate({
+        search: (prev) => ({ review: prev.review, log: position ?? "now" }),
+      }),
     [navigate],
   );
 
@@ -83,10 +94,33 @@ function DayRoute() {
   const openBlock = useCallback(
     (blockId: string) =>
       void navigate({
-        search: { block: blockId },
+        search: (prev) => ({ review: prev.review, block: blockId }),
         replace: block !== undefined,
       }),
     [navigate, block],
+  );
+
+  const openReview = useCallback(
+    () => void navigate({ search: { review: "resolve" } }),
+    [navigate],
+  );
+
+  // Steps replace each other, so closing the review goes straight back to the day.
+  const reviewStep = useCallback(
+    (step: ReviewStep) =>
+      void navigate({ search: { review: step }, replace: true }),
+    [navigate],
+  );
+
+  // The review hands over to planning the next day; back returns to the day itself.
+  const planDay = useCallback(
+    (day: DateKey) =>
+      void navigate({
+        to: "/day/$date",
+        params: { date: day },
+        replace: true,
+      }),
+    [navigate],
   );
 
   // Opening pushed a history entry; closing pops it, as the back gesture would.
@@ -109,6 +143,10 @@ function DayRoute() {
       selectedBlockId={block}
       onSelectBlock={openBlock}
       onCloseOverlay={closeOverlay}
+      review={review}
+      onOpenReview={openReview}
+      onReviewStep={reviewStep}
+      onPlanDay={planDay}
     />
   );
 }

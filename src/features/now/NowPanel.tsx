@@ -35,6 +35,7 @@ export function NowPanel({
   onAction,
   onLog,
   onNotFeeling,
+  onReview,
   totals,
 }: {
   view: NowView;
@@ -48,6 +49,8 @@ export function NowPanel({
   onLog: () => void;
   /** Opens "Not feeling it" for a block (PRD V2). */
   onNotFeeling: (blockId: Id<"blocks">) => void;
+  /** Set in the evening while the day is not reviewed: offers the review (PRD R1). */
+  onReview?: (() => void) | undefined;
   /** The day's totals, shown in the full panel; the phone shows them above the grid. */
   totals: DayTotalsData | null;
 }) {
@@ -76,6 +79,22 @@ export function NowPanel({
             block={lastMarked}
             onAction={(action) => onAction(lastMarked._id, action)}
           />
+        </div>
+      )}
+
+      {onReview !== undefined && (
+        <div className="flex items-center gap-3 rounded-block bg-muted/60 px-3 py-2">
+          <p className="flex-1 text-sm">
+            Close the day: a short review, then tomorrow.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 shrink-0 bg-background sm:h-9"
+            onClick={onReview}
+          >
+            Review the day
+          </Button>
         </div>
       )}
 
