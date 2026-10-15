@@ -12,7 +12,7 @@ import {
 } from "@shared/grid";
 import { copyablePlan } from "@shared/planning";
 import { DEFAULT_SETTINGS } from "@shared/settings";
-import { formatDayLabel, type DateKey } from "@shared/time";
+import { addDays, formatDayLabel, type DateKey } from "@shared/time";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { BlockPanel } from "@/features/block-detail/BlockPanel";
 import type { AddRequest } from "@/features/day/DayScreen";
@@ -25,6 +25,7 @@ import {
   type NewBlockArgs,
 } from "@/features/day/QuickAddForm";
 import { suggestedStart } from "@/features/day/quickAddRules";
+import { useEnsureMaterialized } from "@/features/recurrence/useEnsureMaterialized";
 import { api, type Id } from "@/lib/api";
 import { useSetStatus } from "@/lib/blockStatus";
 import { saveErrorMessage } from "@/lib/errorMessages";
@@ -80,6 +81,8 @@ export function PlanScreen({
   const categories = useQuery(api.categories.list);
   const activities = useQuery(api.activities.list);
   const day = useQuery(api.days.get, { date });
+  // The view reads the day after too (blocks before the grid's start).
+  useEnsureMaterialized(addDays(date, 1));
   const createBlock = useMutation(api.blocks.create);
   const setMainFocus = useMutation(api.days.setMainFocus);
   const copyPlan = useMutation(api.blocks.copyPlan);

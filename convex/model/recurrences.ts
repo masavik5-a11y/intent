@@ -6,6 +6,7 @@ import {
   isValidWeekdays,
   MATERIALIZE_AHEAD_DAYS,
   normalizeWeekdays,
+  ON_DEMAND_MAX_DAYS,
   ruleProblem,
 } from "../../shared/recurrence";
 import {
@@ -144,4 +145,49 @@ export async function materialize(
     });
   }
   return skipped;
+}
+
+/** Whether a rule has ended before any date it has not handled yet. */
+function hasEnded(rule: Doc<"recurrences">): boolean {
+  return rule.endDate !== undefined && rule.endDate <= rule.materializedThrough;
+}
+
+/**
+ * The daily run (docs/ARCHITECTURE.md, section 10): every rule given is materialised
+ * through UTC today + 15, never before UTC yesterday, so a date already over in every
+ * zone is never filled. Rules that ended, or are far enough already, are not written.
+ */
+export async function materializeWindow(
+  ctx: MutationCtx,
+  rules: readonly Doc<"recurrences">[],
+  nowMs: number,
+): Promise<void> {
+  const through = windowEnd(nowMs);
+  const notBefore = addDays(utcDateKey(nowMs), -1);
+  for (const rule of rules) {
+    if (hasEnded(rule) || rule.materializedThrough >= through) continue;
+    await materialize(ctx, rule.userId, rule, through, notBefore);
+  }
+}
+
+/**
+ * Opening a date beyond the window (decided 2026-10-15): the user's rules are
+ * materialised through it, at most a year past UTC today. Dates left out here are
+ * not reported; nobody asked for them yet.
+ */
+export async function materializeThrough(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  date: DateKey,
+  nowMs: number,
+): Promise<void> {
+  if (!isDateKey(date)) throw appError("INVALID_INPUT");
+  const cap = addDays(utcDateKey(nowMs), ON_DEMAND_MAX_DAYS);
+  const through = date > cap ? cap : date;
+  const notBefore = addDays(utcDateKey(nowMs), -1);
+  for (const rule of await listForUser(ctx, userId)) {
+    if (hasEnded(rule) || rule.materializedThrough >= through) continue;
+    if (rule.startDate > through) continue;
+    await materialize(ctx, userId, rule, through, notBefore);
+  }
 }

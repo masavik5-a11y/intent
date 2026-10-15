@@ -488,6 +488,12 @@ Cost is about 44,000 small function calls a month, far inside the free allowance
   and on demand when a later date is opened. The window ends at UTC today + 15 days:
   every zone's today + 14 fits in it, so the cron needs no time zone (Filip's
   decision). Making or changing a rule materialises its window at once.
+- The daily job is `crons.ts` at 02:17 UTC, `recurrences.materializeAll`: every rule
+  in pages of 25, each page scheduling the next, never filling a date before UTC
+  yesterday. Opening a date the window has not reached calls
+  `recurrences.materializeThrough` from the day and plan screens
+  (`useEnsureMaterialized`, which first asks `needsMaterializing` on the loaded rules,
+  so a normal visit sends nothing). On demand reaches at most a year past UTC today.
 - `materializedThrough` is the last date handled. Materialisation only ever creates
   dates after it, then moves it on, so an occurrence deleted by hand stays deleted:
   no tombstone is needed (Filip's decision). Run twice, it creates nothing new; it
@@ -710,6 +716,7 @@ Things assumed here that must be confirmed in the milestone that depends on them
 | 2026-10-15 | The main focus saves by itself a second after typing stops, on leaving the field and on Enter, like the compass. The review's last step has the next day's focus field too. | Writing the focus is the one thing planning always needs; it should cost no extra screen. |
 | 2026-10-15 | A rule holds the plan (title, activity, category, focus, start, length); intent overrides and done-when stay on each block. A rule is made from a saved block on today or later, which becomes its first occurrence; with unsaved plan edits "Repeat" waits for Save. | The why lives on the activity; done-when is usually written per day. A rule made from what is on screen but not saved would surprise. |
 | 2026-10-15 | Materialisation: window through UTC today + 15; only dates after `materializedThrough`; no tombstone; an overlapping occurrence is not made and the block there stays (Filip's decisions). Making a rule reports the dates its first window left out; later ones are left out quietly. | The cron needs no zone; a deleted occurrence stays deleted; nothing the user placed moves. |
+| 2026-10-15 | The daily job runs at 02:17 UTC over all rules in pages of 25; opening a later date materialises on demand, at most a year past UTC today. An ended rule is not written again. | A page per run stays inside a mutation's limits however many rules there are; the cap keeps a stray URL from writing years of blocks. |
 | 2026-10-15 | The reflection saves on Next; `reviewedAt` is set by "Close the day" or "Plan tomorrow". Opening the review again shows the saved answers and closing it again updates `reviewedAt`. "Plan tomorrow" is offered only when the next day is today or later. | Leaving halfway keeps what was typed but does not count as reviewed. Planning a day that is over makes no sense. |
 
 ## 17. Implementation notes
@@ -844,6 +851,10 @@ one; delete an entry when it stops being true.
   and `virtual:pwa-register` to small mocks (a `useQuery` that answers by function
   name, read from `Symbol.for("functionName")` on the reference). Playwright's
   `page.clock.setFixedTime` and `timezoneId` pin the app's "now".
+
+- In a cloud session, `pkill -f "<pattern>"` also matches the shell that runs it (its
+  command line holds the pattern) and kills the tool call. Write the pattern so it
+  cannot match itself: `pkill -f "[v]ite --config"`.
 
 **Tooling on this PC**
 

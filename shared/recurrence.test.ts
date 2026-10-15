@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   datesToMaterialize,
   isValidWeekdays,
+  needsMaterializing,
   normalizeWeekdays,
   planOccurrences,
   repeatLabel,
@@ -233,5 +234,39 @@ describe("labels", () => {
   test("the week starts where the settings say", () => {
     expect(weekdayOrder(1)).toEqual([1, 2, 3, 4, 5, 6, 0]);
     expect(weekdayOrder(0)).toEqual([0, 1, 2, 3, 4, 5, 6]);
+  });
+});
+
+describe("needsMaterializing", () => {
+  const rule = {
+    weekdays: [1],
+    startDate: d("2026-10-01"),
+    materializedThrough: d("2026-10-30"),
+  };
+
+  test("only when a rule has dates left to make up to that day", () => {
+    expect(needsMaterializing([rule], d("2026-10-30"))).toBe(false);
+    expect(needsMaterializing([rule], d("2026-10-31"))).toBe(true);
+    // Ended before the dates it would add.
+    expect(
+      needsMaterializing(
+        [{ ...rule, endDate: d("2026-10-30") }],
+        d("2026-11-20"),
+      ),
+    ).toBe(false);
+    // Starts later than the day asked for.
+    expect(
+      needsMaterializing(
+        [
+          {
+            ...rule,
+            startDate: d("2026-12-01"),
+            materializedThrough: d("2026-12-01"),
+          },
+        ],
+        d("2026-11-20"),
+      ),
+    ).toBe(false);
+    expect(needsMaterializing([], d("2026-11-20"))).toBe(false);
   });
 });
