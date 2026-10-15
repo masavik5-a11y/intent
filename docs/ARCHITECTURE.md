@@ -146,7 +146,9 @@ This is the decision most likely to cause bugs if it is done loosely, so it is f
 
 Draft Convex schema. Tables marked with a milestone are added in that milestone. The
 real one is `convex/schema.ts`; where they differ, it wins. M2 made the plan times
-optional (unplanned entries) and added the statuses and actual fields.
+optional (unplanned entries) and added the statuses and actual fields. M3 added `days`,
+`recurrences`, and `recurrenceId` / `detached` on blocks, all optional on the existing
+table so production's rows fit as they are.
 
 ```ts
 import { defineSchema, defineTable } from "convex/server";
@@ -267,10 +269,12 @@ export default defineSchema({
     ...intentFields, // per-block overrides; unset means "inherit from the activity"
 
     recurrenceId: v.optional(v.id("recurrences")), // M3
-    detached: v.optional(v.boolean()), // M3: edited by hand, leave it alone
+    detached: v.optional(v.boolean()), // M3: plan edited by hand, leave it alone
     notifiedAt: v.optional(v.number()), // M4: start notification sent
     endingNotifiedAt: v.optional(v.number()), // M4: ten-minutes-left sent
-  }).index("by_userId_and_date", ["userId", "date"]),
+  })
+    .index("by_userId_and_date", ["userId", "date"])
+    .index("by_recurrenceId_and_date", ["recurrenceId", "date"]), // M3
 
   // M3
   days: defineTable({
@@ -297,7 +301,7 @@ export default defineSchema({
     weekdays: v.array(v.number()), // 0 = Sunday … 6 = Saturday
     startDate: vDateKey,
     endDate: v.optional(vDateKey),
-    materializedThrough: v.optional(vDateKey),
+    materializedThrough: vDateKey, // every date up to here has been created
   }).index("by_userId", ["userId"]),
 
   // M4

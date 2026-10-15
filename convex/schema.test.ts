@@ -86,6 +86,54 @@ describe("schema", () => {
         actualStartMin: 780,
         actualDurationMin: 45,
       });
+
+      // M3: a day record, a repeating rule, and its occurrences, one detached.
+      await ctx.db.insert("days", {
+        userId,
+        date: "2026-10-14" as DateKey,
+        mainFocus: "Script the reel.",
+        wentWell: "The hook.",
+        drifted: "Phone after lunch.",
+        changeTomorrow: "Phone away after lunch.",
+        rating: 4,
+        energy: 3,
+        reviewedAt: 0,
+      });
+      const recurrenceId = await ctx.db.insert("recurrences", {
+        userId,
+        activityId,
+        title: "Gym",
+        categoryId,
+        startMin: 660,
+        durationMin: 90,
+        weekdays: [1, 3, 5],
+        startDate: "2026-10-12" as DateKey,
+        endDate: "2026-12-31" as DateKey,
+        materializedThrough: "2026-10-30" as DateKey,
+      });
+      await ctx.db.insert("blocks", {
+        userId,
+        date: "2026-10-16" as DateKey,
+        title: "Gym",
+        activityId,
+        categoryId,
+        plannedStartMin: 660,
+        plannedDurationMin: 90,
+        status: "planned",
+        recurrenceId,
+      });
+      await ctx.db.insert("blocks", {
+        userId,
+        date: "2026-10-19" as DateKey,
+        title: "Gym",
+        activityId,
+        categoryId,
+        plannedStartMin: 1080,
+        plannedDurationMin: 90,
+        status: "planned",
+        recurrenceId,
+        detached: true,
+      });
     });
   });
 });

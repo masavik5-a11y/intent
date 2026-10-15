@@ -10,6 +10,8 @@ export const MAX_FOCUS_LENGTH = 120;
 export const MAX_INTENT_LENGTH = 1000;
 /** The one-line note on a block, added after the fact (PRD A5). */
 export const MAX_NOTE_LENGTH = 200;
+/** One answer in the evening review (PRD R2). */
+export const MAX_REFLECTION_LENGTH = 1000;
 /** The vision or the anti-vision. */
 export const MAX_COMPASS_LENGTH = 10_000;
 

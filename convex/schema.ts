@@ -140,5 +140,60 @@ export default defineSchema({
     minimumChosen: v.optional(v.boolean()),
 
     ...intentFields,
+
+    /** The repeating rule this block is an occurrence of (PRD P3). */
+    recurrenceId: v.optional(v.id("recurrences")),
+    /**
+     * Its plan was changed by hand ("This one"): changes to the rule leave it alone.
+     * Marking it, its actual times and its note never set this.
+     */
+    detached: v.optional(v.boolean()),
+  })
+    .index("by_userId_and_date", ["userId", "date"])
+    .index("by_recurrenceId_and_date", ["recurrenceId", "date"]),
+
+  // One row per user and day, made the first time something is written for that day:
+  // the main focus (written while planning, PRD P5) and the evening review (R1, R2).
+  days: defineTable({
+    userId: v.id("users"),
+    date: vDateKey,
+    /** What makes this day a win. Shown on the now panel that day. */
+    mainFocus: v.optional(v.string()),
+    /** "What went well?" */
+    wentWell: v.optional(v.string()),
+    /** "Where did time drift, and what triggered it?" */
+    drifted: v.optional(v.string()),
+    /** "One change for tomorrow" */
+    changeTomorrow: v.optional(v.string()),
+    /** 1 to 5, optional. */
+    rating: v.optional(v.number()),
+    /** 1 to 5, optional. */
+    energy: v.optional(v.number()),
+    /** When the review was closed (ms since the epoch); unset until it is. */
+    reviewedAt: v.optional(v.number()),
   }).index("by_userId_and_date", ["userId", "date"]),
+
+  // A repeating block (PRD P3): a rule that is materialised into ordinary blocks for
+  // a rolling window (docs/ARCHITECTURE.md, section 10).
+  recurrences: defineTable({
+    userId: v.id("users"),
+    activityId: v.optional(v.id("activities")),
+    title: v.string(),
+    focus: v.optional(v.string()),
+    categoryId: v.id("categories"),
+    /** Minutes from the local midnight of each date; start + duration may pass 1440. */
+    startMin: v.number(),
+    durationMin: v.number(),
+    /** 0 = Sunday … 6 = Saturday; at least one, each once. */
+    weekdays: v.array(v.number()),
+    /** The first date it produces. */
+    startDate: vDateKey,
+    /** The last date it may produce. Unset: it goes on. */
+    endDate: v.optional(vDateKey),
+    /**
+     * Every date up to here has been materialised. Only later dates are ever created,
+     * so an occurrence deleted by hand stays deleted.
+     */
+    materializedThrough: vDateKey,
+  }).index("by_userId", ["userId"]),
 });
