@@ -13,6 +13,7 @@ import { summarizeDay } from "@shared/summary";
 import { DEFAULT_SETTINGS } from "@shared/settings";
 import { addDays, type DateKey, type LocalMoment } from "@shared/time";
 import { BlockPanel } from "@/features/block-detail/BlockPanel";
+import { useEnsureMaterialized } from "@/features/recurrence/useEnsureMaterialized";
 import { api, type Doc, type Id } from "@/lib/api";
 import { useSetStatus } from "@/lib/blockStatus";
 import { saveErrorMessage } from "@/lib/errorMessages";
@@ -103,6 +104,8 @@ export function DayScreen({
   const categories = useQuery(api.categories.list);
   const activities = useQuery(api.activities.list);
   const day = useQuery(api.days.get, { date });
+  // The view reads the day after too (blocks before the grid's start).
+  useEnsureMaterialized(addDays(date, 1));
   const createBlock = useMutation(api.blocks.create);
   const logEntry = useMutation(api.blocks.logEntry);
   const setStatus = useSetStatus();

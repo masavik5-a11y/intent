@@ -148,6 +148,23 @@ export function planOccurrences<E extends LaneSpan>({
   };
 }
 
+/**
+ * Whether some rule still has dates to make up to `through`: it has not been
+ * materialised that far, it has not ended before the dates it would add, and it has
+ * begun by then. The day view asks this before calling on the server.
+ */
+export function needsMaterializing(
+  rules: readonly (RepeatRule & { materializedThrough: DateKey })[],
+  through: DateKey,
+): boolean {
+  return rules.some(
+    (rule) =>
+      rule.materializedThrough < through &&
+      rule.startDate <= through &&
+      (rule.endDate === undefined || rule.endDate > rule.materializedThrough),
+  );
+}
+
 const WEEKDAY_NAMES = [
   "Sun",
   "Mon",

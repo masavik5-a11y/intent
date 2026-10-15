@@ -220,7 +220,7 @@ skipping, anti-vision and vision, and "Start the minimum" works.
 - [x] Main focus shown on the now panel that day.
 - [x] `shared/recurrence.ts` with tests. Repeat settings in block detail (weekdays, end
       date).
-- [ ] Materialisation: daily cron for a 14-day window, and on demand for later dates.
+- [x] Materialisation: daily cron for a 14-day window, and on demand for later dates.
       Idempotent, tested.
 - [ ] Editing a repeating block: "this one" (detaches it) or "this and following".
 - [ ] Returning after days away: today's plan and "Welcome back. Plan today?", nothing

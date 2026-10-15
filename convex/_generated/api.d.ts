@@ -13,6 +13,7 @@ import type * as auth from "../auth.js";
 import type * as blocks from "../blocks.js";
 import type * as categories from "../categories.js";
 import type * as compass from "../compass.js";
+import type * as crons from "../crons.js";
 import type * as days from "../days.js";
 import type * as http from "../http.js";
 import type * as lib_allowedEmails from "../lib/allowedEmails.js";
@@ -42,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   blocks: typeof blocks;
   categories: typeof categories;
   compass: typeof compass;
+  crons: typeof crons;
   days: typeof days;
   http: typeof http;
   "lib/allowedEmails": typeof lib_allowedEmails;
