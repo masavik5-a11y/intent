@@ -36,6 +36,7 @@ export function NowPanel({
   onLog,
   onNotFeeling,
   onReview,
+  mainFocus,
   totals,
 }: {
   view: NowView;
@@ -51,6 +52,8 @@ export function NowPanel({
   onNotFeeling: (blockId: Id<"blocks">) => void;
   /** Set in the evening while the day is not reviewed: offers the review (PRD R1). */
   onReview?: (() => void) | undefined;
+  /** What makes today a win, written while planning it (PRD P5). */
+  mainFocus?: string | undefined;
   /** The day's totals, shown in the full panel; the phone shows them above the grid. */
   totals: DayTotalsData | null;
 }) {
@@ -79,6 +82,20 @@ export function NowPanel({
             block={lastMarked}
             onAction={(action) => onAction(lastMarked._id, action)}
           />
+        </div>
+      )}
+
+      {mainFocus !== undefined && (
+        <div className="flex flex-col gap-0.5">
+          <h2 className="text-xs text-muted-foreground">Today's focus</h2>
+          <p
+            className={cn(
+              "font-voice text-lg",
+              compact && !expanded && "line-clamp-2",
+            )}
+          >
+            {mainFocus}
+          </p>
         </div>
       )}
 

@@ -342,6 +342,7 @@ export function DayScreen({
               onLog={() => onOpenLog(null)}
               onNotFeeling={onOpenNotFeeling}
               onReview={offerReview ? onOpenReview : undefined}
+              mainFocus={day?.mainFocus}
               totals={null}
             />
           </div>
@@ -414,6 +415,7 @@ export function DayScreen({
               onLog={() => onOpenLog(null)}
               onNotFeeling={onOpenNotFeeling}
               onReview={offerReview ? onOpenReview : undefined}
+              mainFocus={day?.mainFocus}
               totals={totals}
             />
           </aside>

@@ -142,6 +142,8 @@ function render(now: LocalMoment): string {
       onAction={() => undefined}
       onLog={() => undefined}
       onNotFeeling={() => undefined}
+      onReview={() => undefined}
+      mainFocus="Script the reel, start to end."
       totals={totals}
     />
   );
@@ -176,6 +178,9 @@ describe("the Today screen keeps the hard words for when you ask (PRD V4)", () =
     // The rendering is real: what may show does.
     expect(html).toContain(shown);
     expect(html).toContain("Not feeling it");
+    // Today's focus (PRD P5) and the evening offer (R1) show in the panel and card.
+    expect(html.split("Script the reel, start to end.")).toHaveLength(3);
+    expect(html).toContain("Review the day");
     expect(html).not.toContain(COST);
     expect(html).not.toContain(BLOCK_COST);
   });
@@ -184,10 +189,13 @@ describe("the Today screen keeps the hard words for when you ask (PRD V4)", () =
     // The anti-vision lives in the compass. Only the "Not feeling it" view, mounted
     // when it is opened, may query it (src/features/not-feeling/NotFeelingIt.tsx).
     const sources = import.meta.glob<string>(
-      ["/src/features/{day,now}/*.{ts,tsx}", "!**/*.test.*"],
+      ["/src/features/{day,now,review,planning}/*.{ts,tsx}", "!**/*.test.*"],
       { query: "?raw", import: "default", eager: true },
     );
     expect(Object.keys(sources)).toContain("/src/features/day/DayScreen.tsx");
+    expect(Object.keys(sources)).toContain(
+      "/src/features/review/EveningReview.tsx",
+    );
     for (const [file, source] of Object.entries(sources)) {
       expect(source, file).not.toMatch(/api\.compass/);
       expect(source, file).not.toMatch(/antiVision/);
