@@ -126,6 +126,9 @@ minute (`liveActual` in `shared/lanes.ts`).
 
 Order, top to bottom. Items appear only when they have content.
 
+0. **Today's focus** (PRD P5, from M3): the main focus written while planning the day,
+   in the serif voice under a small "Today's focus" label. On the phone's card it is the
+   first thing, cut to two lines until "More".
 1. **Status line**: "Now · 42 min left".
 2. **Countdown bar** (pressure blocks only): a full-width bar in the block's solid colour
    that drains from right to left over the block's planned time. In the last ten minutes
