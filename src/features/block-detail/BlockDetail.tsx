@@ -37,12 +37,14 @@ import { COST_OF_SKIPPING_HINT, INTENT_PROMPTS } from "@/lib/intentPrompts";
 import { cn } from "@/lib/utils";
 import { StatusActions } from "@/features/status/StatusActions";
 import { StatusSummary } from "@/features/status/StatusSummary";
+import { RepeatSection, type RepeatProps } from "./RepeatSection";
 import {
   actualProblem,
   actualStartOf,
   draftOf,
   draftProblem,
   inheritedIntent,
+  planChanged,
   updateArgs,
   type BlockDraft,
 } from "./blockDraft";
@@ -68,6 +70,8 @@ interface BlockDetailProps {
   statusError: string | null;
   /** "Edit plan" was chosen for the whole (past) day. */
   dayPlanUnlocked: boolean;
+  /** Its repeat settings (PRD P3). */
+  repeat: Omit<RepeatProps, "blocked">;
 }
 
 /**
@@ -88,6 +92,7 @@ export function BlockDetail({
   onAction,
   statusError,
   dayPlanUnlocked,
+  repeat,
 }: BlockDetailProps) {
   const ids = useId();
   const [draft, setDraft] = useState(() => draftOf(block));
@@ -420,6 +425,15 @@ export function BlockDetail({
             )}
           </>
         )}
+
+        <RepeatSection
+          {...repeat}
+          blockDate={block.date}
+          // A rule is made from the block as saved.
+          blocked={
+            planChanged(block, draft) ? "Save your changes first." : null
+          }
+        />
 
         <section className="flex flex-col gap-4">
           <h3 className="text-lg font-medium">Intent</h3>

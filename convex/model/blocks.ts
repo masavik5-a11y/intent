@@ -14,6 +14,7 @@ import {
 } from "../../shared/blocks";
 import { findOverlap, overlapWindow, placeSpans } from "../../shared/lanes";
 import { copyablePlan, shiftedPlan } from "../../shared/planning";
+import { planOccurrences } from "../../shared/recurrence";
 import { DEFAULT_SETTINGS } from "../../shared/settings";
 import {
   cleanName,
@@ -374,6 +375,95 @@ export async function copyPlan(
       blockedBy: "block" in by ? by.block.title : "",
     })),
   };
+}
+
+/** A date a rule could not fill, and the block that was there. */
+export interface SkippedOccurrence {
+  date: DateKey;
+  blockedBy: string;
+}
+
+/** At most this many days of occurrences are placed against one read of the lane. */
+const OCCURRENCE_CHUNK_DAYS = MAX_RANGE_DAYS - 2;
+
+/**
+ * Makes a rule's occurrences on `dates` (ascending): plain planned blocks linked to
+ * the rule (docs/ARCHITECTURE.md, section 10). A date that already has one of this
+ * rule's blocks is left alone, so running it twice creates nothing new. One that
+ * would overlap a block in the plan lane is not made; nothing there moves (decided
+ * 2026-10-15). Says which dates were left out and what stood there.
+ */
+export async function materializeOccurrences(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  rule: Doc<"recurrences">,
+  dates: readonly DateKey[],
+): Promise<SkippedOccurrence[]> {
+  const skipped: SkippedOccurrence[] = [];
+  let index = 0;
+  while (index < dates.length) {
+    const first = dates[index];
+    if (first === undefined) break;
+    const chunk = dates
+      .slice(index)
+      .filter((date) => daysBetween(first, date) < OCCURRENCE_CHUNK_DAYS);
+    index += chunk.length;
+    const last = chunk[chunk.length - 1] ?? first;
+    // Reads this transaction's own writes, so earlier chunks and rules count too.
+    const around = await listBetween(
+      ctx,
+      userId,
+      addDays(first, -1),
+      addDays(last, 1),
+    );
+    const taken = new Set<string>(
+      around
+        .filter((block) => block.recurrenceId === rule._id)
+        .map((block) => block.date),
+    );
+    const plan = planOccurrences({
+      rule,
+      dates: chunk,
+      taken,
+      lane: planLaneOf(around),
+    });
+    for (const span of plan.create) {
+      const fields: BlockFields = {
+        date: span.date,
+        title: rule.title,
+        categoryId: rule.categoryId,
+        plannedStartMin: span.startMin,
+        plannedDurationMin: span.durationMin,
+        status: "planned",
+        recurrenceId: rule._id,
+      };
+      if (rule.activityId !== undefined) fields.activityId = rule.activityId;
+      if (rule.focus !== undefined) fields.focus = rule.focus;
+      checkShape(fields);
+      await ctx.db.insert("blocks", { userId, ...fields });
+    }
+    for (const { date, by } of plan.skipped) {
+      skipped.push({
+        date,
+        blockedBy: "block" in by ? by.block.title : rule.title,
+      });
+    }
+  }
+  return skipped;
+}
+
+/** Makes a block the first occurrence of the rule made from it. */
+export async function linkToRule(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  blockId: Id<"blocks">,
+  ruleId: Id<"recurrences">,
+): Promise<void> {
+  const block = await getOwned(ctx, userId, blockId);
+  await ctx.db.patch("blocks", block._id, {
+    recurrenceId: ruleId,
+    detached: undefined,
+  });
 }
 
 export async function remove(
