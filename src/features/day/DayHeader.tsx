@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   CalendarDays,
+  CalendarPlus,
   ChevronLeft,
   ChevronRight,
   MoonStar,
@@ -30,6 +31,7 @@ export function DayHeader({
   onEditPlan,
   onLog,
   onReview,
+  plan,
 }: {
   date: DateKey;
   today: DateKey;
@@ -43,6 +45,8 @@ export function DayHeader({
   onLog: () => void;
   /** Opens the evening review (PRD R1): on today, always within reach. */
   onReview?: (() => void) | undefined;
+  /** "Plan tomorrow" on today (PRD P1), "Plan this day" on a day to come. */
+  plan?: { date: DateKey; label: string } | undefined;
 }) {
   const navigate = useNavigate();
   const pickerRef = useRef<HTMLInputElement>(null);
@@ -114,6 +118,20 @@ export function DayHeader({
           className="pointer-events-none absolute inset-0 opacity-0"
         />
       </span>
+      {plan !== undefined && (
+        <Link
+          to="/plan/$date"
+          params={{ date: plan.date }}
+          aria-label={plan.label}
+          className={cn(
+            buttonVariants({ variant: "ghost" }),
+            "ml-1 h-11 px-2.5 sm:h-9",
+          )}
+        >
+          <CalendarPlus aria-hidden="true" />
+          <span className="hidden sm:inline">{plan.label}</span>
+        </Link>
+      )}
       {onReview !== undefined && (
         <Button
           variant="ghost"

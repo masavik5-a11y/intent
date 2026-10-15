@@ -28,8 +28,17 @@ export function BottomBar({ className }: { className?: string }) {
   const moreActive = MORE_ITEMS.some((item) => item.matches(pathname));
   const [first, second, ...rest] = BAR_ITEMS;
 
-  // Quick add on the day being viewed, or on today from any other screen.
+  // Quick add on the day being viewed or planned, or on today from any other screen.
   function quickAdd() {
+    const planned = /^\/plan\/([^/]+)$/.exec(pathname)?.[1];
+    if (planned !== undefined) {
+      void navigate({
+        to: "/plan/$date",
+        params: { date: planned },
+        search: { add: "now" },
+      });
+      return;
+    }
     const day = /^\/day\/([^/]+)$/.exec(pathname)?.[1];
     if (day === undefined) {
       void navigate({ to: "/", search: { add: "now" } });

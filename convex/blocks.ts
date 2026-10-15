@@ -106,6 +106,28 @@ export const setStatus = mutation({
   },
 });
 
+/**
+ * "Copy from a date" (PRD P2): the plan of `from` onto `to`, leaving out blocks a
+ * rule made and any that would overlap. Says what it copied and what did not fit.
+ */
+export const copyPlan = mutation({
+  args: { from: vDateKey, to: vDateKey },
+  returns: v.object({
+    copied: v.number(),
+    skipped: v.array(
+      v.object({
+        title: v.string(),
+        startMin: v.number(),
+        blockedBy: v.string(),
+      }),
+    ),
+  }),
+  handler: async (ctx, args) => {
+    const userId = await requireUser(ctx);
+    return await Blocks.copyPlan(ctx, userId, args.from, args.to);
+  },
+});
+
 export const remove = mutation({
   args: { blockId: v.id("blocks") },
   returns: v.null(),

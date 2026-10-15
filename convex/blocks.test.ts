@@ -1183,3 +1183,160 @@ describe("blocks.listForDay", () => {
     );
   });
 });
+
+describe("blocks.copyPlan", () => {
+  const THU = "2026-10-15" as DateKey;
+  const FRI = "2026-10-16" as DateKey;
+  const SAT = "2026-10-17" as DateKey;
+
+  test("requires a session", async () => {
+    const t = newTest();
+    await expectAppError(
+      t.mutation(api.blocks.copyPlan, { from: THU, to: FRI }),
+      "UNAUTHENTICATED",
+    );
+  });
+
+  test("copies the plan lane only, as blocks still to do", async () => {
+    const t = newTest();
+    const { userId, as, deepWork, gym } = await setUp(t);
+    const writeId = await as.mutation(api.blocks.create, {
+      date: THU,
+      title: "Write",
+      focus: "Script the reel",
+      doneWhen: "Draft, 300 words.",
+      why: "One reel a week.",
+      categoryId: deepWork,
+      plannedStartMin: 540,
+      plannedDurationMin: 120,
+    });
+    await as.mutation(api.blocks.setStatus, {
+      blockId: writeId,
+      action: { type: "partial", minutes: 60 },
+      now: { date: THU, minute: 700 },
+    });
+    await as.mutation(api.blocks.update, { blockId: writeId, note: "Slow." });
+    await as.mutation(api.blocks.create, {
+      date: THU,
+      activityId: gym,
+      plannedStartMin: 690,
+      plannedDurationMin: 90,
+    });
+    // An unplanned entry has no plan to copy.
+    await as.mutation(api.blocks.logEntry, {
+      date: THU,
+      categoryId: deepWork,
+      actualStartMin: 960,
+      actualDurationMin: 30,
+    });
+
+    expect(
+      await as.mutation(api.blocks.copyPlan, { from: THU, to: SAT }),
+    ).toEqual({ copied: 2, skipped: [] });
+    const copies = await t.run((ctx) =>
+      ctx.db
+        .query("blocks")
+        .withIndex("by_userId_and_date", (q) =>
+          q.eq("userId", userId).eq("date", SAT),
+        )
+        .collect(),
+    );
+    expect(copies).toHaveLength(2);
+    const write = copies.find((block) => block.title === "Write");
+    expect(write).toMatchObject({
+      status: "planned",
+      focus: "Script the reel",
+      doneWhen: "Draft, 300 words.",
+      why: "One reel a week.",
+      categoryId: deepWork,
+      plannedStartMin: 540,
+      plannedDurationMin: 120,
+    });
+    expect(write?.actualStartMin).toBeUndefined();
+    expect(write?.note).toBeUndefined();
+    expect(write?.minimumChosen).toBeUndefined();
+    expect(copies.find((block) => block.title === "Gym")).toMatchObject({
+      activityId: gym,
+      plannedStartMin: 690,
+    });
+  });
+
+  test("leaves out a rule's blocks and lists what would overlap", async () => {
+    const t = newTest();
+    const { userId, as, deepWork, body } = await setUp(t);
+    await plan(as, deepWork, THU, "09:00", 120, "Write");
+    await plan(as, body, THU, "11:30", 90, "Gym");
+    await plan(as, deepWork, THU, "14:00", 60, "Edit");
+    await t.run(async (ctx) => {
+      const recurrenceId = await ctx.db.insert("recurrences", {
+        userId,
+        title: "Routine",
+        categoryId: body,
+        startMin: 420,
+        durationMin: 30,
+        weekdays: [4],
+        startDate: THU,
+        materializedThrough: THU,
+      });
+      await ctx.db.insert("blocks", {
+        userId,
+        date: THU,
+        title: "Routine",
+        categoryId: body,
+        plannedStartMin: 420,
+        plannedDurationMin: 30,
+        status: "planned",
+        recurrenceId,
+      });
+    });
+    // Friday already has a block where Gym would go, and one where Edit would.
+    await plan(as, body, FRI, "12:00", 60, "Dentist");
+    await plan(as, body, FRI, "13:30", 60, "Call");
+
+    expect(
+      await as.mutation(api.blocks.copyPlan, { from: THU, to: FRI }),
+    ).toEqual({
+      copied: 1,
+      skipped: [
+        { title: "Gym", startMin: 690, blockedBy: "Dentist" },
+        { title: "Edit", startMin: 840, blockedBy: "Call" },
+      ],
+    });
+    const friday = await as.query(api.blocks.listForDay, { date: FRI });
+    expect(
+      friday
+        .filter((block) => block.date === FRI)
+        .map((block) => block.title)
+        .sort(),
+    ).toEqual(["Call", "Dentist", "Write"]);
+  });
+
+  test("a block after midnight lands after midnight", async () => {
+    const t = newTest();
+    const { as, deepWork } = await setUp(t);
+    await plan(as, deepWork, FRI, "01:00", 60, "Late edit"); // Thursday's grid
+    expect(
+      await as.mutation(api.blocks.copyPlan, { from: THU, to: FRI }),
+    ).toEqual({ copied: 1, skipped: [] });
+    const saturday = await as.query(api.blocks.listForDay, { date: SAT });
+    expect(
+      saturday.filter(
+        (block) => block.date === SAT && block.title === "Late edit",
+      ),
+    ).toHaveLength(1);
+  });
+
+  test("copying a day onto itself is refused; another user's day copies nothing", async () => {
+    const t = newTest();
+    const { as, deepWork } = await setUp(t);
+    await plan(as, deepWork, THU, "09:00", 60, "Write");
+    await expectAppError(
+      as.mutation(api.blocks.copyPlan, { from: THU, to: THU }),
+      "INVALID_INPUT",
+    );
+    const other = await setUp(t, "other@intent.test");
+    expect(
+      await other.as.mutation(api.blocks.copyPlan, { from: THU, to: FRI }),
+    ).toEqual({ copied: 0, skipped: [] });
+  });
+});

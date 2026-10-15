@@ -685,6 +685,9 @@ Things assumed here that must be confirmed in the milestone that depends on them
 | 2026-10-15 | Resolve asks about the blocks that begin in the day's grid, are still "planned" and have begun. A tail from the day before belongs to that day's review; a block still ahead tonight is not asked about. | One block, one review. Nothing that has not happened is asked for. |
 | 2026-10-15 | Fill gaps offers Drift and the rest category at once (found by "rest" in an intentional category's name, so "Rest on purpose"), "Leave it", and behind "Something else" every category and the activities. A gap labelled with an activity is an entry linked to it (`blocks.logEntry` takes `activityId`). | PRD section 5 names an activity, rest and drift. Eight colour chips per gap was too much on the phone. |
 | 2026-10-15 | The now panel offers the review from whichever comes first, the end of the day's last planned block or two hours before the sleep time, until the day is reviewed (Filip's decision). R and today's "Review the day" always open it; a past day not reviewed shows a quiet "Review the day" link above the grid, so the phone can reach it too. | The review must be cheap to start every evening and never nag. |
+| 2026-10-15 | "Copy from a date" copies the plan lane only (times, title, activity, category, focus, done-when and the other overrides) as plain blocks still to do; blocks a rule made are left out, a block that would overlap is skipped and listed, nothing already there moves (Filip's decision). It takes the source day's grid as shown, so a block after midnight lands after midnight (`shared/planning.ts`, `placeSpans` in `shared/lanes.ts`). | Copying is a starting point; what happened that day is not part of a plan. |
+| 2026-10-15 | Planning ahead is its own screen, `/plan/<date>`, the plan lane at full width with the main focus above it, not a mode of the day view. A day that is over redirects to its day view. Block detail is one container, `BlockPanel`, shared by both screens. | The day view's other lane, totals and now panel are noise while planning; one detail panel keeps the edit rules in one place. |
+| 2026-10-15 | The main focus saves by itself a second after typing stops, on leaving the field and on Enter, like the compass. The review's last step has the next day's focus field too. | Writing the focus is the one thing planning always needs; it should cost no extra screen. |
 | 2026-10-15 | The reflection saves on Next; `reviewedAt` is set by "Close the day" or "Plan tomorrow". Opening the review again shows the saved answers and closing it again updates `reviewedAt`. "Plan tomorrow" is offered only when the next day is today or later. | Leaving halfway keeps what was typed but does not count as reviewed. Planning a day that is over makes no sense. |
 
 ## 17. Implementation notes
@@ -724,6 +727,10 @@ one; delete an entry when it stops being true.
   `vColorKey`, both exported from `convex/schema.ts`, so documents and arguments carry
   the branded types. The cast checks nothing at run time: a model function that writes
   one validates it first (`isDateKey`, `isColorKey`). Decided 2026-10-14.
+- In a cloud session there is no `npx convex dev` to regenerate
+  `convex/_generated/api.d.ts`. A new module under `convex/` needs its two lines there
+  (the import and the `fullApi` entry) by hand, in the generated order; `api.js` is a
+  proxy and needs nothing. Vercel's `npx convex deploy` regenerates the file anyway.
 
 **Frontend**
 
@@ -809,6 +816,12 @@ one; delete an entry when it stops being true.
   `todayGuard.test.tsx`, the V4 guard); a test that clicks needs jsdom (a new
   dependency) and the `app` project switched to it. `src/` has no Node types: read
   source files in a test with `import.meta.glob(..., { query: "?raw" })`.
+
+- Screens checked in a cloud session (section 14) can run the whole router with fixture
+  data: a throwaway Vite config that aliases `convex/react`, `@convex-dev/auth/react`
+  and `virtual:pwa-register` to small mocks (a `useQuery` that answers by function
+  name, read from `Symbol.for("functionName")` on the reference). Playwright's
+  `page.clock.setFixedTime` and `timezoneId` pin the app's "now".
 
 **Tooling on this PC**
 

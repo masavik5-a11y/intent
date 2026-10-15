@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { hasPlan, type StatusAction } from "@shared/blocks";
 import type { DayTotals } from "@shared/summary";
@@ -14,6 +14,8 @@ import { api, type Doc, type Id } from "@/lib/api";
 import { saveErrorMessage } from "@/lib/errorMessages";
 import { dayTitle } from "@/features/day/dayView";
 import { logCategories } from "@/features/log/logRules";
+import { MainFocusField } from "@/features/planning/MainFocusField";
+import { focusPrompt } from "@/features/planning/planningView";
 import {
   GapsStep,
   ReflectStep,
@@ -92,6 +94,19 @@ export function EveningReview({
   const nextBlocks = useQuery(
     api.blocks.listForDay,
     step === "tomorrow" ? { date: next } : "skip",
+  );
+  const nextDay = useQuery(
+    api.days.get,
+    step === "tomorrow" ? { date: next } : "skip",
+  );
+  const setMainFocus = useMutation(api.days.setMainFocus);
+  const saveNextFocus = useCallback(
+    (text: string) =>
+      setMainFocus({
+        date: next,
+        mainFocus: text.trim() === "" ? null : text,
+      }).then(() => undefined),
+    [setMainFocus, next],
   );
 
   // The blocks to resolve as the review opened stay listed once marked, with Undo;
@@ -210,13 +225,20 @@ export function EveningReview({
           <ReflectStep draft={draft} onChange={setDraft} />
         )}
         {step === "tomorrow" && (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             <h3 className="text-base font-medium">{dayTitle(next, today)}</h3>
             <p className="text-sm text-muted-foreground">
               {nextBlocks === undefined
                 ? " "
                 : planSummary(nextBlocks, next, gridStartMin)}
             </p>
+            {canPlanNext && nextDay !== undefined && (
+              <MainFocusField
+                prompt={focusPrompt(next, today)}
+                saved={nextDay?.mainFocus ?? ""}
+                onSave={saveNextFocus}
+              />
+            )}
           </div>
         )}
         {step === "closed" && (

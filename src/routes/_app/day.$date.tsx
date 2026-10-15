@@ -116,7 +116,7 @@ function DayRoute() {
   const planDay = useCallback(
     (day: DateKey) =>
       void navigate({
-        to: "/day/$date",
+        to: "/plan/$date",
         params: { date: day },
         replace: true,
       }),

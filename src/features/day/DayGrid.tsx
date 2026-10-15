@@ -65,6 +65,11 @@ interface DayGridProps {
   onEmptySlot?: (position: number) => void;
   /** A click on the actual lane before now where nothing is recorded. */
   onEmptyActualSlot?: (position: number) => void;
+  /**
+   * Planning ahead shows the plan lane alone, full width (DESIGN.md section 7, "Plan
+   * tomorrow"). Default: both lanes.
+   */
+  planOnly?: boolean;
 }
 
 /** The two-lane hour grid (DESIGN.md section 3). Plan on the left, actual on the right. */
@@ -83,6 +88,7 @@ export function DayGrid({
   onOpenCard,
   onEmptySlot,
   onEmptyActualSlot,
+  planOnly = false,
 }: DayGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
@@ -137,7 +143,8 @@ export function DayGrid({
   ]);
 
   const gridPx = MINUTES_PER_DAY * pxPerMin;
-  const laneClass = isPhone ? "" : "flex-1";
+  const laneClass = isPhone && !planOnly ? "" : "flex-1";
+  const planWidth = isPhone && !planOnly ? { width: "60%" } : undefined;
 
   return (
     <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-y-auto">
@@ -147,13 +154,10 @@ export function DayGrid({
       >
         <div style={{ width: GUTTER_PX }} className="shrink-0" />
         <div className="flex flex-1 gap-1">
-          <div
-            className={cn("px-2 py-1.5", laneClass)}
-            style={isPhone ? { width: "60%" } : undefined}
-          >
+          <div className={cn("px-2 py-1.5", laneClass)} style={planWidth}>
             Plan
           </div>
-          <div className="flex-1 px-2 py-1.5">Actual</div>
+          {!planOnly && <div className="flex-1 px-2 py-1.5">Actual</div>}
         </div>
       </div>
 
@@ -191,7 +195,7 @@ export function DayGrid({
               Add block button and N for the same thing. */}
           <div
             className={cn("relative", laneClass, onEmptySlot && "cursor-copy")}
-            style={isPhone ? { width: "60%" } : undefined}
+            style={planWidth}
             aria-label="Plan"
             role="list"
             onClick={(event) => {
@@ -212,47 +216,51 @@ export function DayGrid({
           {/* Clicking empty actual lane before now logs an entry there; the future
               part is covered by its dimmed overlay, so it does not. L and the now
               panel's "Log what I'm doing" do the same from the keyboard. */}
-          <div
-            className={cn(
-              "relative flex-1",
-              onEmptyActualSlot && "cursor-copy",
-            )}
-            aria-label="Actual"
-            role="list"
-            onClick={(event) => {
-              if (event.target !== event.currentTarget) return;
-              const top = event.currentTarget.getBoundingClientRect().top;
-              onEmptyActualSlot?.(pxToMinutes(event.clientY - top, pxPerMin));
-            }}
-          >
-            {futureFrom !== null && futureFrom < MINUTES_PER_DAY && (
-              <div
-                aria-hidden="true"
-                className="absolute inset-x-0 bottom-0 rounded-t-block bg-muted/50"
-                style={{ top: Math.round(Math.max(futureFrom, 0) * pxPerMin) }}
-              />
-            )}
-            {untracked.map((stretch) => {
-              const box = pxBox(stretch.top, stretch.height, pxPerMin);
-              // Clicks pass through to the lane, which logs an entry there.
-              return (
+          {!planOnly && (
+            <div
+              className={cn(
+                "relative flex-1",
+                onEmptyActualSlot && "cursor-copy",
+              )}
+              aria-label="Actual"
+              role="list"
+              onClick={(event) => {
+                if (event.target !== event.currentTarget) return;
+                const top = event.currentTarget.getBoundingClientRect().top;
+                onEmptyActualSlot?.(pxToMinutes(event.clientY - top, pxPerMin));
+              }}
+            >
+              {futureFrom !== null && futureFrom < MINUTES_PER_DAY && (
                 <div
-                  key={stretch.top}
                   aria-hidden="true"
-                  className="pointer-events-none absolute inset-x-1 rounded-block bg-hatch"
-                  style={{ top: box.top, height: box.height }}
+                  className="absolute inset-x-0 bottom-0 rounded-t-block bg-muted/50"
+                  style={{
+                    top: Math.round(Math.max(futureFrom, 0) * pxPerMin),
+                  }}
                 />
-              );
-            })}
-            {actualCards.map((card) => (
-              <GridBlock
-                key={card.key}
-                card={card}
-                pxPerMin={pxPerMin}
-                onOpenCard={onOpenCard}
-              />
-            ))}
-          </div>
+              )}
+              {untracked.map((stretch) => {
+                const box = pxBox(stretch.top, stretch.height, pxPerMin);
+                // Clicks pass through to the lane, which logs an entry there.
+                return (
+                  <div
+                    key={stretch.top}
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-x-1 rounded-block bg-hatch"
+                    style={{ top: box.top, height: box.height }}
+                  />
+                );
+              })}
+              {actualCards.map((card) => (
+                <GridBlock
+                  key={card.key}
+                  card={card}
+                  pxPerMin={pxPerMin}
+                  onOpenCard={onOpenCard}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         {nowPosition !== null && (

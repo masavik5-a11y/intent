@@ -9,6 +9,7 @@ import {
   liveActual,
   minuteFrom,
   overlapWindow,
+  placeSpans,
   spanBounds,
   spansOverlap,
   untrackedGaps,
@@ -514,5 +515,56 @@ describe("untrackedGaps (PRD section 7, rule 8)", () => {
 
   test("an empty window has no gaps", () => {
     expect(untrackedGaps([], span(TUE, "05:00", 0))).toEqual([]);
+  });
+});
+
+describe("placeSpans", () => {
+  const D = "2026-10-15" as DateKey;
+  const N = "2026-10-16" as DateKey;
+  const lane = [
+    { id: "gym", date: D, startMin: 660, durationMin: 90 },
+    { id: "sleep", date: D, startMin: 1380, durationMin: 480 },
+  ];
+
+  test("places what fits, leaves out what collides, and moves nothing", () => {
+    const result = placeSpans(
+      [
+        { key: "write", date: D, startMin: 540, durationMin: 120 },
+        { key: "lunch", date: D, startMin: 720, durationMin: 60 }, // into gym
+        { key: "early", date: N, startMin: 360, durationMin: 30 }, // into sleep
+        { key: "read", date: D, startMin: 1200, durationMin: 30 },
+      ],
+      lane,
+    );
+    expect(result.placed.map((item) => item.key)).toEqual(["write", "read"]);
+    expect(
+      result.blocked.map(({ candidate, by }) => [
+        candidate.key,
+        "id" in by ? by.id : by.key,
+      ]),
+    ).toEqual([
+      ["lunch", "gym"],
+      ["early", "sleep"],
+    ]);
+  });
+
+  test("a candidate placed first stands in the way of a later one", () => {
+    const result = placeSpans(
+      [
+        { key: "a", date: D, startMin: 540, durationMin: 60 },
+        { key: "b", date: D, startMin: 570, durationMin: 60 },
+      ],
+      [],
+    );
+    expect(result.placed.map((item) => item.key)).toEqual(["a"]);
+    expect(result.blocked[0]?.by).toMatchObject({ key: "a" });
+  });
+
+  test("touching is not colliding", () => {
+    const result = placeSpans(
+      [{ key: "after", date: D, startMin: 750, durationMin: 30 }],
+      lane,
+    );
+    expect(result.placed).toHaveLength(1);
   });
 });

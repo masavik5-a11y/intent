@@ -72,6 +72,32 @@ export function findOverlap<Id, E extends LaneEntry<Id>>(
 }
 
 /**
+ * Places `candidates` into a lane in order, each only where it collides with nothing:
+ * neither the lane's entries nor a candidate placed before it. One that would collide
+ * is left out, with what stands in its way (the one that starts first). Nothing in
+ * the lane moves. `lane` holds every entry around the candidates' days, as for
+ * findOverlap.
+ */
+export function placeSpans<T extends LaneSpan, E extends LaneSpan>(
+  candidates: readonly T[],
+  lane: readonly E[],
+): { placed: T[]; blocked: { candidate: T; by: E | T }[] } {
+  const placed: T[] = [];
+  const blocked: { candidate: T; by: E | T }[] = [];
+  for (const candidate of candidates) {
+    let first: { by: E | T; start: number } | null = null;
+    for (const other of [...lane, ...placed]) {
+      if (!spansOverlap(candidate, other)) continue;
+      const { start } = spanBounds(candidate.date, other);
+      if (first === null || start < first.start) first = { by: other, start };
+    }
+    if (first === null) placed.push(candidate);
+    else blocked.push({ candidate, by: first.by });
+  }
+  return { placed, blocked };
+}
+
+/**
  * The first place at or after `span`'s start where a span of its length fits, moving
  * past each entry it would collide with. Null when nothing fits within a day of the
  * start. `lane` holds the entries around the candidate, as for findOverlap.
