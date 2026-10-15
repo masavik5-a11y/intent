@@ -1,5 +1,7 @@
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { hasPlan, type StatusAction } from "@shared/blocks";
+import { gridDayOf } from "@shared/grid";
+import { DEFAULT_SETTINGS } from "@shared/settings";
 import { formatTimeRange, type DateKey, type LocalMoment } from "@shared/time";
 import { SidePanel } from "@/components/SidePanel";
 import { entryTitle } from "@/features/day/dayView";
@@ -8,6 +10,7 @@ import { api, type BlockUpdate, type Doc } from "@/lib/api";
 import { saveErrorMessage } from "@/lib/errorMessages";
 import { BlockDetail } from "./BlockDetail";
 import { EntryDetail } from "./EntryDetail";
+import type { RepeatChoice, RepeatOutcome } from "./RepeatSection";
 
 interface BlockPanelProps {
   /** The block whose detail is open. */
@@ -50,6 +53,14 @@ export function BlockPanel({
 }: BlockPanelProps) {
   const updateBlock = useMutation(api.blocks.update);
   const removeBlock = useMutation(api.blocks.remove);
+  const repeatBlock = useMutation(api.recurrences.repeat);
+  const settings = useQuery(api.settings.get);
+  const rules = useQuery(api.recurrences.list);
+  const rule =
+    block.recurrenceId === undefined
+      ? undefined
+      : rules?.find((item) => item._id === block.recurrenceId);
+  const today = gridDayOf(now, gridStartMin);
   const category = categories.find((item) => item._id === block.categoryId);
 
   /** Runs a change and closes the panel; a failure becomes its message. */
@@ -66,6 +77,19 @@ export function BlockPanel({
   }
   const save = (changes: BlockUpdate) => attempt(() => updateBlock(changes));
   const remove = () => attempt(() => removeBlock({ blockId: block._id }));
+
+  async function repeat(choice: RepeatChoice): Promise<RepeatOutcome> {
+    try {
+      const result = await repeatBlock({
+        blockId: block._id,
+        weekdays: choice.weekdays,
+        ...(choice.endDate === undefined ? {} : { endDate: choice.endDate }),
+      });
+      return { skipped: result.skipped };
+    } catch (error) {
+      return { error: saveErrorMessage(error) };
+    }
+  }
 
   return (
     <SidePanel
@@ -94,6 +118,16 @@ export function BlockPanel({
           statusError={statusError}
           onAction={onAction}
           dayPlanUnlocked={dayPlanUnlocked}
+          repeat={{
+            rule,
+            // Only a plain block on today or later starts a rule; a past day's plan
+            // is a record (PRD section 7, rule 4). Rules load before this offers.
+            canStart:
+              rules !== undefined && rule === undefined && block.date >= today,
+            weekStartsOn:
+              settings?.weekStartsOn ?? DEFAULT_SETTINGS.weekStartsOn,
+            onRepeat: repeat,
+          }}
         />
       ) : (
         <EntryDetail

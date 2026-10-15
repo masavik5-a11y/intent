@@ -98,6 +98,25 @@ export function actualProblem(
   return null;
 }
 
+/**
+ * Whether the draft changes the block's plan: what it is (title, activity, category,
+ * focus) or when (start, length). What a repeating rule copies from a block.
+ */
+export function planChanged(
+  block: PlannedBlockDoc,
+  draft: BlockDraft,
+): boolean {
+  const before = draftOf(block);
+  return (
+    draft.title.trim() !== before.title ||
+    draft.focus.trim() !== before.focus ||
+    draft.activityId !== before.activityId ||
+    draft.categoryId !== before.categoryId ||
+    draft.plannedStartMin !== before.plannedStartMin ||
+    draft.plannedDurationMin !== before.plannedDurationMin
+  );
+}
+
 /** Arguments for blocks.update: only what changed; emptied text is sent as null. */
 export function updateArgs(block: PlannedBlockDoc, draft: BlockDraft) {
   const before = draftOf(block);

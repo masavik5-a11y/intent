@@ -146,6 +146,20 @@ export function addDays(date: DateKey, days: number): DateKey {
   });
 }
 
+/**
+ * The UTC calendar day of an instant (ms since the epoch). The server has no user's
+ * zone for this: the daily materialisation counts from UTC today, and its extra day
+ * covers every zone (docs/ARCHITECTURE.md, section 10).
+ */
+export function utcDateKey(ms: number): DateKey {
+  const instant = new Date(ms);
+  return toDateKey({
+    year: instant.getUTCFullYear(),
+    month: instant.getUTCMonth() + 1,
+    day: instant.getUTCDate(),
+  });
+}
+
 /** Whole days from `from` to `to`: positive when `to` is later. */
 export function daysBetween(from: DateKey, to: DateKey): number {
   return Math.round((toUtcMs(to) - toUtcMs(from)) / MS_PER_DAY);

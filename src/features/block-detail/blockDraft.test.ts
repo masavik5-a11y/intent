@@ -6,6 +6,7 @@ import {
   draftOf,
   draftProblem,
   inheritedIntent,
+  planChanged,
   updateArgs,
 } from "./blockDraft";
 
@@ -228,6 +229,20 @@ describe("what happened and the note", () => {
       actualProblem(early, { ...draftOf(early), actualClockMin: 1430 }),
     ).toBe(
       "That start would fall on the day before. Pick one closer to the plan.",
+    );
+  });
+});
+
+describe("planChanged", () => {
+  test("only what a rule copies counts: what it is and when", () => {
+    const draft = draftOf(gymBlock);
+    expect(planChanged(gymBlock, draft)).toBe(false);
+    expect(planChanged(gymBlock, { ...draft, why: "Other why." })).toBe(false);
+    expect(planChanged(gymBlock, { ...draft, note: "A note." })).toBe(false);
+    expect(planChanged(gymBlock, { ...draft, title: " Gym " })).toBe(false);
+    expect(planChanged(gymBlock, { ...draft, focus: "Legs" })).toBe(true);
+    expect(planChanged(gymBlock, { ...draft, plannedStartMin: 720 })).toBe(
+      true,
     );
   });
 });

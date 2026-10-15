@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  utcDateKey,
   addDays,
   dateKeyParts,
   daysBetween,
@@ -389,5 +390,17 @@ describe("formatDuration", () => {
 
   test.each([-5, 12.5])("rejects %d", (minutes) => {
     expect(() => formatDuration(minutes)).toThrow(RangeError);
+  });
+});
+
+describe("utcDateKey", () => {
+  test.each([
+    ["2026-10-15T00:00:00Z", "2026-10-15"],
+    ["2026-10-15T23:59:59Z", "2026-10-15"],
+    // 01:30 in Prague is still the 14th in UTC.
+    ["2026-10-14T23:30:00Z", "2026-10-14"],
+    ["2028-02-29T12:00:00Z", "2028-02-29"],
+  ])("%s is %s", (iso, expected) => {
+    expect(utcDateKey(Date.parse(iso))).toBe(expected);
   });
 });

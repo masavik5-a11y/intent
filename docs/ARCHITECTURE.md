@@ -476,17 +476,37 @@ Cost is about 44,000 small function calls a month, far inside the free allowance
 
 ## 10. Recurrence
 
-- A `recurrences` row is a rule: weekdays, start time, duration, start and end dates.
-- Rules are **materialised into ordinary blocks** for a rolling window (today + 14 days)
-  by a daily cron, and on demand when a later date is opened.
-- Materialisation is idempotent: for a given rule and date it creates a block only if
-  none exists with that `recurrenceId` and `date`.
+- A `recurrences` row is a rule: weekdays, start time, duration, start and end dates,
+  and the plan every occurrence gets (title, activity, category, focus). Intent
+  overrides and done-when are not on the rule: an occurrence inherits its activity's,
+  and an override written on one occurrence belongs to that block only.
+- A rule is made from a block ("Repeat…" in block detail, `recurrences.repeat`): the
+  rule takes the block's plan as saved, starts on the block's date, and the block
+  becomes its first occurrence (`recurrenceId` set). Only a plain block on today or
+  later can start one.
+- Rules are **materialised into ordinary blocks** for a rolling window by a daily cron,
+  and on demand when a later date is opened. The window ends at UTC today + 15 days:
+  every zone's today + 14 fits in it, so the cron needs no time zone (Filip's
+  decision). Making or changing a rule materialises its window at once.
+- `materializedThrough` is the last date handled. Materialisation only ever creates
+  dates after it, then moves it on, so an occurrence deleted by hand stays deleted:
+  no tombstone is needed (Filip's decision). Run twice, it creates nothing new; it
+  also skips a date that already holds a block of the rule.
+- An occurrence that would overlap a block already in the plan lane is not created,
+  and the block there never moves (Filip's decision). Making or changing a rule
+  reports the dates it left out in its first window, and the screen says so in one
+  line; dates the daily run reaches later are left out quietly.
+- The lane is read once per chunk of up to 60 days (`listBetween`) and occurrences are
+  placed with `planOccurrences` (`shared/recurrence.ts`, over `placeSpans` in
+  `shared/lanes.ts`), so the inserts of one run see each other and the occurrences of
+  rules handled before them.
 - A block edited by hand is marked `detached` and is never regenerated or deleted by rule
-  changes. Skipping one occurrence is just status `skipped` (or deleting the block; a
-  deleted occurrence is remembered by a `detached` tombstone if needed, decide in M3).
+  changes. Skipping one occurrence is just status `skipped`, or deleting the block.
 - Editing a rule ("this and following") updates the rule, deletes future non-detached
   `planned` blocks of that rule, and materialises again.
-- `shared/recurrence.ts` answers "which dates does this rule produce between A and B".
+- `shared/recurrence.ts` answers "which dates does this rule produce between A and B"
+  (`ruleDates`, `datesToMaterialize`) and "which of them become blocks"
+  (`planOccurrences`).
 
 ## 11. Offline and PWA
 
@@ -688,6 +708,8 @@ Things assumed here that must be confirmed in the milestone that depends on them
 | 2026-10-15 | "Copy from a date" copies the plan lane only (times, title, activity, category, focus, done-when and the other overrides) as plain blocks still to do; blocks a rule made are left out, a block that would overlap is skipped and listed, nothing already there moves (Filip's decision). It takes the source day's grid as shown, so a block after midnight lands after midnight (`shared/planning.ts`, `placeSpans` in `shared/lanes.ts`). | Copying is a starting point; what happened that day is not part of a plan. |
 | 2026-10-15 | Planning ahead is its own screen, `/plan/<date>`, the plan lane at full width with the main focus above it, not a mode of the day view. A day that is over redirects to its day view. Block detail is one container, `BlockPanel`, shared by both screens. | The day view's other lane, totals and now panel are noise while planning; one detail panel keeps the edit rules in one place. |
 | 2026-10-15 | The main focus saves by itself a second after typing stops, on leaving the field and on Enter, like the compass. The review's last step has the next day's focus field too. | Writing the focus is the one thing planning always needs; it should cost no extra screen. |
+| 2026-10-15 | A rule holds the plan (title, activity, category, focus, start, length); intent overrides and done-when stay on each block. A rule is made from a saved block on today or later, which becomes its first occurrence; with unsaved plan edits "Repeat" waits for Save. | The why lives on the activity; done-when is usually written per day. A rule made from what is on screen but not saved would surprise. |
+| 2026-10-15 | Materialisation: window through UTC today + 15; only dates after `materializedThrough`; no tombstone; an overlapping occurrence is not made and the block there stays (Filip's decisions). Making a rule reports the dates its first window left out; later ones are left out quietly. | The cron needs no zone; a deleted occurrence stays deleted; nothing the user placed moves. |
 | 2026-10-15 | The reflection saves on Next; `reviewedAt` is set by "Close the day" or "Plan tomorrow". Opening the review again shows the saved answers and closing it again updates `reviewedAt`. "Plan tomorrow" is offered only when the next day is today or later. | Leaving halfway keeps what was typed but does not count as reviewed. Planning a day that is over makes no sense. |
 
 ## 17. Implementation notes
