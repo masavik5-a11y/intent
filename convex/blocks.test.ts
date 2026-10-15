@@ -896,6 +896,40 @@ describe("blocks.logEntry", () => {
     expect(entry && "plannedStartMin" in entry).toBe(false);
   });
 
+  test("for an activity: its name and the link, for a gap filled in the review", async () => {
+    const t = newTest();
+    const { as, body, gym } = await setUp(t);
+    const entryId = await as.mutation(api.blocks.logEntry, {
+      date: TUE,
+      categoryId: body,
+      activityId: gym,
+      actualStartMin: 420,
+      actualDurationMin: 60,
+    });
+    expect(await read(t, entryId)).toMatchObject({
+      title: "Gym",
+      activityId: gym,
+      categoryId: body,
+      status: "done",
+    });
+  });
+
+  test("someone else's activity is refused", async () => {
+    const t = newTest();
+    const { as, body } = await setUp(t);
+    const other = await setUp(t, "other@intent.test");
+    await expectAppError(
+      as.mutation(api.blocks.logEntry, {
+        date: TUE,
+        categoryId: body,
+        activityId: other.gym,
+        actualStartMin: 420,
+        actualDurationMin: 60,
+      }),
+      "NOT_FOUND",
+    );
+  });
+
   test("keeps a title of its own, trimmed", async () => {
     const t = newTest();
     const { as, body } = await setUp(t);

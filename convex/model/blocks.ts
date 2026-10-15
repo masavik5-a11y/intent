@@ -60,9 +60,11 @@ export type NewBlock = { [F in IntentField]?: string } & {
 export interface NewEntry {
   /** The calendar day it began on. */
   date: DateKey;
-  /** Defaults to the category's name: "Drift". */
+  /** Defaults to the activity's name, else the category's: "Drift". */
   title?: string;
   categoryId: Id<"categories">;
+  /** What it was, when it was one of the activities (a gap filled in the review). */
+  activityId?: Id<"activities">;
   /** Minutes from the midnight of `date`, below 1440. */
   actualStartMin: number;
   actualDurationMin: number;
@@ -179,15 +181,22 @@ export async function logEntry(
 ): Promise<Id<"blocks">> {
   const date = checkDate(input.date);
   const category = await Categories.getOwned(ctx, userId, input.categoryId);
+  const activity =
+    input.activityId === undefined
+      ? null
+      : await Activities.getOwned(ctx, userId, input.activityId);
   const typed = input.title === undefined ? "" : input.title.trim();
   const fields: BlockFields = {
     date,
-    title: requiredTitle(typed === "" ? category.name : typed),
+    title: requiredTitle(
+      typed !== "" ? typed : (activity?.name ?? category.name),
+    ),
     categoryId: category._id,
     status: "done",
     actualStartMin: input.actualStartMin,
     actualDurationMin: input.actualDurationMin,
   };
+  if (activity !== null) fields.activityId = activity._id;
   checkShape(fields);
   await assertFree(ctx, userId, fields);
   return await ctx.db.insert("blocks", { userId, ...fields });

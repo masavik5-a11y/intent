@@ -41,6 +41,7 @@ export const logEntry = mutation({
     date: vDateKey,
     title: v.optional(v.string()),
     categoryId: v.id("categories"),
+    activityId: v.optional(v.id("activities")),
     actualStartMin: v.number(),
     actualDurationMin: v.number(),
   },

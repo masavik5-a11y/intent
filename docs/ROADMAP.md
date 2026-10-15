@@ -212,7 +212,7 @@ skipping, anti-vision and vision, and "Start the minimum" works.
 **Slices:**
 
 - [x] Schema: `days`, `recurrences`, and `recurrenceId` / `detached` on blocks.
-- [ ] Evening review: resolve unmarked blocks, fill gaps of 30 minutes or more, three
+- [x] Evening review: resolve unmarked blocks, fill gaps of 30 minutes or more, three
       prompts with optional rating and energy, then hand over to planning. Every step
       skippable. `R` starts it.
 - [ ] Plan tomorrow screen: tomorrow's plan lane, add blocks, main focus field, "Copy
