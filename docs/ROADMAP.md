@@ -211,7 +211,7 @@ skipping, anti-vision and vision, and "Start the minimum" works.
 
 **Slices:**
 
-- [ ] Schema: `days`, `recurrences`, and `recurrenceId` / `detached` on blocks.
+- [x] Schema: `days`, `recurrences`, and `recurrenceId` / `detached` on blocks.
 - [ ] Evening review: resolve unmarked blocks, fill gaps of 30 minutes or more, three
       prompts with optional rating and energy, then hand over to planning. Every step
       skippable. `R` starts it.
