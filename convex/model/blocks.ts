@@ -267,11 +267,32 @@ export async function update(
     patch.actualDurationMin = changes.actualDurationMin;
   }
 
+  // "This one" (decided 2026-10-15): an occurrence whose plan is changed by hand
+  // leaves its rule, which no longer moves or replaces it. What happened, the note and
+  // the intent are not the plan.
+  if (
+    block.recurrenceId !== undefined &&
+    PLAN_FIELDS.some((field) => field in patch && patch[field] !== block[field])
+  ) {
+    patch.detached = true;
+  }
+
   const next = { ...fieldsOf(block), ...patch };
   checkShape(next);
   if (timesChange) await assertFree(ctx, userId, next, block._id);
   await ctx.db.patch("blocks", block._id, patch);
 }
+
+/** What a repeating rule decides about its occurrences: what and when. */
+const PLAN_FIELDS = [
+  "title",
+  "focus",
+  "activityId",
+  "categoryId",
+  "date",
+  "plannedStartMin",
+  "plannedDurationMin",
+] as const;
 
 /**
  * Done, Partly, Skip, Undo (PRD A1, A4) or Start the minimum (PRD V3), as
@@ -450,6 +471,90 @@ export async function materializeOccurrences(
     }
   }
   return skipped;
+}
+
+/** Most occurrences one rule can have from a date on: a year ahead, one a day. */
+const MAX_OCCURRENCES = 1000;
+
+/** A rule's blocks dated `from` or later, by date. */
+export async function occurrencesFrom(
+  ctx: QueryCtx,
+  ruleId: Id<"recurrences">,
+  from: DateKey,
+): Promise<Doc<"blocks">[]> {
+  return await ctx.db
+    .query("blocks")
+    .withIndex("by_recurrenceId_and_date", (q) =>
+      q.eq("recurrenceId", ruleId).gte("date", from),
+    )
+    .take(MAX_OCCURRENCES);
+}
+
+/** The plan a rule gives an occurrence. */
+export interface RulePlanFields {
+  title: string;
+  focus: string | undefined;
+  activityId: Id<"activities"> | undefined;
+  categoryId: Id<"categories">;
+  plannedStartMin: number;
+  plannedDurationMin: number;
+}
+
+/**
+ * Gives a block a rule's plan and links it to the rule, following it again ("this and
+ * following" from that block). Checked like any edit: it must still fit the lane.
+ */
+export async function followRule(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  blockId: Id<"blocks">,
+  ruleId: Id<"recurrences">,
+  plan: RulePlanFields,
+): Promise<void> {
+  const block = await getOwned(ctx, userId, blockId);
+  const patch: Partial<BlockFields> = {
+    ...plan,
+    recurrenceId: ruleId,
+    detached: undefined,
+  };
+  const next = { ...fieldsOf(block), ...patch };
+  checkShape(next);
+  await assertFree(ctx, userId, next, block._id);
+  await ctx.db.patch("blocks", block._id, patch);
+}
+
+/** Links an occurrence to another rule, leaving its plan as it is. */
+export async function moveToRule(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  blockId: Id<"blocks">,
+  ruleId: Id<"recurrences">,
+): Promise<void> {
+  const block = await getOwned(ctx, userId, blockId);
+  await ctx.db.patch("blocks", block._id, { recurrenceId: ruleId });
+}
+
+/**
+ * When a rule changes or ends from a date: its blocks from then on that are still
+ * "planned" and not changed by hand go, so the rule can make them anew; the others
+ * (marked, or detached) stay and move to `keepWith`, so no date gets a second one.
+ * `except` is the block the change was made from, which the caller handles.
+ */
+export async function clearOccurrencesFrom(
+  ctx: MutationCtx,
+  ruleId: Id<"recurrences">,
+  from: DateKey,
+  keepWith: Id<"recurrences">,
+  except: Id<"blocks"> | null,
+): Promise<void> {
+  for (const block of await occurrencesFrom(ctx, ruleId, from)) {
+    if (block._id === except) continue;
+    if (block.status === "planned" && block.detached !== true) {
+      await ctx.db.delete("blocks", block._id);
+    } else if (keepWith !== ruleId) {
+      await ctx.db.patch("blocks", block._id, { recurrenceId: keepWith });
+    }
+  }
 }
 
 /** Makes a block the first occurrence of the rule made from it. */

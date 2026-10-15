@@ -187,3 +187,46 @@ export function inheritedIntent(activity: Doc<"activities"> | undefined): {
     costOfSkipping: intent.costOfSkipping?.text ?? null,
   };
 }
+
+/** What a repeating rule takes from an edit: the plan (PRD P3; decided 2026-10-15). */
+const RULE_PLAN_KEYS = [
+  "title",
+  "focus",
+  "activityId",
+  "categoryId",
+  "plannedStartMin",
+  "plannedDurationMin",
+] as const;
+
+type UpdateArgs = ReturnType<typeof updateArgs>;
+type RulePlanKey = (typeof RULE_PLAN_KEYS)[number];
+
+/**
+ * An edit saved as "This and following", split in two: the plan, which goes to the
+ * rule from this day on (recurrences.changeFrom), and the rest (intent, what
+ * happened, the note), which stays this block's own (blocks.update). `rest` is null
+ * when there is nothing else.
+ */
+export function splitForFollowing(args: UpdateArgs): {
+  plan: Pick<UpdateArgs, "blockId" | RulePlanKey>;
+  rest: UpdateArgs | null;
+} {
+  const plan: Pick<UpdateArgs, "blockId" | RulePlanKey> = {
+    blockId: args.blockId,
+  };
+  const rest: UpdateArgs = { blockId: args.blockId };
+  let others = false;
+  for (const [key, value] of Object.entries(args) as [
+    keyof UpdateArgs,
+    UpdateArgs[keyof UpdateArgs],
+  ][]) {
+    if (key === "blockId") continue;
+    if ((RULE_PLAN_KEYS as readonly string[]).includes(key)) {
+      Object.assign(plan, { [key]: value });
+    } else {
+      Object.assign(rest, { [key]: value });
+      others = true;
+    }
+  }
+  return { plan, rest: others ? rest : null };
+}

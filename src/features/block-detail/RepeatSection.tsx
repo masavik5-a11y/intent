@@ -23,38 +23,56 @@ export type RepeatOutcome =
   { error: string } | { skipped: { date: DateKey; blockedBy: string }[] };
 
 export interface RepeatProps {
-  /** The rule this block is an occurrence of, if it repeats. */
+  /** The rule this block is an occurrence of, when it still reaches this date. */
   rule: Doc<"recurrences"> | undefined;
   /** It may start repeating: a plain block on today or a day to come. */
   canStart: boolean;
-  /** Why the Repeat button waits (unsaved changes to the plan), or null. */
+  /** Its rule may change from here: an occurrence on today or a day to come. */
+  canChange: boolean;
+  /** Why saving waits (unsaved changes to the plan), or null. */
   blocked: string | null;
   weekStartsOn: number;
+  /** Makes the block repeat. */
   onRepeat: (choice: RepeatChoice) => Promise<RepeatOutcome>;
+  /** Changes when its rule repeats, from this block's date on. */
+  onChange: (choice: RepeatChoice) => Promise<RepeatOutcome>;
 }
 
 /**
  * Repeat settings in block detail (PRD P3; DESIGN.md section 7): on which weekdays,
  * until when. Saved at once, apart from the form, like the status. A rule is made
- * from the block as saved, and the block becomes its first occurrence.
+ * from the block as saved, and the block becomes its first occurrence; on an
+ * occurrence, a change applies from its date on ("this and following"), and "Stop
+ * after this one" ends the rule there.
  */
 export function RepeatSection({
   blockDate,
   rule,
   canStart,
+  canChange,
   blocked,
   weekStartsOn,
   onRepeat,
+  onChange,
 }: RepeatProps & { blockDate: DateKey }) {
   const ids = useId();
   const [editing, setEditing] = useState(false);
-  const [weekdays, setWeekdays] = useState<number[]>(() => [
-    weekdayOf(blockDate),
-  ]);
+  const [weekdays, setWeekdays] = useState<number[]>([]);
   const [endDate, setEndDate] = useState<DateKey | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const changing = rule !== undefined;
+
+  function open() {
+    setWeekdays(
+      rule === undefined ? [weekdayOf(blockDate)] : [...rule.weekdays],
+    );
+    setEndDate(rule?.endDate);
+    setEditing(true);
+    setMessage(null);
+    setError(null);
+  }
 
   function toggle(day: number) {
     setWeekdays((current) =>
@@ -65,30 +83,36 @@ export function RepeatSection({
     setError(null);
   }
 
-  async function save() {
-    if (weekdays.length === 0) {
+  async function save(choice: RepeatChoice) {
+    if (choice.weekdays.length === 0) {
       setError("Choose at least one day.");
       return;
     }
-    if (endDate !== undefined && endDate < blockDate) {
+    if (choice.endDate !== undefined && choice.endDate < blockDate) {
       setError(`The end can't be before ${formatDayLabel(blockDate)}.`);
       return;
     }
     setBusy(true);
-    const outcome = await onRepeat({ weekdays, endDate });
+    const outcome = await (changing ? onChange(choice) : onRepeat(choice));
     setBusy(false);
     if ("error" in outcome) {
       setError(outcome.error);
       return;
     }
     setEditing(false);
+    const stopping = changing && choice.endDate === blockDate;
     setMessage(
       skippedLine(outcome.skipped) ??
-        "Added for the next two weeks; later dates come by themselves.",
+        (stopping
+          ? "It stops after this one."
+          : changing
+            ? "Changed from this day on."
+            : "Added for the next two weeks; later dates come by themselves."),
     );
   }
 
   if (rule === undefined && !canStart) return null;
+  const canEdit = changing ? canChange : canStart;
 
   return (
     <section aria-label="Repeat" className="flex flex-col gap-2">
@@ -97,23 +121,26 @@ export function RepeatSection({
         <p className="flex-1 text-sm">
           {rule === undefined ? "Does not repeat" : repeatsSentence(rule)}
         </p>
-        {rule === undefined && !editing && (
+        {canEdit && !editing && (
           <Button
             type="button"
             variant="ghost"
             className="h-11 sm:h-8"
-            onClick={() => {
-              setEditing(true);
-              setMessage(null);
-            }}
+            onClick={open}
           >
-            Repeat…
+            {changing ? "Change" : "Repeat…"}
           </Button>
         )}
       </div>
 
       {editing && (
         <div className="flex flex-col gap-3 rounded-block border px-3 py-3">
+          {changing && (
+            <p className="text-sm text-muted-foreground">
+              From {formatDayLabel(blockDate)} on. The days before keep their
+              plan.
+            </p>
+          )}
           <div
             role="group"
             aria-label="On these days"
@@ -172,15 +199,31 @@ export function RepeatSection({
           {blocked !== null && (
             <p className="text-sm text-muted-foreground">{blocked}</p>
           )}
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               type="button"
               disabled={busy || blocked !== null}
               className="h-11 sm:h-9"
-              onClick={() => void save()}
+              onClick={() => void save({ weekdays, endDate })}
             >
-              Repeat
+              {changing ? "Save" : "Repeat"}
             </Button>
+            {changing && (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busy || blocked !== null}
+                className="h-11 sm:h-9"
+                onClick={() =>
+                  void save({
+                    weekdays: [...(rule?.weekdays ?? weekdays)],
+                    endDate: blockDate,
+                  })
+                }
+              >
+                Stop after this one
+              </Button>
+            )}
             <Button
               type="button"
               variant="ghost"

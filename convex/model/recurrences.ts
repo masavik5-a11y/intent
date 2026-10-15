@@ -15,8 +15,16 @@ import {
   utcDateKey,
   type DateKey,
 } from "../../shared/time";
+import {
+  cleanName,
+  cleanText,
+  MAX_FOCUS_LENGTH,
+  MAX_TITLE_LENGTH,
+} from "../../shared/text";
 import { appError } from "../lib/errors";
+import * as Activities from "./activities";
 import * as Blocks from "./blocks";
+import * as Categories from "./categories";
 
 // The only module that writes the recurrences table (CLAUDE.md, rule 4). A rule is
 // materialised into ordinary blocks for a rolling window (docs/ARCHITECTURE.md,
@@ -81,11 +89,17 @@ export async function repeatBlock(
 ): Promise<RepeatResult> {
   const block = await Blocks.getOwned(ctx, userId, blockId);
   if (!hasPlan(block)) throw appError("INVALID_INPUT");
+  const current =
+    block.recurrenceId === undefined
+      ? null
+      : await ctx.db.get("recurrences", block.recurrenceId);
   if (
-    block.recurrenceId !== undefined &&
-    (await ctx.db.get("recurrences", block.recurrenceId)) !== null
+    current !== null &&
+    block.date >= current.startDate &&
+    coversDate(current, block.date)
   ) {
-    // It repeats already; changing that rule is "this and following".
+    // It repeats already; changing that rule is "this and following". A block its
+    // rule no longer reaches (the rule ended before it) may start a rule of its own.
     throw appError("INVALID_INPUT");
   }
   if (!isValidWeekdays(settings.weekdays)) throw appError("INVALID_INPUT");
@@ -190,4 +204,221 @@ export async function materializeThrough(
     if (rule.startDate > through) continue;
     await materialize(ctx, userId, rule, through, notBefore);
   }
+}
+
+/**
+ * What "this and following" may change (PRD P3; decided 2026-10-15): the plan every
+ * occurrence gets, and when the rule repeats. Left out keeps; null clears.
+ */
+export interface RuleChanges {
+  title?: string;
+  focus?: string | null;
+  /** Choosing another activity also moves the rule to its category. */
+  activityId?: Id<"activities"> | null;
+  categoryId?: Id<"categories">;
+  plannedStartMin?: number;
+  plannedDurationMin?: number;
+  weekdays?: readonly number[];
+  /** Null: it goes on. */
+  endDate?: DateKey | null;
+}
+
+/** Whether a rule produces dates up to and including `date`. */
+export function coversDate(rule: Doc<"recurrences">, date: DateKey): boolean {
+  return rule.endDate === undefined || rule.endDate >= date;
+}
+
+/**
+ * "This and following" (decided 2026-10-15): changes the rule from the date of the
+ * block it is made from. From the rule's first date the rule itself changes; from a
+ * later one it ends the day before and a new rule carries on with the change, so the
+ * days already past keep the plan they had. The block gets the new plan; the later
+ * occurrences still to do are made anew (one deleted by hand may come back), and the
+ * marked or detached ones stay where they are. Returns the dates of the window that
+ * did not fit.
+ */
+export async function changeFrom(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  blockId: Id<"blocks">,
+  changes: RuleChanges,
+): Promise<RepeatResult> {
+  const block = await Blocks.getOwned(ctx, userId, blockId);
+  if (!hasPlan(block) || block.recurrenceId === undefined) {
+    throw appError("INVALID_INPUT");
+  }
+  const rule = await getOwned(ctx, userId, block.recurrenceId);
+  const from = block.date;
+  if (!coversDate(rule, from)) throw appError("INVALID_INPUT");
+
+  const next = await changedFields(ctx, userId, rule, changes);
+  if (next.endDate !== undefined && next.endDate < from) {
+    throw appError("INVALID_INPUT");
+  }
+  const problem = ruleProblem({ ...next, startDate: from });
+  if (problem !== null) throw appError(problem);
+
+  let target: Id<"recurrences">;
+  if (from <= rule.startDate) {
+    await ctx.db.replace(
+      "recurrences",
+      rule._id,
+      withoutUnset({
+        ...next,
+        userId,
+        startDate: from,
+        materializedThrough: from,
+      }),
+    );
+    target = rule._id;
+  } else {
+    await ctx.db.patch("recurrences", rule._id, {
+      endDate: addDays(from, -1),
+    });
+    target = await ctx.db.insert(
+      "recurrences",
+      withoutUnset({
+        ...next,
+        userId,
+        startDate: from,
+        materializedThrough: from,
+      }),
+    );
+  }
+
+  await Blocks.clearOccurrencesFrom(ctx, rule._id, from, target, block._id);
+  const planChanges =
+    changes.title !== undefined ||
+    changes.focus !== undefined ||
+    changes.activityId !== undefined ||
+    changes.categoryId !== undefined ||
+    changes.plannedStartMin !== undefined ||
+    changes.plannedDurationMin !== undefined;
+  if (block.detached === true && !planChanges) {
+    // Only when it repeats changed: a block moved by hand keeps its own plan.
+    await Blocks.moveToRule(ctx, userId, block._id, target);
+  } else {
+    await Blocks.followRule(ctx, userId, block._id, target, {
+      title: next.title,
+      focus: next.focus,
+      activityId: next.activityId,
+      categoryId: next.categoryId,
+      plannedStartMin: next.startMin,
+      plannedDurationMin: next.durationMin,
+    });
+  }
+  const updated = await getOwned(ctx, userId, target);
+  const end = windowEnd(Date.now());
+  const through = [rule.materializedThrough, end, from].reduce((a, b) =>
+    a > b ? a : b,
+  );
+  const skipped = await materialize(
+    ctx,
+    userId,
+    updated,
+    through,
+    addDays(from, 1),
+  );
+  return { skipped };
+}
+
+/**
+ * Deleting "this and following" (decided 2026-10-15): the rule ends the day before
+ * the block's date. That block goes, and so do the later occurrences still to do;
+ * marked or detached ones stay as plain blocks.
+ */
+export async function endFrom(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  blockId: Id<"blocks">,
+): Promise<void> {
+  const block = await Blocks.getOwned(ctx, userId, blockId);
+  if (block.recurrenceId === undefined) throw appError("INVALID_INPUT");
+  const rule = await getOwned(ctx, userId, block.recurrenceId);
+  const from = block.date;
+  // The rule is kept, ended, so the blocks that stay still say where they came from.
+  await ctx.db.patch("recurrences", rule._id, { endDate: addDays(from, -1) });
+  await Blocks.clearOccurrencesFrom(ctx, rule._id, from, rule._id, block._id);
+  await Blocks.remove(ctx, userId, block._id);
+}
+
+/** The rule's fields with `changes` applied and checked: text, ownership, weekdays. */
+async function changedFields(
+  ctx: QueryCtx,
+  userId: Id<"users">,
+  rule: Doc<"recurrences">,
+  changes: RuleChanges,
+): Promise<
+  Omit<RuleFields, "userId" | "startDate" | "materializedThrough"> & {
+    focus: string | undefined;
+    activityId: Id<"activities"> | undefined;
+    endDate: DateKey | undefined;
+  }
+> {
+  let title = rule.title;
+  if (changes.title !== undefined) {
+    const cleaned = cleanName(changes.title, MAX_TITLE_LENGTH);
+    if (cleaned === null) throw appError("INVALID_INPUT");
+    title = cleaned;
+  }
+  let focus = rule.focus;
+  if (changes.focus !== undefined) {
+    const cleaned =
+      changes.focus === null
+        ? undefined
+        : cleanText(changes.focus, MAX_FOCUS_LENGTH);
+    if (cleaned === null) throw appError("INVALID_INPUT");
+    focus = cleaned;
+  }
+  let activityId = rule.activityId;
+  let categoryId = rule.categoryId;
+  if (changes.activityId === null) {
+    activityId = undefined;
+  } else if (changes.activityId !== undefined) {
+    const activity = await Activities.getOwned(ctx, userId, changes.activityId);
+    if (activity._id !== rule.activityId) categoryId = activity.categoryId;
+    activityId = activity._id;
+  }
+  if (changes.categoryId !== undefined) {
+    await Categories.getOwned(ctx, userId, changes.categoryId);
+    categoryId = changes.categoryId;
+  }
+  let weekdays = rule.weekdays;
+  if (changes.weekdays !== undefined) {
+    if (!isValidWeekdays(changes.weekdays)) throw appError("INVALID_INPUT");
+    weekdays = normalizeWeekdays(changes.weekdays);
+  }
+  let endDate = rule.endDate;
+  if (changes.endDate === null) {
+    endDate = undefined;
+  } else if (changes.endDate !== undefined) {
+    if (!isDateKey(changes.endDate)) throw appError("INVALID_INPUT");
+    endDate = changes.endDate;
+  }
+  return {
+    title,
+    focus,
+    activityId,
+    categoryId,
+    startMin: changes.plannedStartMin ?? rule.startMin,
+    durationMin: changes.plannedDurationMin ?? rule.durationMin,
+    weekdays,
+    endDate,
+  };
+}
+
+/** A rule's fields without the optional ones that are unset. */
+function withoutUnset(
+  fields: RuleFields & {
+    focus: string | undefined;
+    activityId: Id<"activities"> | undefined;
+    endDate: DateKey | undefined;
+  },
+): RuleFields {
+  const { focus, activityId, endDate, ...rest } = fields;
+  const result: RuleFields = { ...rest };
+  if (focus !== undefined) result.focus = focus;
+  if (activityId !== undefined) result.activityId = activityId;
+  if (endDate !== undefined) result.endDate = endDate;
+  return result;
 }
