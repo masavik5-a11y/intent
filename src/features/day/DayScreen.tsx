@@ -18,6 +18,7 @@ import { api, type Doc, type Id } from "@/lib/api";
 import { useSetStatus } from "@/lib/blockStatus";
 import { saveErrorMessage } from "@/lib/errorMessages";
 import { useNow } from "@/lib/now";
+import { dismissWelcome, welcomeDismissedOn } from "@/lib/welcomeDismissal";
 import { useIsPhone, useMediaQuery } from "@/lib/useMediaQuery";
 import { DayGrid, type GridCard } from "./DayGrid";
 import { DayHeader } from "./DayHeader";
@@ -47,6 +48,7 @@ import {
 import { cardLooks, planCards } from "./gridCards";
 import { DayNotes } from "./DayNotes";
 import { DayReview } from "./DayReview";
+import { WelcomeBack } from "./WelcomeBack";
 import { DayTotals } from "./DayTotals";
 import { QuickAdd } from "./QuickAdd";
 import { DEFAULT_DURATION_MIN, type NewBlockArgs } from "./QuickAddForm";
@@ -122,6 +124,15 @@ export function DayScreen({
   const { gridStartMin, wakeMin, sleepMin } = settings ?? DEFAULT_SETTINGS;
   const today = gridDayOf(now, gridStartMin);
   const tense = dayTense(date, today);
+  // After days away, today opens with "Welcome back. Plan today?" (decided
+  // 2026-10-15); "Not now" puts it away for the day on this device.
+  const returning = useQuery(
+    api.days.returning,
+    tense === "today" ? { today: date } : "skip",
+  );
+  const [welcomeDismissed, setWelcomeDismissed] = useState(() =>
+    welcomeDismissedOn(date),
+  );
   // Nothing has happened yet on a day still to come.
   const canLog = tense !== "future";
   // A past day's plan is frozen until "Edit plan" (PRD section 7, rule 4). Day screens
@@ -334,6 +345,15 @@ export function DayScreen({
                 : undefined
           }
         />
+        {tense === "today" && returning === true && !welcomeDismissed && (
+          <WelcomeBack
+            today={date}
+            onDismiss={() => {
+              dismissWelcome(date);
+              setWelcomeDismissed(true);
+            }}
+          />
+        )}
         {!isWide && nowPanel !== null && (
           <div className="border-b">
             <NowPanel

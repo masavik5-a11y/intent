@@ -223,7 +223,7 @@ skipping, anti-vision and vision, and "Start the minimum" works.
 - [x] Materialisation: daily cron for a 14-day window, and on demand for later dates.
       Idempotent, tested.
 - [x] Editing a repeating block: "this one" (detaches it) or "this and following".
-- [ ] Returning after days away: today's plan and "Welcome back. Plan today?", nothing
+- [x] Returning after days away: today's plan and "Welcome back. Plan today?", nothing
       about the missed days.
 
 **Done when:** you have run the whole loop on three consecutive real days; the review

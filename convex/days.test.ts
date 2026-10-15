@@ -181,3 +181,114 @@ describe("days", () => {
     );
   });
 });
+
+describe("days.returning", () => {
+  const day = (value: string) => value as DateKey;
+
+  /** A signed-in user with categories, and a way to put blocks on days. */
+  async function user(t: ReturnType<typeof newTest>, email = "me@intent.test") {
+    const { userId, as } = await signedIn(t, email);
+    await as.mutation(api.setup.ensure, { timeZone: "Europe/Prague" });
+    const categoryId = await t.run(async (ctx) => {
+      const category = await ctx.db
+        .query("categories")
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
+        .first();
+      if (category === null) throw new Error("no category");
+      return category._id;
+    });
+    const planned = (date: DateKey, startMin = 540) =>
+      as.mutation(api.blocks.create, {
+        date,
+        title: "Write",
+        categoryId,
+        plannedStartMin: startMin,
+        plannedDurationMin: 60,
+      });
+    const logged = (date: DateKey) =>
+      as.mutation(api.blocks.logEntry, {
+        date,
+        categoryId,
+        actualStartMin: 780,
+        actualDurationMin: 30,
+      });
+    return { as, planned, logged };
+  }
+
+  test("requires a session", async () => {
+    const t = newTest();
+    await expectAppError(
+      t.query(api.days.returning, { today: THU }),
+      "UNAUTHENTICATED",
+    );
+  });
+
+  test("a first day in the app is not a return", async () => {
+    const t = newTest();
+    const { as, planned } = await user(t);
+    expect(await as.query(api.days.returning, { today: THU })).toBe(false);
+    await planned(THU);
+    expect(await as.query(api.days.returning, { today: THU })).toBe(false);
+  });
+
+  test("something recorded yesterday or today: no welcome", async () => {
+    const t = newTest();
+    const { as, logged } = await user(t);
+    await logged(day("2026-10-14"));
+    expect(await as.query(api.days.returning, { today: THU })).toBe(false);
+    expect(
+      await as.query(api.days.returning, { today: day("2026-10-14") }),
+    ).toBe(false);
+  });
+
+  test("the last day with a status two days back or more: welcome back", async () => {
+    const t = newTest();
+    const { as, planned } = await user(t);
+    const blockId = await planned(day("2026-10-12"));
+    await as.mutation(api.blocks.setStatus, {
+      blockId,
+      action: { type: "skip" },
+      now: { date: day("2026-10-12"), minute: 500 },
+    });
+    // Planned blocks since then, untouched, do not count as recorded.
+    await planned(day("2026-10-13"));
+    await planned(day("2026-10-14"));
+    await planned(THU);
+    expect(await as.query(api.days.returning, { today: THU })).toBe(true);
+  });
+
+  test("a review counts as recorded", async () => {
+    const t = newTest();
+    const { as, planned } = await user(t);
+    await planned(day("2026-10-10"));
+    await as.mutation(api.days.closeReview, { date: day("2026-10-14") });
+    expect(await as.query(api.days.returning, { today: THU })).toBe(false);
+    // A main focus alone is a plan, not a record.
+    await as.mutation(api.days.setMainFocus, {
+      date: day("2026-10-17"),
+      mainFocus: "Ship it.",
+    });
+    expect(
+      await as.query(api.days.returning, { today: day("2026-10-17") }),
+    ).toBe(true);
+  });
+
+  test("nothing recorded in the last 14 days, after earlier use: welcome back", async () => {
+    const t = newTest();
+    const { as, logged } = await user(t);
+    await logged(day("2026-09-01"));
+    expect(await as.query(api.days.returning, { today: THU })).toBe(true);
+  });
+
+  test("only the caller's own days count", async () => {
+    const t = newTest();
+    const me = await user(t);
+    const other = await user(t, "other@intent.test");
+    await me.logged(day("2026-10-01"));
+    await other.logged(THU);
+    expect(await me.as.query(api.days.returning, { today: THU })).toBe(true);
+    expect(await other.as.query(api.days.returning, { today: THU })).toBe(
+      false,
+    );
+  });
+});

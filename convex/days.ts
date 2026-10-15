@@ -17,6 +17,19 @@ export const get = query({
   },
 });
 
+/**
+ * Whether `today` (the device's, as the app counts it) opens with "Welcome back. Plan
+ * today?": nothing recorded for two days or more. Never says how many.
+ */
+export const returning = query({
+  args: { today: vDateKey },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const userId = await requireUser(ctx);
+    return await Days.returning(ctx, userId, args.today);
+  },
+});
+
 /** What makes the day a win (PRD P5). Null or blank clears it. */
 export const setMainFocus = mutation({
   args: { date: vDateKey, mainFocus: v.union(v.string(), v.null()) },

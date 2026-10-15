@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 /** Saving starts this long after the last keystroke, or at once on leaving the field. */
 const SAVE_AFTER_MS = 1000;
 
-type SaveState = "idle" | "saving" | "saved" | "failed";
+type SaveState = "idle" | "saving" | "saved" | "unsaved";
 
 /**
  * The day's main focus (PRD P5), one line that saves by itself: a second after typing
@@ -48,7 +48,7 @@ export function MainFocusField({
     } catch {
       // Kept as pending, so leaving the field tries again.
       pending.current = value;
-      setState("failed");
+      setState("unsaved");
     }
   }
 
@@ -76,7 +76,7 @@ export function MainFocusField({
         <p aria-live="polite" className="text-xs text-muted-foreground">
           {state === "saving" && "Saving…"}
           {state === "saved" && "Saved"}
-          {state === "failed" &&
+          {state === "unsaved" &&
             "Not saved yet. It tries again when you leave the field."}
         </p>
       </div>

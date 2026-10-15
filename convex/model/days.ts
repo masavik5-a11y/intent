@@ -1,8 +1,10 @@
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import {
+  isReturning,
   isScalePoint,
   REFLECTION_FIELDS,
+  RETURNING_LOOK_BACK_DAYS,
   type ReflectionField,
 } from "../../shared/days";
 import {
@@ -10,7 +12,7 @@ import {
   MAX_FOCUS_LENGTH,
   MAX_REFLECTION_LENGTH,
 } from "../../shared/text";
-import { isDateKey, type DateKey } from "../../shared/time";
+import { addDays, isDateKey, type DateKey } from "../../shared/time";
 import { appError } from "../lib/errors";
 
 // The only module that writes the days table (CLAUDE.md, rule 4). At most one row per
@@ -77,6 +79,55 @@ export async function closeReview(
   date: DateKey,
 ): Promise<void> {
   await write(ctx, userId, date, { reviewedAt: Date.now() });
+}
+
+/**
+ * Whether today opens with "Welcome back. Plan today?" (shared/days.ts, isReturning):
+ * the latest day of the last 14 with anything recorded (a block marked, an entry
+ * logged, a review closed), read newest first through the date index and stopping
+ * at the first; and whether anything is dated before today at all.
+ */
+export async function returning(
+  ctx: QueryCtx,
+  userId: Id<"users">,
+  today: DateKey,
+): Promise<boolean> {
+  checkDate(today);
+  const from = addDays(today, -RETURNING_LOOK_BACK_DAYS);
+  let lastRecorded: DateKey | null = null;
+  const blocks = ctx.db
+    .query("blocks")
+    .withIndex("by_userId_and_date", (q) =>
+      q.eq("userId", userId).gte("date", from).lte("date", today),
+    )
+    .order("desc");
+  for await (const block of blocks) {
+    if (block.status !== "planned") {
+      lastRecorded = block.date;
+      break;
+    }
+  }
+  const days = ctx.db
+    .query("days")
+    .withIndex("by_userId_and_date", (q) =>
+      q.eq("userId", userId).gte("date", from).lte("date", today),
+    )
+    .order("desc");
+  for await (const day of days) {
+    if (day.reviewedAt !== undefined) {
+      if (lastRecorded === null || day.date > lastRecorded) {
+        lastRecorded = day.date;
+      }
+      break;
+    }
+  }
+  const before = await ctx.db
+    .query("blocks")
+    .withIndex("by_userId_and_date", (q) =>
+      q.eq("userId", userId).lt("date", today),
+    )
+    .first();
+  return isReturning({ lastRecorded, usedBefore: before !== null, today });
 }
 
 // ---------------------------------------------------------------------------

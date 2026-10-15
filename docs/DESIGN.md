@@ -342,6 +342,13 @@ Sentence case everywhere. No exclamation marks. Buttons are verbs: "Plan tomorro
   of skipping), then invites you to write the compass ("Write my compass" or "Later").
   Every step can be skipped, and so can the whole setup. The app opens on `/welcome`
   until it is finished or skipped, then on today.
+- **Back after days away (M3):** when the last day with anything recorded (a status,
+  a logged entry or a review) is two or more days before today, today opens with one
+  line under the header, "Welcome back. Plan today?", in the serif voice, with "Plan
+  today" (the plan screen for today) and "Not now" (put away for the day on this
+  device). Today's plan is already there. Nothing says how long it was or what was
+  missed, and the review is never offered for those days; a past day that is opened
+  shows its quiet "Review the day" link like any other.
 - **Loading:** grid skeleton with hour lines; never a full-page spinner.
 - **Offline:** a small banner, "Offline. Showing the last synced plan.", editing controls
   disabled.
