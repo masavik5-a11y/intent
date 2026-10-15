@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from "convex/react";
+import type { FunctionArgs } from "convex/server";
 import { hasPlan, type StatusAction } from "@shared/blocks";
 import { gridDayOf } from "@shared/grid";
 import { DEFAULT_SETTINGS } from "@shared/settings";
@@ -54,12 +55,22 @@ export function BlockPanel({
   const updateBlock = useMutation(api.blocks.update);
   const removeBlock = useMutation(api.blocks.remove);
   const repeatBlock = useMutation(api.recurrences.repeat);
+  const changeFrom = useMutation(api.recurrences.changeFrom);
+  const endFrom = useMutation(api.recurrences.endFrom);
   const settings = useQuery(api.settings.get);
   const rules = useQuery(api.recurrences.list);
-  const rule =
+  // Its rule, while that still reaches this date: a rule that ended before it leaves
+  // a plain block behind.
+  const linked =
     block.recurrenceId === undefined
       ? undefined
       : rules?.find((item) => item._id === block.recurrenceId);
+  const rule =
+    linked !== undefined &&
+    block.date >= linked.startDate &&
+    (linked.endDate === undefined || linked.endDate >= block.date)
+      ? linked
+      : undefined;
   const today = gridDayOf(now, gridStartMin);
   const category = categories.find((item) => item._id === block.categoryId);
 
@@ -77,6 +88,38 @@ export function BlockPanel({
   }
   const save = (changes: BlockUpdate) => attempt(() => updateBlock(changes));
   const remove = () => attempt(() => removeBlock({ blockId: block._id }));
+
+  /** "This and following": the plan to the rule, the rest to this block. */
+  async function saveFollowing(
+    plan: Omit<
+      FunctionArgs<typeof api.recurrences.changeFrom>,
+      "weekdays" | "endDate"
+    >,
+    rest: BlockUpdate | null,
+  ): Promise<RepeatOutcome> {
+    try {
+      if (rest !== null) await updateBlock(rest);
+      const result = await changeFrom(plan);
+      // Dates left out are said here, in the panel; otherwise it is done.
+      if (result.skipped.length === 0) onClose();
+      return { skipped: result.skipped };
+    } catch (error) {
+      return { error: saveErrorMessage(error) };
+    }
+  }
+
+  async function changeRepeat(choice: RepeatChoice): Promise<RepeatOutcome> {
+    try {
+      const result = await changeFrom({
+        blockId: block._id,
+        weekdays: choice.weekdays,
+        endDate: choice.endDate ?? null,
+      });
+      return { skipped: result.skipped };
+    } catch (error) {
+      return { error: saveErrorMessage(error) };
+    }
+  }
 
   async function repeat(choice: RepeatChoice): Promise<RepeatOutcome> {
     try {
@@ -120,14 +163,26 @@ export function BlockPanel({
           dayPlanUnlocked={dayPlanUnlocked}
           repeat={{
             rule,
-            // Only a plain block on today or later starts a rule; a past day's plan
-            // is a record (PRD section 7, rule 4). Rules load before this offers.
+            // Only a plain block on today or later starts a rule, and only one on
+            // today or later changes it; a past day's plan is a record (PRD section
+            // 7, rule 4). Rules load before either is offered.
             canStart:
               rules !== undefined && rule === undefined && block.date >= today,
+            canChange: rule !== undefined && block.date >= today,
             weekStartsOn:
               settings?.weekStartsOn ?? DEFAULT_SETTINGS.weekStartsOn,
             onRepeat: repeat,
+            onChange: changeRepeat,
           }}
+          following={
+            rule !== undefined && block.detached !== true
+              ? {
+                  onSave: saveFollowing,
+                  onDelete: () =>
+                    attempt(() => endFrom({ blockId: block._id })),
+                }
+              : null
+          }
         />
       ) : (
         <EntryDetail

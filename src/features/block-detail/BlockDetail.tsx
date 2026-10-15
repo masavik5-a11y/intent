@@ -37,7 +37,12 @@ import { COST_OF_SKIPPING_HINT, INTENT_PROMPTS } from "@/lib/intentPrompts";
 import { cn } from "@/lib/utils";
 import { StatusActions } from "@/features/status/StatusActions";
 import { StatusSummary } from "@/features/status/StatusSummary";
-import { RepeatSection, type RepeatProps } from "./RepeatSection";
+import {
+  RepeatSection,
+  type RepeatOutcome,
+  type RepeatProps,
+} from "./RepeatSection";
+import { skippedLine } from "./repeatView";
 import {
   actualProblem,
   actualStartOf,
@@ -45,6 +50,7 @@ import {
   draftProblem,
   inheritedIntent,
   planChanged,
+  splitForFollowing,
   updateArgs,
   type BlockDraft,
 } from "./blockDraft";
@@ -72,6 +78,19 @@ interface BlockDetailProps {
   dayPlanUnlocked: boolean;
   /** Its repeat settings (PRD P3). */
   repeat: Omit<RepeatProps, "blocked">;
+  /**
+   * Set on an occurrence of a repeating block, not changed by hand: changing its plan
+   * or deleting it before it starts asks "This one" or "This and following" (decided
+   * 2026-10-15). Null otherwise.
+   */
+  following: {
+    /** The plan to the rule from this day on; the rest to this block alone. */
+    onSave: (
+      plan: ReturnType<typeof splitForFollowing>["plan"],
+      rest: BlockUpdate | null,
+    ) => Promise<RepeatOutcome>;
+    onDelete: () => Promise<string | null>;
+  } | null;
 }
 
 /**
@@ -93,6 +112,7 @@ export function BlockDetail({
   statusError,
   dayPlanUnlocked,
   repeat,
+  following,
 }: BlockDetailProps) {
   const ids = useId();
   const [draft, setDraft] = useState(() => draftOf(block));
@@ -112,6 +132,9 @@ export function BlockDetail({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // "This one" or "This and following", asked on Save of a repeating block's plan.
+  const [askScope, setAskScope] = useState(false);
+  const [info, setInfo] = useState<string | null>(null);
   const [planUnlockedHere, setPlanUnlockedHere] = useState(false);
   // The past is edited as actual: a started block's plan is frozen behind "Edit plan".
   const planFrozen =
@@ -171,6 +194,7 @@ export function BlockDetail({
   function set<K extends keyof BlockDraft>(key: K, value: BlockDraft[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
     setError(null);
+    setAskScope(false);
   }
 
   function chooseActivity(activityId: string) {
@@ -194,8 +218,37 @@ export function BlockDetail({
       setError(problem);
       return;
     }
+    // A repeating block's plan, still ahead: this one, or this and following. Once
+    // it has started, or on a past day, only this one changes (PRD section 7, rule 4).
+    if (following !== null && !planFrozen && planChanged(block, draft)) {
+      setAskScope(true);
+      return;
+    }
+    await saveThisOne();
+  }
+
+  async function saveThisOne() {
+    setAskScope(false);
     setBusy(true);
     setError(await onSave(updateArgs(block, draft)));
+    setBusy(false);
+  }
+
+  async function saveFollowing() {
+    if (following === null) return;
+    setAskScope(false);
+    setBusy(true);
+    const { plan, rest } = splitForFollowing(updateArgs(block, draft));
+    const outcome = await following.onSave(plan, rest);
+    setBusy(false);
+    if ("error" in outcome) setError(outcome.error);
+    else setInfo(skippedLine(outcome.skipped));
+  }
+
+  async function deleteFollowing() {
+    if (following === null) return;
+    setBusy(true);
+    setError(await following.onDelete());
     setBusy(false);
   }
 
@@ -455,27 +508,53 @@ export function BlockDetail({
             {message}
           </p>
         )}
-        {confirmDelete ? (
-          <div className="flex items-center gap-2">
-            <p className="flex-1 text-sm">Delete this block?</p>
-            <Button
-              type="button"
-              variant="outline"
-              className="h-11 sm:h-9"
-              onClick={() => setConfirmDelete(false)}
-            >
-              Keep it
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              disabled={busy}
-              className="h-11 sm:h-9"
-              onClick={() => void handleDelete()}
-            >
-              Delete
-            </Button>
-          </div>
+        {info !== null && (
+          <p aria-live="polite" className="text-sm text-muted-foreground">
+            {info}
+          </p>
+        )}
+        {askScope ? (
+          <ScopeQuestion
+            question="Change only this one, or this and the following?"
+            busy={busy}
+            onThisOne={() => void saveThisOne()}
+            onFollowing={() => void saveFollowing()}
+            onBack={() => setAskScope(false)}
+            back="Back"
+          />
+        ) : confirmDelete ? (
+          following !== null && !hasStarted(block, now) ? (
+            <ScopeQuestion
+              question="Delete only this one, or this and the following?"
+              busy={busy}
+              destructive
+              onThisOne={() => void handleDelete()}
+              onFollowing={() => void deleteFollowing()}
+              onBack={() => setConfirmDelete(false)}
+              back="Keep it"
+            />
+          ) : (
+            <div className="flex items-center gap-2">
+              <p className="flex-1 text-sm">Delete this block?</p>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 sm:h-9"
+                onClick={() => setConfirmDelete(false)}
+              >
+                Keep it
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={busy}
+                className="h-11 sm:h-9"
+                onClick={() => void handleDelete()}
+              >
+                Delete
+              </Button>
+            </div>
+          )
         ) : (
           <div className="flex items-center gap-2">
             <Button
@@ -502,5 +581,62 @@ export function BlockDetail({
         )}
       </div>
     </form>
+  );
+}
+
+/**
+ * "This one" or "This and following" for a repeating block (decided 2026-10-15), in
+ * place of the form's buttons until it is answered.
+ */
+function ScopeQuestion({
+  question,
+  busy,
+  destructive = false,
+  onThisOne,
+  onFollowing,
+  onBack,
+  back,
+}: {
+  question: string;
+  busy: boolean;
+  destructive?: boolean;
+  onThisOne: () => void;
+  onFollowing: () => void;
+  onBack: () => void;
+  back: string;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-sm">{question}</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-11 sm:h-9"
+          onClick={onBack}
+        >
+          {back}
+        </Button>
+        <div className="flex-1" />
+        <Button
+          type="button"
+          variant="outline"
+          disabled={busy}
+          className="h-11 sm:h-9"
+          onClick={onThisOne}
+        >
+          This one
+        </Button>
+        <Button
+          type="button"
+          variant={destructive ? "destructive" : "default"}
+          disabled={busy}
+          className="h-11 sm:h-9"
+          onClick={onFollowing}
+        >
+          This and following
+        </Button>
+      </div>
+    </div>
   );
 }

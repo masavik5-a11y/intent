@@ -7,6 +7,7 @@ import {
   draftProblem,
   inheritedIntent,
   planChanged,
+  splitForFollowing,
   updateArgs,
 } from "./blockDraft";
 
@@ -244,5 +245,28 @@ describe("planChanged", () => {
     expect(planChanged(gymBlock, { ...draft, plannedStartMin: 720 })).toBe(
       true,
     );
+  });
+});
+
+describe("splitForFollowing", () => {
+  test("the plan goes to the rule, the rest stays this block's", () => {
+    const args = updateArgs(gymBlock, {
+      ...draftOf(gymBlock),
+      plannedStartMin: 720,
+      focus: "Legs",
+      why: "For the shoot.",
+    });
+    expect(splitForFollowing(args)).toEqual({
+      plan: { blockId: gymBlock._id, plannedStartMin: 720, focus: "Legs" },
+      rest: { blockId: gymBlock._id, why: "For the shoot." },
+    });
+  });
+
+  test("with only the plan changed there is no rest", () => {
+    const args = updateArgs(gymBlock, { ...draftOf(gymBlock), title: "Lift" });
+    expect(splitForFollowing(args)).toEqual({
+      plan: { blockId: gymBlock._id, title: "Lift" },
+      rest: null,
+    });
   });
 });

@@ -506,10 +506,23 @@ Cost is about 44,000 small function calls a month, far inside the free allowance
   placed with `planOccurrences` (`shared/recurrence.ts`, over `placeSpans` in
   `shared/lanes.ts`), so the inserts of one run see each other and the occurrences of
   rules handled before them.
-- A block edited by hand is marked `detached` and is never regenerated or deleted by rule
-  changes. Skipping one occurrence is just status `skipped`, or deleting the block.
-- Editing a rule ("this and following") updates the rule, deletes future non-detached
-  `planned` blocks of that rule, and materialises again.
+- A block whose plan is changed by hand is marked `detached` (`blocks.update` does it
+  whenever the title, activity, category, focus, date, start or length of an
+  occurrence changes; marking, actual times, the note and intent never do). Rule
+  changes never regenerate or delete it. Skipping one occurrence is just status
+  `skipped`, or deleting the block.
+- **"This and following"** (`recurrences.changeFrom`, from an occurrence on date S):
+  from the rule's first date the rule itself is rewritten; from a later one the rule
+  ends at S − 1 and a new rule carries on from S, so past days keep the plan they had.
+  The occurrences from S on that are still `planned` and not detached are deleted and
+  made anew (one deleted by hand may come back, Filip's decision); the marked and
+  detached ones stay and move to the rule that now covers them, so no date gets a
+  second block. The block it was made from takes the new plan and follows the rule
+  again, unless only the weekdays or the end changed and it was moved by hand.
+- **Deleting "this and following"** (`recurrences.endFrom`): the rule ends at S − 1
+  (it is kept, ended, so the blocks that stay still point at it); S's block goes, and
+  so do the later occurrences still to do. A rule that no longer reaches a block's
+  date leaves a plain block, which may start a rule of its own.
 - `shared/recurrence.ts` answers "which dates does this rule produce between A and B"
   (`ruleDates`, `datesToMaterialize`) and "which of them become blocks"
   (`planOccurrences`).
@@ -717,6 +730,8 @@ Things assumed here that must be confirmed in the milestone that depends on them
 | 2026-10-15 | A rule holds the plan (title, activity, category, focus, start, length); intent overrides and done-when stay on each block. A rule is made from a saved block on today or later, which becomes its first occurrence; with unsaved plan edits "Repeat" waits for Save. | The why lives on the activity; done-when is usually written per day. A rule made from what is on screen but not saved would surprise. |
 | 2026-10-15 | Materialisation: window through UTC today + 15; only dates after `materializedThrough`; no tombstone; an overlapping occurrence is not made and the block there stays (Filip's decisions). Making a rule reports the dates its first window left out; later ones are left out quietly. | The cron needs no zone; a deleted occurrence stays deleted; nothing the user placed moves. |
 | 2026-10-15 | The daily job runs at 02:17 UTC over all rules in pages of 25; opening a later date materialises on demand, at most a year past UTC today. An ended rule is not written again. | A page per run stays inside a mutation's limits however many rules there are; the cap keeps a stray URL from writing years of blocks. |
+| 2026-10-15 | Editing a repeating block (Filip's decision, built so): changing the plan of an occurrence still ahead, or deleting it, asks "This one" (it detaches) or "This and following"; marking, actual times, the note and intent never ask or detach; an occurrence that has started or is past changes only itself. A detached occurrence edits like a plain block. Repeat settings on an occurrence ("Change", "Stop after this one") apply from its date and need it to be today or later. When "This and following" leaves dates out, the panel stays open to say so. | Every one-off change stays one tap away from the default, and nothing that happened is ever rewritten by a rule. |
+| 2026-10-15 | "This and following" from a later date splits the rule (old one ends the day before, a new one starts); from the first date it rewrites the rule. Deleting ends the rule rather than removing its document. | Past occurrences keep the rule they were made by, and every block that stays can still say where it came from. |
 | 2026-10-15 | The reflection saves on Next; `reviewedAt` is set by "Close the day" or "Plan tomorrow". Opening the review again shows the saved answers and closing it again updates `reviewedAt`. "Plan tomorrow" is offered only when the next day is today or later. | Leaving halfway keeps what was typed but does not count as reviewed. Planning a day that is over makes no sense. |
 
 ## 17. Implementation notes

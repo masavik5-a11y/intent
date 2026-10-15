@@ -509,3 +509,364 @@ describe("recurrences.materializeThrough", () => {
     expect(mine?.materializedThrough).toBe("2026-10-30");
   });
 });
+
+describe("editing one occurrence ('This one')", () => {
+  test("a plan edit detaches it; the rule and the others stay", async () => {
+    const t = newTest();
+    const { userId, as, body } = await setUp(t);
+    const { rule } = await repeating(as, body, "Gym", 660, 90, EVERY_DAY);
+    const friday = (await allBlocks(t, userId)).find(
+      (block) => block.date === "2026-10-16",
+    );
+    if (friday === undefined) throw new Error("no Friday");
+    await as.mutation(api.blocks.update, {
+      blockId: friday._id,
+      plannedStartMin: 1080,
+    });
+    const after = await allBlocks(t, userId);
+    expect(after.find((block) => block._id === friday._id)).toMatchObject({
+      plannedStartMin: 1080,
+      detached: true,
+      recurrenceId: rule._id,
+    });
+    expect(
+      after.filter((block) => block.detached === true).map((b) => b.date),
+    ).toEqual(["2026-10-16"]);
+    const [same] = await as.query(api.recurrences.list, {});
+    expect(same).toEqual(rule);
+  });
+
+  test("marking it, its actual times, its note and its intent never detach it", async () => {
+    const t = newTest();
+    const { userId, as, body } = await setUp(t);
+    const { blockId } = await repeating(as, body, "Gym", 660, 90, EVERY_DAY);
+    await as.mutation(api.blocks.setStatus, {
+      blockId,
+      action: { type: "done" },
+      now: { date: THU, minute: 800 },
+    });
+    await as.mutation(api.blocks.update, {
+      blockId,
+      actualStartMin: 670,
+      actualDurationMin: 80,
+      note: "Heavy.",
+      why: "Today, for the shoot.",
+      doneWhen: "Four lifts.",
+    });
+    // The same plan sent back is not a change either.
+    await as.mutation(api.blocks.update, { blockId, plannedStartMin: 660 });
+    const block = (await allBlocks(t, userId)).find((b) => b._id === blockId);
+    expect(block?.detached).toBeUndefined();
+    expect(block?.status).toBe("done");
+  });
+});
+
+describe("recurrences.changeFrom ('This and following')", () => {
+  test("from the first date: the rule changes, the days to come follow", async () => {
+    const t = newTest();
+    const { userId, as, body } = await setUp(t);
+    const { blockId, rule } = await repeating(
+      as,
+      body,
+      "Gym",
+      660,
+      90,
+      EVERY_DAY,
+    );
+    const blocks = await allBlocks(t, userId);
+    const sat = blocks.find((block) => block.date === "2026-10-17");
+    const sun = blocks.find((block) => block.date === "2026-10-18");
+    if (sat === undefined || sun === undefined) throw new Error("missing");
+    // Saturday was skipped ahead of time, Sunday moved by hand.
+    await as.mutation(api.blocks.setStatus, {
+      blockId: sat._id,
+      action: { type: "skip" },
+      now: { date: THU, minute: 600 },
+    });
+    await as.mutation(api.blocks.update, {
+      blockId: sun._id,
+      plannedStartMin: 1020,
+    });
+
+    expect(
+      await as.mutation(api.recurrences.changeFrom, {
+        blockId,
+        plannedStartMin: 720,
+        focus: "Legs",
+      }),
+    ).toEqual({ skipped: [] });
+
+    const [changed] = await as.query(api.recurrences.list, {});
+    expect(changed).toMatchObject({
+      _id: rule._id,
+      startMin: 720,
+      focus: "Legs",
+      startDate: THU,
+      materializedThrough: "2026-10-30",
+    });
+    const after = await allBlocks(t, userId);
+    const gym = after.filter((block) => block.recurrenceId === rule._id);
+    // One a day, none twice.
+    expect(gym.map((block) => block.date)).toEqual([
+      ...new Set(gym.map((block) => block.date)),
+    ]);
+    expect(gym).toHaveLength(16);
+    for (const block of gym) {
+      if (block._id === sat._id) {
+        expect(block).toMatchObject({
+          status: "skipped",
+          plannedStartMin: 660,
+        });
+      } else if (block._id === sun._id) {
+        expect(block).toMatchObject({ detached: true, plannedStartMin: 1020 });
+      } else {
+        expect(block).toMatchObject({ plannedStartMin: 720, focus: "Legs" });
+      }
+    }
+  });
+
+  test("from a later date: the past keeps its plan, a new rule carries on", async () => {
+    const t = newTest();
+    const { userId, as, body } = await setUp(t);
+    const { rule } = await repeating(as, body, "Gym", 660, 90, EVERY_DAY);
+    const blocks = await allBlocks(t, userId);
+    const tue = blocks.find((block) => block.date === "2026-10-20");
+    const thu = blocks.find((block) => block.date === "2026-10-22");
+    if (tue === undefined || thu === undefined) throw new Error("missing");
+    // A deleted occurrence after the change may come back; that is fine.
+    await as.mutation(api.blocks.remove, { blockId: thu._id });
+
+    await as.mutation(api.recurrences.changeFrom, {
+      blockId: tue._id,
+      title: "Gym with Tom",
+      weekdays: [2, 4], // Tuesdays and Thursdays
+    });
+
+    const rules = await as.query(api.recurrences.list, {});
+    expect(rules).toHaveLength(2);
+    const old = rules.find((item) => item._id === rule._id);
+    const next = rules.find((item) => item._id !== rule._id);
+    expect(old?.endDate).toBe("2026-10-19");
+    expect(next).toMatchObject({
+      title: "Gym with Tom",
+      weekdays: [2, 4],
+      startDate: "2026-10-20",
+      startMin: 660,
+    });
+    const after = await allBlocks(t, userId);
+    expect(datesOf(after, "Gym")).toEqual([
+      THU,
+      "2026-10-16",
+      "2026-10-17",
+      "2026-10-18",
+      "2026-10-19",
+    ]);
+    expect(datesOf(after, "Gym with Tom")).toEqual([
+      "2026-10-20",
+      "2026-10-22",
+      "2026-10-27",
+      "2026-10-29",
+    ]);
+    expect(after.find((block) => block._id === tue._id)?.recurrenceId).toBe(
+      next?._id,
+    );
+  });
+
+  test("after a change, the daily run twice makes nothing twice", async () => {
+    const t = newTest();
+    const { userId, as, body } = await setUp(t);
+    const { blockId } = await repeating(as, body, "Gym", 660, 90, EVERY_DAY);
+    await as.mutation(api.recurrences.changeFrom, {
+      blockId,
+      plannedDurationMin: 60,
+    });
+    vi.setSystemTime(new Date("2026-10-21T02:17:00Z"));
+    await t.mutation(internal.recurrences.materializeAll, {});
+    const once = await allBlocks(t, userId);
+    await t.mutation(internal.recurrences.materializeAll, {});
+    const twice = await allBlocks(t, userId);
+    expect(twice.map((block) => block._id)).toEqual(
+      once.map((block) => block._id),
+    );
+    const gym = datesOf(twice, "Gym");
+    expect(new Set(gym).size).toBe(gym.length);
+    expect(gym.at(-1)).toBe("2026-11-05");
+    for (const block of twice) expect(block.plannedDurationMin).toBe(60);
+  });
+
+  test("changing only when it repeats, from a block moved by hand, keeps that block's time", async () => {
+    const t = newTest();
+    const { userId, as, body } = await setUp(t);
+    await repeating(as, body, "Gym", 660, 90, EVERY_DAY);
+    const tue = (await allBlocks(t, userId)).find(
+      (block) => block.date === "2026-10-20",
+    );
+    if (tue === undefined) throw new Error("no Tuesday");
+    await as.mutation(api.blocks.update, {
+      blockId: tue._id,
+      plannedStartMin: 1080,
+    });
+    await as.mutation(api.recurrences.changeFrom, {
+      blockId: tue._id,
+      weekdays: [2],
+    });
+    const after = await allBlocks(t, userId);
+    expect(after.find((block) => block._id === tue._id)).toMatchObject({
+      plannedStartMin: 1080,
+      detached: true,
+    });
+    expect(datesOf(after, "Gym").filter((date) => date > "2026-10-20")).toEqual(
+      ["2026-10-27"],
+    );
+  });
+
+  test("an earlier end takes the later days still to do away", async () => {
+    const t = newTest();
+    const { userId, as, body } = await setUp(t);
+    const { blockId } = await repeating(as, body, "Gym", 660, 90, EVERY_DAY);
+    await as.mutation(api.recurrences.changeFrom, {
+      blockId,
+      endDate: d("2026-10-18"),
+    });
+    expect(datesOf(await allBlocks(t, userId), "Gym")).toEqual([
+      THU,
+      "2026-10-16",
+      "2026-10-17",
+      "2026-10-18",
+    ]);
+    // And taking the end away fills the window again.
+    await as.mutation(api.recurrences.changeFrom, { blockId, endDate: null });
+    expect(datesOf(await allBlocks(t, userId), "Gym")).toHaveLength(16);
+  });
+
+  test("a date now taken is left out and named", async () => {
+    const t = newTest();
+    const { userId, as, body } = await setUp(t);
+    const { blockId } = await repeating(as, body, "Gym", 660, 90, EVERY_DAY);
+    await plan(as, body, d("2026-10-19"), 1080, 60, "Call");
+    expect(
+      await as.mutation(api.recurrences.changeFrom, {
+        blockId,
+        plannedStartMin: 1050,
+      }),
+    ).toEqual({ skipped: [{ date: "2026-10-19", blockedBy: "Call" }] });
+    expect(datesOf(await allBlocks(t, userId), "Gym")).not.toContain(
+      "2026-10-19",
+    );
+  });
+
+  test("the block's own new time must fit, or nothing changes", async () => {
+    const t = newTest();
+    const { userId, as, body } = await setUp(t);
+    const { blockId } = await repeating(as, body, "Gym", 660, 90, EVERY_DAY);
+    await plan(as, body, THU, 1080, 60, "Call");
+    const before = await allBlocks(t, userId);
+    const rulesBefore = await as.query(api.recurrences.list, {});
+    await expectAppError(
+      as.mutation(api.recurrences.changeFrom, {
+        blockId,
+        plannedStartMin: 1050,
+      }),
+      "OVERLAP",
+    );
+    expect(await allBlocks(t, userId)).toEqual(before);
+    expect(await as.query(api.recurrences.list, {})).toEqual(rulesBefore);
+  });
+
+  test("refuses what is not an occurrence, or not the caller's", async () => {
+    const t = newTest();
+    const me = await setUp(t);
+    const other = await setUp(t, "other@intent.test");
+    const plain = await plan(me.as, me.body, THU, 540, 60, "Write");
+    await expectAppError(
+      me.as.mutation(api.recurrences.changeFrom, {
+        blockId: plain,
+        title: "X",
+      }),
+      "INVALID_INPUT",
+    );
+    const { blockId } = await repeating(me.as, me.body, "Gym", 660, 90, [4]);
+    await expectAppError(
+      other.as.mutation(api.recurrences.changeFrom, { blockId, title: "X" }),
+      "NOT_FOUND",
+    );
+    await expectAppError(
+      other.as.mutation(api.recurrences.endFrom, { blockId }),
+      "NOT_FOUND",
+    );
+    await expectAppError(
+      me.as.mutation(api.recurrences.changeFrom, { blockId, weekdays: [] }),
+      "INVALID_INPUT",
+    );
+    await expectAppError(
+      me.as.mutation(api.recurrences.changeFrom, {
+        blockId,
+        endDate: d("2026-10-14"),
+      }),
+      "INVALID_INPUT",
+    );
+    await expectAppError(
+      t.mutation(api.recurrences.endFrom, { blockId }),
+      "UNAUTHENTICATED",
+    );
+  });
+});
+
+describe("recurrences.endFrom (deleting 'This and following')", () => {
+  test("the rule ends the day before; marked and moved ones stay", async () => {
+    const t = newTest();
+    const { userId, as, body } = await setUp(t);
+    const { rule } = await repeating(as, body, "Gym", 660, 90, EVERY_DAY);
+    const blocks = await allBlocks(t, userId);
+    const tue = blocks.find((block) => block.date === "2026-10-20");
+    const wed = blocks.find((block) => block.date === "2026-10-21");
+    const thu = blocks.find((block) => block.date === "2026-10-22");
+    if (tue === undefined || wed === undefined || thu === undefined) {
+      throw new Error("missing");
+    }
+    await as.mutation(api.blocks.setStatus, {
+      blockId: wed._id,
+      action: { type: "skip", reason: "noTime" },
+      now: { date: THU, minute: 600 },
+    });
+    await as.mutation(api.blocks.update, {
+      blockId: thu._id,
+      plannedStartMin: 1080,
+    });
+
+    await as.mutation(api.recurrences.endFrom, { blockId: tue._id });
+
+    const [ended] = await as.query(api.recurrences.list, {});
+    expect(ended?.endDate).toBe("2026-10-19");
+    const after = await allBlocks(t, userId);
+    expect(datesOf(after, "Gym")).toEqual([
+      THU,
+      "2026-10-16",
+      "2026-10-17",
+      "2026-10-18",
+      "2026-10-19",
+      "2026-10-21",
+      "2026-10-22",
+    ]);
+    // The daily run makes nothing more.
+    vi.setSystemTime(new Date("2026-10-25T02:17:00Z"));
+    await t.mutation(internal.recurrences.materializeAll, {});
+    expect(await allBlocks(t, userId)).toEqual(after);
+    expect(rule._id).toBe(ended?._id);
+  });
+
+  test("from the first date, every occurrence still to do goes", async () => {
+    const t = newTest();
+    const { userId, as, body } = await setUp(t);
+    const { blockId } = await repeating(as, body, "Gym", 660, 90, EVERY_DAY);
+    await as.mutation(api.recurrences.endFrom, { blockId });
+    expect(await allBlocks(t, userId)).toEqual([]);
+    // That block may now start a rule of its own again, if planned anew.
+    const again = await plan(as, body, THU, 660, 90, "Gym");
+    await as.mutation(api.recurrences.repeat, {
+      blockId: again,
+      weekdays: [4],
+    });
+    expect(await as.query(api.recurrences.list, {})).toHaveLength(2);
+  });
+});

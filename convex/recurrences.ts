@@ -33,6 +33,47 @@ export const repeat = mutation({
   },
 });
 
+/** In a change: left out keeps the field, null clears it. */
+const clearableText = v.optional(v.union(v.string(), v.null()));
+
+/**
+ * "This and following" (PRD P3): changes the rule of the block's occurrence from its
+ * date on: what (title, activity, category, focus), when (start, length), and on which
+ * weekdays until when. Returns the dates of the window that did not fit.
+ */
+export const changeFrom = mutation({
+  args: {
+    blockId: v.id("blocks"),
+    title: v.optional(v.string()),
+    focus: clearableText,
+    activityId: v.optional(v.union(v.id("activities"), v.null())),
+    categoryId: v.optional(v.id("categories")),
+    plannedStartMin: v.optional(v.number()),
+    plannedDurationMin: v.optional(v.number()),
+    weekdays: v.optional(v.array(v.number())),
+    endDate: v.optional(v.union(vDateKey, v.null())),
+  },
+  returns: v.object({ skipped: vSkipped }),
+  handler: async (ctx, { blockId, ...changes }) => {
+    const userId = await requireUser(ctx);
+    return await Recurrences.changeFrom(ctx, userId, blockId, changes);
+  },
+});
+
+/**
+ * Deleting "this and following": the rule ends the day before the block's date, and
+ * the occurrences from then on that are still to do go with the block.
+ */
+export const endFrom = mutation({
+  args: { blockId: v.id("blocks") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const userId = await requireUser(ctx);
+    await Recurrences.endFrom(ctx, userId, args.blockId);
+    return null;
+  },
+});
+
 /**
  * Opening a date beyond the materialised window (docs/ARCHITECTURE.md, section 10):
  * the user's rules are materialised through it, at most a year ahead.
