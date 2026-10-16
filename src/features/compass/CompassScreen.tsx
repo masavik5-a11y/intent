@@ -1,12 +1,15 @@
 import { useCallback } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/lib/api";
+import { GoalsSection } from "@/features/goals/GoalsSection";
+import { WeeklyTargets } from "@/features/goals/WeeklyTargets";
 import { CompassText } from "./CompassText";
 import { ANTI_VISION, lastEditedText, VISION } from "./compassCopy";
 
 /**
  * The Compass (PRD V1): the life you are building and the life you refuse to drift
  * into, in your own words. Nothing here is shown anywhere else unless you ask.
+ * Below them, the goals and the weekly targets (PRD U5, U6).
  */
 export function CompassScreen() {
   const compass = useQuery(api.compass.get);
@@ -53,6 +56,10 @@ export function CompassScreen() {
           )}
         </>
       )}
+      <div className="grid gap-8 border-t pt-6 md:grid-cols-[3fr_2fr]">
+        <GoalsSection />
+        <WeeklyTargets />
+      </div>
     </div>
   );
 }

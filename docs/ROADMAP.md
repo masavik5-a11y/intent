@@ -248,7 +248,7 @@ by themselves.
 - [x] Schema: `goals`, `weeklyTargetMin` on categories, `goalId` on activities.
 - [x] `shared/pace.ts`: `weeklyPace`, `daysLeft`, with tests for the pace rules in PRD
       section 7 (week boundaries, today not yet counted, target reached, no target).
-- [ ] Compass screen: goals list (create, edit, mark done or dropped) and the weekly
+- [x] Compass screen: goals list (create, edit, mark done or dropped) and the weekly
       target per category.
 - [ ] Link an activity to a goal. Goal chip with days left on the now panel.
 - [ ] Pace line on the now panel for the current category.
