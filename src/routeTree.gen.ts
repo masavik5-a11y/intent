@@ -15,10 +15,11 @@ import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppActivitiesRouteImport } from './routes/_app/activities'
 import { Route as AppCompassRouteImport } from './routes/_app/compass'
 import { Route as AppInsightsRouteImport } from './routes/_app/insights'
-import { Route as AppMonthRouteImport } from './routes/_app/month'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppWelcomeRouteImport } from './routes/_app/welcome'
 import { Route as AppDayDateRouteImport } from './routes/_app/day.$date'
+import { Route as AppMonthIndexRouteImport } from './routes/_app/month.index'
+import { Route as AppMonthDateRouteImport } from './routes/_app/month.$date'
 import { Route as AppPlanDateRouteImport } from './routes/_app/plan.$date'
 import { Route as AppWeekIndexRouteImport } from './routes/_app/week.index'
 import { Route as AppWeekDateRouteImport } from './routes/_app/week.$date'
@@ -52,11 +53,6 @@ const AppInsightsRoute = AppInsightsRouteImport.update({
   path: '/insights',
   getParentRoute: () => AppRoute,
 } as any)
-const AppMonthRoute = AppMonthRouteImport.update({
-  id: '/month',
-  path: '/month',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -70,6 +66,16 @@ const AppWelcomeRoute = AppWelcomeRouteImport.update({
 const AppDayDateRoute = AppDayDateRouteImport.update({
   id: '/day/$date',
   path: '/day/$date',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMonthIndexRoute = AppMonthIndexRouteImport.update({
+  id: '/month/',
+  path: '/month/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMonthDateRoute = AppMonthDateRouteImport.update({
+  id: '/month/$date',
+  path: '/month/$date',
   getParentRoute: () => AppRoute,
 } as any)
 const AppPlanDateRoute = AppPlanDateRouteImport.update({
@@ -94,12 +100,13 @@ export interface FileRoutesByFullPath {
   '/activities': typeof AppActivitiesRoute
   '/compass': typeof AppCompassRoute
   '/insights': typeof AppInsightsRoute
-  '/month': typeof AppMonthRoute
   '/settings': typeof AppSettingsRoute
   '/welcome': typeof AppWelcomeRoute
   '/day/$date': typeof AppDayDateRoute
+  '/month/$date': typeof AppMonthDateRoute
   '/plan/$date': typeof AppPlanDateRoute
   '/week/$date': typeof AppWeekDateRoute
+  '/month/': typeof AppMonthIndexRoute
   '/week/': typeof AppWeekIndexRoute
 }
 export interface FileRoutesByTo {
@@ -107,13 +114,14 @@ export interface FileRoutesByTo {
   '/activities': typeof AppActivitiesRoute
   '/compass': typeof AppCompassRoute
   '/insights': typeof AppInsightsRoute
-  '/month': typeof AppMonthRoute
   '/settings': typeof AppSettingsRoute
   '/welcome': typeof AppWelcomeRoute
   '/': typeof AppIndexRoute
   '/day/$date': typeof AppDayDateRoute
+  '/month/$date': typeof AppMonthDateRoute
   '/plan/$date': typeof AppPlanDateRoute
   '/week/$date': typeof AppWeekDateRoute
+  '/month': typeof AppMonthIndexRoute
   '/week': typeof AppWeekIndexRoute
 }
 export interface FileRoutesById {
@@ -123,13 +131,14 @@ export interface FileRoutesById {
   '/_app/activities': typeof AppActivitiesRoute
   '/_app/compass': typeof AppCompassRoute
   '/_app/insights': typeof AppInsightsRoute
-  '/_app/month': typeof AppMonthRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/welcome': typeof AppWelcomeRoute
   '/_app/': typeof AppIndexRoute
   '/_app/day/$date': typeof AppDayDateRoute
+  '/_app/month/$date': typeof AppMonthDateRoute
   '/_app/plan/$date': typeof AppPlanDateRoute
   '/_app/week/$date': typeof AppWeekDateRoute
+  '/_app/month/': typeof AppMonthIndexRoute
   '/_app/week/': typeof AppWeekIndexRoute
 }
 export interface FileRouteTypes {
@@ -140,12 +149,13 @@ export interface FileRouteTypes {
     | '/activities'
     | '/compass'
     | '/insights'
-    | '/month'
     | '/settings'
     | '/welcome'
     | '/day/$date'
+    | '/month/$date'
     | '/plan/$date'
     | '/week/$date'
+    | '/month/'
     | '/week/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -153,13 +163,14 @@ export interface FileRouteTypes {
     | '/activities'
     | '/compass'
     | '/insights'
-    | '/month'
     | '/settings'
     | '/welcome'
     | '/'
     | '/day/$date'
+    | '/month/$date'
     | '/plan/$date'
     | '/week/$date'
+    | '/month'
     | '/week'
   id:
     | '__root__'
@@ -168,13 +179,14 @@ export interface FileRouteTypes {
     | '/_app/activities'
     | '/_app/compass'
     | '/_app/insights'
-    | '/_app/month'
     | '/_app/settings'
     | '/_app/welcome'
     | '/_app/'
     | '/_app/day/$date'
+    | '/_app/month/$date'
     | '/_app/plan/$date'
     | '/_app/week/$date'
+    | '/_app/month/'
     | '/_app/week/'
   fileRoutesById: FileRoutesById
 }
@@ -227,13 +239,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppInsightsRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/month': {
-      id: '/_app/month'
-      path: '/month'
-      fullPath: '/month'
-      preLoaderRoute: typeof AppMonthRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/settings': {
       id: '/_app/settings'
       path: '/settings'
@@ -253,6 +258,20 @@ declare module '@tanstack/react-router' {
       path: '/day/$date'
       fullPath: '/day/$date'
       preLoaderRoute: typeof AppDayDateRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/month/': {
+      id: '/_app/month/'
+      path: '/month'
+      fullPath: '/month/'
+      preLoaderRoute: typeof AppMonthIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/month/$date': {
+      id: '/_app/month/$date'
+      path: '/month/$date'
+      fullPath: '/month/$date'
+      preLoaderRoute: typeof AppMonthDateRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/plan/$date': {
@@ -283,13 +302,14 @@ interface AppRouteChildren {
   AppActivitiesRoute: typeof AppActivitiesRoute
   AppCompassRoute: typeof AppCompassRoute
   AppInsightsRoute: typeof AppInsightsRoute
-  AppMonthRoute: typeof AppMonthRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppWelcomeRoute: typeof AppWelcomeRoute
   AppIndexRoute: typeof AppIndexRoute
   AppDayDateRoute: typeof AppDayDateRoute
+  AppMonthDateRoute: typeof AppMonthDateRoute
   AppPlanDateRoute: typeof AppPlanDateRoute
   AppWeekDateRoute: typeof AppWeekDateRoute
+  AppMonthIndexRoute: typeof AppMonthIndexRoute
   AppWeekIndexRoute: typeof AppWeekIndexRoute
 }
 
@@ -297,13 +317,14 @@ const AppRouteChildren: AppRouteChildren = {
   AppActivitiesRoute: AppActivitiesRoute,
   AppCompassRoute: AppCompassRoute,
   AppInsightsRoute: AppInsightsRoute,
-  AppMonthRoute: AppMonthRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppWelcomeRoute: AppWelcomeRoute,
   AppIndexRoute: AppIndexRoute,
   AppDayDateRoute: AppDayDateRoute,
+  AppMonthDateRoute: AppMonthDateRoute,
   AppPlanDateRoute: AppPlanDateRoute,
   AppWeekDateRoute: AppWeekDateRoute,
+  AppMonthIndexRoute: AppMonthIndexRoute,
   AppWeekIndexRoute: AppWeekIndexRoute,
 }
 
