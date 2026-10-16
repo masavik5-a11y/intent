@@ -2,14 +2,14 @@
 
 Build order, one milestone at a time. Requirement IDs refer to [PRD.md](PRD.md).
 
-**Current milestone: M3. Every slice is built and ticked (2026-10-15, pull request #2);
-its "Done when" needs the merge and three real days of the whole loop.** M2 is merged
-and live (main at 576de17, the live bundle checked 2026-10-15); its "Done when", one
-real day recorded on the live app, is still waiting for Filip's day, which runs in
-parallel. M3 was started before it on Filip's say-so (ARCHITECTURE.md section 16). M0
-and M1 met their "Done when" on the live app (2026-10-14). One M1 check is still to be
-seen once: the draining bar on a block whose activity has Countdown on. Update this
-line when a milestone is finished.
+**Current milestones: M5, M6 and M7, built in that order in one pull request
+(2026-10-16), with M4 moved after M7 on Filip's say-so (ARCHITECTURE.md section 16).**
+M3 is merged and live (main at bef936d, deployed 2026-10-16); its "Done when", three
+real days of the whole loop, runs in parallel, as does M2's one real day. The gate
+between milestones is lifted for this work (Filip, 2026-10-16). M0 and M1 met their
+"Done when" on the live app (2026-10-14). One M1 check is still to be seen once: the
+draining bar on a block whose activity has Countdown on. Update this line when a
+milestone is finished.
 
 ## How to work
 
@@ -19,7 +19,8 @@ line when a milestone is finished.
   tests exist and pass, `npm run check` is green, and its box is ticked here.
 - Do not start a milestone before the previous one meets its "Done when".
 - **Start using the app for real after M3.** Everything after that should be shaped by
-  what annoys you in daily use, so the order of M5 to M9 may change. Change it here.
+  what annoys you in daily use, so the order of M5 to M9 may change. Change it here. (Done once: M4 now comes after
+  M7.)
 - If a slice turns out bigger than a session, split it here before continuing.
 
 A good first prompt for a new session:
@@ -35,10 +36,10 @@ A good first prompt for a new session:
 | M1 | Plan a day | Activities with their why, a day grid, the now panel with countdown, the compass. |
 | M2 | Track what happened | Done / Partly / Skip, the actual lane, drift, live untracked time, "Not feeling it". |
 | M3 | Close the loop | Evening review, plan tomorrow, recurring blocks. **Daily use starts here.** |
-| M4 | Notifications and offline | Block-start and ten-minutes-left notifications, morning and evening nudges, offline view. |
 | M5 | Pace and goals | Weekly targets with pace, goals with days left. |
 | M6 | Feel and speed | Drag and resize, keyboard shortcuts, motion, phone polish. |
 | M7 | Week, month, inbox | Wider views, capturing things for later, replanning a slipping day. |
+| M4 | Notifications and offline | Block-start and ten-minutes-left notifications, morning and evening nudges, offline view. Built after M7 (reordered 2026-10-16). |
 | M8 | Insights and weekly review | Looking back over weeks, you versus last week, the skip check. |
 | M9 | Extras | Year bar and life in weeks, shareable week card, export, images. |
 
@@ -238,40 +239,6 @@ by themselves.
 
 ---
 
-## M4 — Notifications and offline
-
-**Goal:** the app reaches you at the right moments, and opens without a connection.
-Covers N1–N4, U3, S2, S4.
-
-**Verify first:** time-zone conversion in Convex's default runtime; minute crons on the
-free plan; Web Push on your actual phone with battery optimisation on; the Convex client
-API for connection state.
-
-**Slices:**
-
-- [ ] VAPID keys generated and stored as environment variables (ARCHITECTURE.md
-      section 12).
-- [ ] Service worker: `push` and `notificationclick` handlers.
-- [ ] `pushSubscriptions` table; Settings: "Enable notifications on this device", device
-      list, "Send a test notification".
-- [ ] `push.send` Node action, removing dead subscriptions.
-- [ ] Dispatcher cron for block starts, with tests: sent once, respects the global and
-      per-activity switches, skips blocks already marked, and never includes anti-vision
-      or cost-of-skipping text in any payload (V4).
-- [ ] Ten-minutes-left for pressure blocks, including blocks that cross midnight, with
-      tests.
-- [ ] Morning and evening nudges with times in Settings.
-- [ ] Offline: snapshot of today, offline banner, controls disabled.
-- [ ] Android check: notifications arrive with the app closed for an hour; note any
-      battery setting that has to be changed.
-
-**Done when:** for two days every block start arrives on the phone within about a minute
-with the why in it, deep work blocks warn ten minutes before the end with the finish
-line, no notification ever arrives twice, and in flight mode the app opens and shows
-today's plan read-only.
-
----
-
 ## M5 — Pace and goals
 
 **Goal:** deadlines for a life without deadlines. Covers U5, U6.
@@ -329,6 +296,40 @@ thumb on the phone.
 
 **Done when:** a wedding three weeks away can be added from the month view in under
 twenty seconds and is visible when that week comes.
+
+---
+
+## M4 — Notifications and offline
+
+**Goal:** the app reaches you at the right moments, and opens without a connection.
+Covers N1–N4, U3, S2, S4.
+
+**Verify first:** time-zone conversion in Convex's default runtime; minute crons on the
+free plan; Web Push on your actual phone with battery optimisation on; the Convex client
+API for connection state.
+
+**Slices:**
+
+- [ ] VAPID keys generated and stored as environment variables (ARCHITECTURE.md
+      section 12).
+- [ ] Service worker: `push` and `notificationclick` handlers.
+- [ ] `pushSubscriptions` table; Settings: "Enable notifications on this device", device
+      list, "Send a test notification".
+- [ ] `push.send` Node action, removing dead subscriptions.
+- [ ] Dispatcher cron for block starts, with tests: sent once, respects the global and
+      per-activity switches, skips blocks already marked, and never includes anti-vision
+      or cost-of-skipping text in any payload (V4).
+- [ ] Ten-minutes-left for pressure blocks, including blocks that cross midnight, with
+      tests.
+- [ ] Morning and evening nudges with times in Settings.
+- [ ] Offline: snapshot of today, offline banner, controls disabled.
+- [ ] Android check: notifications arrive with the app closed for an hour; note any
+      battery setting that has to be changed.
+
+**Done when:** for two days every block start arrives on the phone within about a minute
+with the why in it, deep work blocks warn ten minutes before the end with the finish
+line, no notification ever arrives twice, and in flight mode the app opens and shows
+today's plan read-only.
 
 ---
 
