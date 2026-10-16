@@ -145,6 +145,7 @@ function render(now: LocalMoment): string {
       onReview={() => undefined}
       mainFocus="Script the reel, start to end."
       totals={totals}
+      pace="Deep work 9h of 15h · 3 days left · behind by 1h 30m"
     />
   );
   return renderToStaticMarkup(
@@ -181,6 +182,8 @@ describe("the Today screen keeps the hard words for when you ask (PRD V4)", () =
     // Today's focus (PRD P5) and the evening offer (R1) show in the panel and card.
     expect(html.split("Script the reel, start to end.")).toHaveLength(3);
     expect(html).toContain("Review the day");
+    // The weekly pace (PRD U5) in the full panel, a plain fact.
+    expect(html).toContain("behind by 1h 30m");
     expect(html).not.toContain(COST);
     expect(html).not.toContain(BLOCK_COST);
   });

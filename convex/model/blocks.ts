@@ -124,6 +124,16 @@ export async function listBetween(
     .take(days * MAX_BLOCKS_PER_DAY);
 }
 
+/** listBetween for a public caller: real dates, at most MAX_RANGE_DAYS apart. */
+export async function listRange(
+  ctx: QueryCtx,
+  userId: Id<"users">,
+  from: DateKey,
+  to: DateKey,
+): Promise<Doc<"blocks">[]> {
+  return await listBetween(ctx, userId, checkDate(from), checkDate(to));
+}
+
 /**
  * Everything the day view of `date` can show: blocks dated the day before (tails
  * across midnight), the day, and the day after (before the grid's start, at the

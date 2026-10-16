@@ -11,8 +11,10 @@ import {
 import { minuteFrom } from "@shared/lanes";
 import { summarizeDay } from "@shared/summary";
 import { DEFAULT_SETTINGS } from "@shared/settings";
+import { weekStart } from "@shared/pace";
 import { addDays, type DateKey, type LocalMoment } from "@shared/time";
 import { BlockPanel } from "@/features/block-detail/BlockPanel";
+import { weekPaces, weekReadRange } from "@/features/goals/paceView";
 import { useEnsureMaterialized } from "@/features/recurrence/useEnsureMaterialized";
 import { api, type Doc, type Id } from "@/lib/api";
 import { useSetStatus } from "@/lib/blockStatus";
@@ -122,9 +124,16 @@ export function DayScreen({
   const isWide = useMediaQuery("(min-width: 1024px)");
 
   // Until the first visit has created settings, the defaults stand in.
-  const { gridStartMin, wakeMin, sleepMin } = settings ?? DEFAULT_SETTINGS;
+  const { gridStartMin, wakeMin, sleepMin, weekStartsOn } =
+    settings ?? DEFAULT_SETTINGS;
   const today = gridDayOf(now, gridStartMin);
   const tense = dayTense(date, today);
+  // This week's blocks, for the pace line on today's now panel (PRD U5).
+  const weekFirst = weekStart(today, weekStartsOn);
+  const weekBlocks = useQuery(
+    api.blocks.listRange,
+    tense === "today" ? weekReadRange(weekFirst) : "skip",
+  );
   // After days away, today opens with "Welcome back. Plan today?" (decided
   // 2026-10-15); "Not now" puts it away for the day on this device.
   const returning = useQuery(
@@ -237,6 +246,25 @@ export function DayScreen({
       : null;
 
   const feelingTargetId = nowPanel?.feelingTarget?.block._id ?? null;
+
+  // The running block's category's pace this week, if it has a target (PRD U5).
+  const paceLine =
+    nowPanel?.current?.category?.weeklyTargetMin === undefined ||
+    weekBlocks === undefined ||
+    categories === undefined
+      ? undefined
+      : weekPaces({
+          blocks: weekBlocks,
+          categories: categories.filter(
+            (category) => category._id === nowPanel.current?.category?._id,
+          ),
+          first: weekFirst,
+          today,
+          weekStartsOn,
+          gridStartMin,
+          now,
+          todayReviewed: day?.reviewedAt !== undefined,
+        })[0]?.text;
 
   // The evening review: R or "Review the day" on any day that has begun, and offered
   // by the now panel in the evening until the day is reviewed (PRD R1).
@@ -371,6 +399,7 @@ export function DayScreen({
               onReview={offerReview ? onOpenReview : undefined}
               mainFocus={day?.mainFocus}
               totals={null}
+              pace={paceLine}
             />
           </div>
         )}
@@ -444,6 +473,7 @@ export function DayScreen({
               onReview={offerReview ? onOpenReview : undefined}
               mainFocus={day?.mainFocus}
               totals={totals}
+              pace={paceLine}
             />
           </aside>
         )}

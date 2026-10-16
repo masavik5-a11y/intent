@@ -16,6 +16,18 @@ export const listForDay = query({
   },
 });
 
+/**
+ * The blocks dated `from` to `to`, both included, at most 62 days: a week with the
+ * days around it (pace, the week view) or a month (the month view).
+ */
+export const listRange = query({
+  args: { from: vDateKey, to: vDateKey },
+  handler: async (ctx, args) => {
+    const userId = await requireUser(ctx);
+    return await Blocks.listRange(ctx, userId, args.from, args.to);
+  },
+});
+
 /** Plans a block. From an activity, the title and category default to the activity's. */
 export const create = mutation({
   args: {
