@@ -148,7 +148,9 @@ Draft Convex schema. Tables marked with a milestone are added in that milestone.
 real one is `convex/schema.ts`; where they differ, it wins. M2 made the plan times
 optional (unplanned entries) and added the statuses and actual fields. M3 added `days`,
 `recurrences`, and `recurrenceId` / `detached` on blocks, all optional on the existing
-table so production's rows fit as they are.
+table so production's rows fit as they are. M5 added `goals`, and `weeklyTargetMin` on
+categories and `goalId` on activities, both optional, plus an index on blocks by
+activity and date.
 
 ```ts
 import { defineSchema, defineTable } from "convex/server";
@@ -274,7 +276,8 @@ export default defineSchema({
     endingNotifiedAt: v.optional(v.number()), // M4: ten-minutes-left sent
   })
     .index("by_userId_and_date", ["userId", "date"])
-    .index("by_recurrenceId_and_date", ["recurrenceId", "date"]), // M3
+    .index("by_recurrenceId_and_date", ["recurrenceId", "date"]) // M3
+    .index("by_activityId_and_date", ["activityId", "date"]), // M5: hours invested
 
   // M3
   days: defineTable({
@@ -322,6 +325,7 @@ export default defineSchema({
     title: v.string(),
     why: v.optional(v.string()),
     dueDate: v.optional(vDateKey),
+    createdOn: vDateKey, // the device's day it was made; hours invested count from it
     status: v.union(v.literal("active"), v.literal("done"), v.literal("dropped")),
     sortOrder: v.number(),
   }).index("by_userId", ["userId"]),
@@ -735,6 +739,8 @@ Things assumed here that must be confirmed in the milestone that depends on them
 | 2026-10-15 | "Welcome back. Plan today?" shows on today when the last day with anything recorded (a status, a logged entry or a review) is two or more days back, read newest first through `by_userId_and_date` over the last 14 days (`days.returning`; `isReturning` in `shared/days.ts`). With nothing in those 14 days it shows if anything is dated before today, so a first day is not a return. "Not now" lasts the day on that device (`localStorage`). A guard test reads the M3 screens' words for missed, streak, failed, wasted (`voiceGuard.test.ts`). | Filip's decision; the look-back stays bounded and indexed, and a lapse is met with today, not with a count. |
 | 2026-10-15 | The reflection saves on Next; `reviewedAt` is set by "Close the day" or "Plan tomorrow". Opening the review again shows the saved answers and closing it again updates `reviewedAt`. "Plan tomorrow" is offered only when the next day is today or later. | Leaving halfway keeps what was typed but does not count as reviewed. Planning a day that is over makes no sense. |
 | 2026-10-16 | M4 (notifications and offline) moves after M7, before M8 (Filip's choice). M5, M6 and M7 are built in one pull request with the milestone gate lifted; M2's and M3's real days run in parallel. Nothing in M5–M7 depends on M4: the notification side of the V4 guard, the offline snapshot and M4's "Verify first" rows stay with M4. | Filip wants pace, speed and the wider views before notifications. |
+| 2026-10-16 | Hours invested in a goal = actual minutes recorded on the blocks of the activities linked to it, dated from the goal's `createdOn` (the device's day it was made) on. Read per linked activity through a new blocks index `by_activityId_and_date`, at most 4,000 blocks per goal (`capped` says when the read stopped). Unmarked running time is not counted (a query does not read the clock). Unlinking an activity takes its hours with it. | Bounded and indexed without a stored counter (pace and hours are computed, never stored). Counting from the goal's own day keeps years of an activity's past out of a new goal. 4,000 blocks is years of daily blocks for one person. |
+| 2026-10-16 | Goals are never deleted: they are marked done or dropped, and can be reopened. Their activities stay linked. | PRD U6 and the roadmap ask for done or dropped; with no delete there is never a dangling `goalId`. |
 
 ## 17. Implementation notes
 

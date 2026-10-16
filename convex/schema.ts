@@ -89,6 +89,8 @@ export default defineSchema({
     icon: v.string(),
     sortOrder: v.number(),
     archived: v.boolean(),
+    /** Hours a week intended for it, in minutes (PRD U5). Unset: no target. */
+    weeklyTargetMin: v.optional(v.number()),
   }).index("by_userId", ["userId"]),
 
   activities: defineTable({
@@ -103,6 +105,8 @@ export default defineSchema({
     /** Countdown bar, and from M4 the ten-minutes-left warning. */
     pressure: v.boolean(),
     archived: v.boolean(),
+    /** The goal its blocks work toward (PRD U6). */
+    goalId: v.optional(v.id("goals")),
     ...intentFields,
   }).index("by_userId", ["userId"]),
 
@@ -150,7 +154,9 @@ export default defineSchema({
     detached: v.optional(v.boolean()),
   })
     .index("by_userId_and_date", ["userId", "date"])
-    .index("by_recurrenceId_and_date", ["recurrenceId", "date"]),
+    .index("by_recurrenceId_and_date", ["recurrenceId", "date"])
+    // M5: the hours a goal's activities have had, read per activity.
+    .index("by_activityId_and_date", ["activityId", "date"]),
 
   // One row per user and day, made the first time something is written for that day:
   // the main focus (written while planning, PRD P5) and the evening review (R1, R2).
@@ -195,5 +201,22 @@ export default defineSchema({
      * so an occurrence deleted by hand stays deleted.
      */
     materializedThrough: vDateKey,
+  }).index("by_userId", ["userId"]),
+
+  // Something with a why and, usually, a date (PRD U6). Activities point at one.
+  goals: defineTable({
+    userId: v.id("users"),
+    title: v.string(),
+    why: v.optional(v.string()),
+    /** The finish line. Unset: a goal without a date. */
+    dueDate: v.optional(vDateKey),
+    /** The device's day when it was made: hours invested count from here. */
+    createdOn: vDateKey,
+    status: v.union(
+      v.literal("active"),
+      v.literal("done"),
+      v.literal("dropped"),
+    ),
+    sortOrder: v.number(),
   }).index("by_userId", ["userId"]),
 });
