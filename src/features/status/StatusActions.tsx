@@ -14,6 +14,7 @@ export function StatusActions({
   plannedDurationMin,
   started,
   soFarMin,
+  initialPartly = false,
   onAction,
 }: {
   plannedDurationMin: number;
@@ -21,10 +22,12 @@ export function StatusActions({
   started: boolean;
   /** While it runs, the time it has had so far: one of Partly's choices. */
   soFarMin?: number;
+  /** Opens with Partly's lengths showing (the P shortcut). */
+  initialPartly?: boolean;
   onAction: (action: StatusAction) => void;
 }) {
   const ids = useId();
-  const [partly, setPartly] = useState(false);
+  const [partly, setPartly] = useState(initialPartly);
   const [typing, setTyping] = useState(false);
   const choices = partlyChoices(plannedDurationMin, soFarMin);
   const [typed, setTyped] = useState(

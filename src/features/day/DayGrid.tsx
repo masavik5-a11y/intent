@@ -323,7 +323,11 @@ export function DayGrid({
   const planWidth = isPhone && !planOnly ? { width: "60%" } : undefined;
 
   return (
-    <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-y-auto">
+    <div
+      ref={scrollRef}
+      data-day-grid=""
+      className="relative min-h-0 flex-1 overflow-y-auto"
+    >
       <div
         ref={headerRef}
         className="sticky top-0 z-20 flex border-b bg-background text-xs text-muted-foreground"
@@ -386,6 +390,7 @@ export function DayGrid({
                 card={card}
                 pxPerMin={pxPerMin}
                 onOpenCard={onOpenCard}
+                lane="plan"
                 drag={dragHandlers}
                 dragged={
                   dragged?.key === card.key && card.drag?.lane === "plan"
@@ -439,6 +444,7 @@ export function DayGrid({
                   card={card}
                   pxPerMin={pxPerMin}
                   onOpenCard={onOpenCard}
+                  lane="actual"
                   drag={dragHandlers}
                   dragged={
                     dragged?.key === card.key && card.drag?.lane === "actual"
@@ -453,6 +459,7 @@ export function DayGrid({
 
         {nowPosition !== null && (
           <div
+            data-now-line=""
             className="pointer-events-none absolute right-0 z-10 h-px bg-foreground"
             style={{
               top: Math.round(nowPosition * pxPerMin),
@@ -473,10 +480,12 @@ function GridBlock({
   card,
   pxPerMin,
   onOpenCard,
+  lane,
   drag,
   dragged,
 }: {
   card: GridCard;
+  lane: "plan" | "actual";
   pxPerMin: number;
   onOpenCard: ((key: string) => void) | undefined;
   drag: {
@@ -516,6 +525,8 @@ function GridBlock({
       }}
     >
       <BlockCard
+        blockKey={card.key}
+        lane={lane}
         title={card.title}
         focus={card.focus}
         icon={card.icon}

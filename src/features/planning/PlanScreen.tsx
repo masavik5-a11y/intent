@@ -20,6 +20,7 @@ import { DayGrid } from "@/features/day/DayGrid";
 import { dayTense } from "@/features/day/dayView";
 import { planCards } from "@/features/day/gridCards";
 import { useBlockDrag } from "@/features/day/useBlockDrag";
+import { dayCommand, shortcutsPaused } from "@/features/shortcuts/shortcuts";
 import { QuickAdd } from "@/features/day/QuickAdd";
 import {
   DEFAULT_DURATION_MIN,
@@ -177,17 +178,8 @@ export function PlanScreen({
   // N opens quick add, as on the day (DESIGN.md section 8).
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key.toLowerCase() !== "n") return;
-      if (event.ctrlKey || event.metaKey || event.altKey) return;
-      const target = event.target;
-      if (
-        (target instanceof HTMLElement &&
-          (target.isContentEditable ||
-            ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))) ||
-        document.querySelector("[role=dialog]")
-      ) {
-        return;
-      }
+      if (event.defaultPrevented || shortcutsPaused(event.target)) return;
+      if (dayCommand(event) !== "add") return;
       event.preventDefault();
       onOpenAdd(null);
     }
