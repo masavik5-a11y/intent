@@ -15,7 +15,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "build": "npm run typecheck && vite build",
-    "preview": "vite preview --port 4173 --strictPort"
+    "preview": "vite preview --port 4173 --strictPort",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@base-ui/react": "1.9.0",
@@ -35,6 +36,7 @@
     "@convex-dev/eslint-plugin": "5.0.0",
     "@edge-runtime/vm": "5.0.0",
     "@eslint/js": "10.0.1",
+    "@playwright/test": "1.63.0",
     "@tailwindcss/vite": "4.3.3",
     "@tanstack/router-plugin": "1.168.45",
     "@types/node": "24.19.2",
