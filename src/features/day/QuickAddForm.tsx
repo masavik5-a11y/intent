@@ -220,33 +220,28 @@ export function QuickAddForm({
               );
               const highlighted = text.trim() !== "" && index === highlight;
               return (
+                // The option itself is pressed: a button inside it would be a second
+                // control in one (an option of a combobox is not focused itself).
                 <li
                   key={item._id}
                   id={`${ids}-option-${index}`}
                   role="option"
                   aria-selected={highlighted}
+                  data-color={itemCategory?.colorKey}
+                  onClick={() => choose(item)}
+                  className={cn(
+                    "flex min-h-11 w-full cursor-pointer items-center gap-2 rounded-block px-2 text-left text-sm sm:min-h-9",
+                    highlighted ? "bg-key-tint text-key-ink" : "hover:bg-muted",
+                  )}
                 >
-                  <button
-                    type="button"
-                    tabIndex={-1}
-                    data-color={itemCategory?.colorKey}
-                    onClick={() => choose(item)}
-                    className={cn(
-                      "flex min-h-11 w-full items-center gap-2 rounded-block px-2 text-left text-sm outline-none sm:min-h-9",
-                      highlighted
-                        ? "bg-key-tint text-key-ink"
-                        : "hover:bg-muted",
-                    )}
-                  >
-                    <AppIcon
-                      name={item.icon ?? itemCategory?.icon}
-                      className="size-4 text-key-solid"
-                    />
-                    <span className="flex-1 truncate">{item.name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {formatDuration(item.defaultDurationMin)}
-                    </span>
-                  </button>
+                  <AppIcon
+                    name={item.icon ?? itemCategory?.icon}
+                    className="size-4 text-key-solid"
+                  />
+                  <span className="flex-1 truncate">{item.name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {formatDuration(item.defaultDurationMin)}
+                  </span>
                 </li>
               );
             })}
