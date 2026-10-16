@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Flag } from "lucide-react";
 import type { StatusAction } from "@shared/blocks";
 import { AppIcon } from "@/components/AppIcon";
 import { Button } from "@/components/ui/button";
@@ -279,6 +279,17 @@ function CurrentBlock({
             {intent.why}
           </p>
         </Labeled>
+      )}
+      {current.goal !== null && (
+        // The goal and its days left, a quiet chip beside the why (PRD U6).
+        <p className="flex items-center gap-1.5 self-start rounded-full bg-muted/60 px-3 py-1 text-sm">
+          <Flag
+            aria-hidden="true"
+            className="size-3.5 shrink-0 text-key-solid"
+          />
+          <span className="sr-only">Goal: </span>
+          {current.goal}
+        </p>
       )}
       {showAll && intent.how !== null && (
         <Labeled label="How">{intent.how}</Labeled>

@@ -38,12 +38,14 @@ export function ActivitiesScreen({
 }: ActivitiesScreenProps) {
   const activities = useQuery(api.activities.list);
   const categories = useQuery(api.categories.list);
+  const goals = useQuery(api.goals.list);
   const create = useMutation(api.activities.create);
   const update = useMutation(api.activities.update);
   const setArchived = useMutation(api.activities.setArchived);
   const titleRef = useRef<HTMLHeadingElement>(null);
 
-  const loaded = activities !== undefined && categories !== undefined;
+  const loaded =
+    activities !== undefined && categories !== undefined && goals !== undefined;
   const editing =
     selection === undefined || selection === "new" || !loaded
       ? undefined
@@ -140,6 +142,7 @@ export function ActivitiesScreen({
                 editing === undefined ? newDraft(categories) : draftOf(editing)
               }
               categories={categories}
+              goals={goals}
               isNew={editing === undefined}
               onSave={(draft) => save(draft, editing)}
               onCancel={close}

@@ -12,9 +12,11 @@ import {
   formatTimeRange,
   MINUTES_PER_HOUR,
   minutesToLabel,
+  type DateKey,
   type LocalMoment,
 } from "@shared/time";
 import type { Doc, PlannedBlockDoc } from "@/lib/api";
+import { goalChipText } from "@/features/goals/goalsView";
 
 // What the now panel shows (DESIGN.md section 4a), worked out without React.
 
@@ -46,6 +48,11 @@ export interface NowCurrent extends NowBlock {
   /** "Start the minimum" was chosen for it (PRD V3). */
   minimumChosen: boolean;
   intent: NowIntent;
+  /**
+   * The open goal its activity points at, as the quiet chip beside the why: "Launch
+   * the course · 38 days left" (PRD U6). Null without one.
+   */
+  goal: string | null;
 }
 
 export interface NowView {
@@ -70,12 +77,20 @@ export interface NowView {
 
 const UP_NEXT = 2;
 
+/** The goals and the app's today, for the goal chip (PRD U6). */
+export interface NowGoals {
+  goals: readonly Doc<"goals">[];
+  /** Today as the app counts it (useToday), from which days left are counted. */
+  today: DateKey;
+}
+
 /** The now panel's content at `now`, from the blocks loaded around today. */
 export function nowView(
   blocks: readonly Doc<"blocks">[],
   activities: readonly Doc<"activities">[],
   categories: readonly Doc<"categories">[],
   now: LocalMoment,
+  { goals, today }: NowGoals = { goals: [], today: now.date },
 ): NowView {
   const lane = planLaneOf(blocks);
   const describe = (block: PlannedBlockDoc): NowBlock => ({
@@ -103,6 +118,9 @@ export function nowView(
   const intent = effectiveIntent(running.block, current.activity ?? null);
   const others = blocks.filter((block) => block._id !== running.block._id);
   const soFar = liveActual(planSpan(running.block), actualLaneOf(others), now);
+  const goal = goals.find(
+    (item) => item._id === current.activity?.goalId && item.status === "active",
+  );
   return {
     toMark: null,
     feelingTarget: current,
@@ -119,6 +137,7 @@ export function nowView(
         ifThen: intent.ifThen?.text ?? null,
         minimumVersion: intent.minimumVersion?.text ?? null,
       },
+      goal: goal === undefined ? null : goalChipText(goal, today),
     },
     next,
   };

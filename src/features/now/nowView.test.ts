@@ -261,3 +261,56 @@ describe("status and free text", () => {
     expect(nextLine(next)).toBe("Lunch · 13:00–14:00");
   });
 });
+
+describe("the goal chip (PRD U6)", () => {
+  const goal = (
+    status: Doc<"goals">["status"],
+    dueDate?: DateKey,
+  ): Doc<"goals"> => ({
+    _id: "g-half" as Id<"goals">,
+    _creationTime: 0,
+    userId: "u" as Id<"users">,
+    title: "Run a half marathon",
+    createdOn: "2026-10-01" as DateKey,
+    status,
+    sortOrder: 0,
+    ...(dueDate === undefined ? {} : { dueDate }),
+  });
+  const linked = { ...gym, goalId: "g-half" as Id<"goals"> };
+  const at = { date: TUE, minute: 690 };
+
+  test("shows the open goal with its days left, counted from the app's today", () => {
+    const view = nowView(blocks, [linked], [body], at, {
+      goals: [goal("active", "2026-11-21" as DateKey)],
+      today: TUE,
+    });
+    expect(view.current?.goal).toBe("Run a half marathon · 39 days left");
+  });
+
+  test("past its date it says how many days over; without a date, just the title", () => {
+    expect(
+      nowView(blocks, [linked], [body], at, {
+        goals: [goal("active", "2026-10-10" as DateKey)],
+        today: TUE,
+      }).current?.goal,
+    ).toBe("Run a half marathon · 3 days over");
+    expect(
+      nowView(blocks, [linked], [body], at, {
+        goals: [goal("active")],
+        today: TUE,
+      }).current?.goal,
+    ).toBe("Run a half marathon");
+  });
+
+  test("a done or dropped goal, or none, shows no chip", () => {
+    for (const status of ["done", "dropped"] as const) {
+      expect(
+        nowView(blocks, [linked], [body], at, {
+          goals: [goal(status, "2026-11-21" as DateKey)],
+          today: TUE,
+        }).current?.goal,
+      ).toBeNull();
+    }
+    expect(nowView(blocks, [gym], [body], at).current?.goal).toBeNull();
+  });
+});

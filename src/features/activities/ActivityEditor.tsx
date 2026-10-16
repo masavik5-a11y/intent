@@ -14,7 +14,8 @@ import { Textarea } from "@/components/ui/textarea";
 import type { Doc } from "@/lib/api";
 import { COST_OF_SKIPPING_HINT, INTENT_PROMPTS } from "@/lib/intentPrompts";
 import { cn } from "@/lib/utils";
-import { draftProblem, type ActivityDraft } from "./activityDraft";
+import { Chip } from "@/features/status/Chip";
+import { draftProblem, goalChoices, type ActivityDraft } from "./activityDraft";
 
 // On an activity, "done when" is the default for its blocks.
 const PROMPTS: Record<IntentField, string> = {
@@ -25,6 +26,8 @@ const PROMPTS: Record<IntentField, string> = {
 interface ActivityEditorProps {
   initial: ActivityDraft;
   categories: readonly Doc<"categories">[];
+  /** Goals it may point at (PRD U6). */
+  goals: readonly Doc<"goals">[];
   isNew: boolean;
   /** Resolves to an error message, or null when saved. */
   onSave: (draft: ActivityDraft) => Promise<string | null>;
@@ -36,6 +39,7 @@ interface ActivityEditorProps {
 export function ActivityEditor({
   initial,
   categories,
+  goals,
   isNew,
   onSave,
   onCancel,
@@ -122,6 +126,12 @@ export function ActivityEditor({
             onChange={(minutes) => set("defaultDurationMin", minutes)}
           />
         </Field>
+
+        <GoalPicker
+          goals={goalChoices(goals, draft.goalId)}
+          value={draft.goalId}
+          onChange={(goalId) => set("goalId", goalId)}
+        />
 
         <Group title="Intent">
           <IntentArea
@@ -219,6 +229,44 @@ export function ActivityEditor({
         </div>
       </div>
     </form>
+  );
+}
+
+/** Which goal its blocks work toward, as chips: "No goal" and each open goal. */
+function GoalPicker({
+  goals,
+  value,
+  onChange,
+}: {
+  goals: readonly Doc<"goals">[];
+  value: Doc<"goals">["_id"] | null;
+  onChange: (goalId: Doc<"goals">["_id"] | null) => void;
+}) {
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="mb-2 text-sm font-medium">Goal</legend>
+      {goals.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          Goals are made on the Compass screen. Its blocks then show the days
+          left.
+        </p>
+      ) : (
+        <div className="flex flex-wrap gap-1.5">
+          <Chip pressed={value === null} onClick={() => onChange(null)}>
+            No goal
+          </Chip>
+          {goals.map((goal) => (
+            <Chip
+              key={goal._id}
+              pressed={value === goal._id}
+              onClick={() => onChange(goal._id)}
+            >
+              {goal.title}
+            </Chip>
+          ))}
+        </div>
+      )}
+    </fieldset>
   );
 }
 

@@ -106,6 +106,7 @@ export function DayScreen({
   const categories = useQuery(api.categories.list);
   const activities = useQuery(api.activities.list);
   const day = useQuery(api.days.get, { date });
+  const goals = useQuery(api.goals.list);
   // The view reads the day after too (blocks before the grid's start).
   useEnsureMaterialized(addDays(date, 1));
   const createBlock = useMutation(api.blocks.create);
@@ -229,7 +230,10 @@ export function DayScreen({
     blocks !== undefined &&
     activities !== undefined &&
     categories !== undefined
-      ? nowView(blocks, activities, categories, now)
+      ? nowView(blocks, activities, categories, now, {
+          goals: goals ?? [],
+          today,
+        })
       : null;
 
   const feelingTargetId = nowPanel?.feelingTarget?.block._id ?? null;

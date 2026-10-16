@@ -16,6 +16,8 @@ export type ActivityDraft = { [F in IntentField]: string } & {
   defaultDurationMin: number;
   notify: boolean;
   pressure: boolean;
+  /** The goal its blocks work toward (PRD U6), or null. */
+  goalId: Id<"goals"> | null;
 };
 
 export const DEFAULT_DURATION_MIN = 60;
@@ -43,6 +45,7 @@ export function newDraft(
     defaultDurationMin: DEFAULT_DURATION_MIN,
     notify: true,
     pressure: pressureByDefault(chosen),
+    goalId: null,
   };
 }
 
@@ -61,6 +64,7 @@ export function draftOf(activity: Doc<"activities">): ActivityDraft {
     defaultDurationMin: activity.defaultDurationMin,
     notify: activity.notify,
     pressure: activity.pressure,
+    goalId: activity.goalId ?? null,
   };
 }
 
@@ -83,6 +87,7 @@ export function createArgs(draft: ActivityDraft, categoryId: Id<"categories">) {
     defaultDurationMin: number;
     notify: boolean;
     pressure: boolean;
+    goalId?: Id<"goals">;
   } = {
     name: draft.name,
     categoryId,
@@ -91,6 +96,7 @@ export function createArgs(draft: ActivityDraft, categoryId: Id<"categories">) {
     pressure: draft.pressure,
   };
   if (draft.icon !== null) args.icon = draft.icon;
+  if (draft.goalId !== null) args.goalId = draft.goalId;
   for (const field of INTENT_FIELDS) {
     if (draft[field].trim() !== "") args[field] = draft[field];
   }
@@ -111,6 +117,7 @@ export function updateArgs(activity: Doc<"activities">, draft: ActivityDraft) {
     defaultDurationMin?: number;
     notify?: boolean;
     pressure?: boolean;
+    goalId?: Id<"goals"> | null;
   } = { activityId: activity._id };
   if (draft.name !== before.name) args.name = draft.name;
   if (draft.categoryId !== null && draft.categoryId !== before.categoryId) {
@@ -122,6 +129,7 @@ export function updateArgs(activity: Doc<"activities">, draft: ActivityDraft) {
   }
   if (draft.notify !== before.notify) args.notify = draft.notify;
   if (draft.pressure !== before.pressure) args.pressure = draft.pressure;
+  if (draft.goalId !== before.goalId) args.goalId = draft.goalId;
   for (const field of INTENT_FIELDS) {
     if (draft[field] === before[field]) continue;
     args[field] = draft[field].trim() === "" ? null : draft[field];
@@ -153,4 +161,17 @@ export function groupByCategory(
         .sort((a, b) => a.name.localeCompare(b.name)),
     }))
     .filter((group) => group.activities.length > 0);
+}
+
+/**
+ * The goals an activity can point at: the active ones, and the one it points at now
+ * even if that is closed, so opening the form never drops a link silently.
+ */
+export function goalChoices(
+  goals: readonly Doc<"goals">[],
+  current: Id<"goals"> | null,
+): Doc<"goals">[] {
+  return goals.filter(
+    (goal) => goal.status === "active" || goal._id === current,
+  );
 }
