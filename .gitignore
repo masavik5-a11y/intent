@@ -33,3 +33,7 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 *.sw?
+
+# Playwright
+/test-results/
+/playwright-report/

@@ -275,7 +275,7 @@ by themselves.
       a new block appears before the server answers.
 - [x] Phone pass: collapsible now card, bottom bar, sheets, 44 px targets.
 - [x] Accessibility pass: focus order, names, contrast in both themes.
-- [ ] Playwright smoke test: sign in, create a block, mark it done, see it in the actual
+- [x] Playwright smoke test: sign in, create a block, mark it done, see it in the actual
       lane.
 
 **Done when:** a normal day can be run from the keyboard alone on the PC, and with one
