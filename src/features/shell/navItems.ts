@@ -4,6 +4,7 @@ import {
   CalendarRange,
   ChartColumn,
   Compass,
+  Inbox,
   LayoutList,
   Settings,
   Sun,
@@ -43,6 +44,12 @@ const month: NavItem = {
   icon: CalendarDays,
   matches: at("/month"),
 };
+const inbox: NavItem = {
+  label: "Inbox",
+  to: "/inbox",
+  icon: Inbox,
+  matches: at("/inbox"),
+};
 const insights: NavItem = {
   label: "Insights",
   to: "/insights",
@@ -73,6 +80,7 @@ export const RAIL_ITEMS: readonly NavItem[] = [
   today,
   week,
   month,
+  inbox,
   insights,
   activities,
   compass,
@@ -85,6 +93,7 @@ export const BAR_ITEMS: readonly NavItem[] = [today, week, insights];
 /** Everything the bottom bar has no room for, behind its More button. */
 export const MORE_ITEMS: readonly NavItem[] = [
   month,
+  inbox,
   activities,
   compass,
   settings,

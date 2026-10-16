@@ -49,6 +49,12 @@ interface QuickAddFormProps {
   blocks: readonly Doc<"blocks">[];
   /** Resolves to an error message, or null when saved. */
   onSave: (args: NewBlockArgs) => Promise<string | null>;
+  /** Starts with this title (an inbox item being scheduled). */
+  initialTitle?: string;
+  /** …and this activity, when the item named one. */
+  initialActivityId?: Id<"activities"> | undefined;
+  /** The button's word; "Add block" unless the form is for something else. */
+  submitLabel?: string;
 }
 
 /**
@@ -64,17 +70,26 @@ export function QuickAddForm({
   categories,
   blocks,
   onSave,
+  initialTitle = "",
+  initialActivityId,
+  submitLabel = "Add block",
 }: QuickAddFormProps) {
   const ids = useId();
-  const [text, setText] = useState("");
-  const [activity, setActivity] = useState<Doc<"activities"> | null>(null);
+  const initialActivity =
+    activities.find((item) => item._id === initialActivityId) ?? null;
+  const [text, setText] = useState(initialTitle);
+  const [activity, setActivity] = useState<Doc<"activities"> | null>(
+    initialActivity,
+  );
   const [highlight, setHighlight] = useState(0);
   const [categoryId, setCategoryId] = useState<Id<"categories"> | null>(
     () => categories.find((category) => !category.archived)?._id ?? null,
   );
   const [startMin, setStartMin] = useState(start.minute);
   const [startTouched, setStartTouched] = useState(false);
-  const [durationMin, setDurationMin] = useState(DEFAULT_DURATION_MIN);
+  const [durationMin, setDurationMin] = useState(
+    initialActivity?.defaultDurationMin ?? DEFAULT_DURATION_MIN,
+  );
   const [durationTouched, setDurationTouched] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -298,7 +313,7 @@ export function QuickAddForm({
       )}
 
       <Button type="submit" disabled={saving} className="h-11 sm:h-9">
-        Add block
+        {submitLabel}
       </Button>
     </form>
   );

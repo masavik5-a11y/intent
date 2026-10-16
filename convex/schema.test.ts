@@ -154,6 +154,15 @@ describe("schema", () => {
       });
       await ctx.db.patch("activities", activityId, { goalId });
       await ctx.db.patch("categories", categoryId, { weeklyTargetMin: 900 });
+
+      // M7: inbox items, one with a note and an activity.
+      await ctx.db.insert("inboxItems", { userId, title: "Call the venue" });
+      await ctx.db.insert("inboxItems", {
+        userId,
+        title: "Leg day",
+        note: "Before the trip.",
+        activityId,
+      });
     });
   });
 });

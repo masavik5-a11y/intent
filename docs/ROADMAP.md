@@ -291,7 +291,7 @@ thumb on the phone.
 
 - [x] Week view: seven columns; past days show both lanes; pace per target in the header.
 - [x] Month view: non-recurring blocks as labels; click a day to open or add.
-- [ ] Inbox: schema, capture from anywhere, schedule onto a day.
+- [x] Inbox: schema, capture from anywhere, schedule onto a day.
 - [ ] Replan: shift the rest of today by N minutes; push a block to tomorrow.
 
 **Done when:** a wedding three weeks away can be added from the month view in under
