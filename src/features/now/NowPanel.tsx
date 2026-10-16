@@ -84,7 +84,7 @@ export function NowPanel({
       <section
         aria-label="Now"
         data-color={current?.category?.colorKey}
-        className="flex items-center gap-2 px-4 py-1"
+        className="flex flex-wrap items-center gap-x-2 px-4 py-1"
       >
         <button
           type="button"
@@ -111,6 +111,11 @@ export function NowPanel({
           >
             Done
           </Button>
+        )}
+        {error !== null && (
+          <p role="alert" className="w-full pb-1 text-sm text-destructive">
+            {error}
+          </p>
         )}
       </section>
     );
