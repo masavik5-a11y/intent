@@ -250,7 +250,7 @@ by themselves.
       section 7 (week boundaries, today not yet counted, target reached, no target).
 - [x] Compass screen: goals list (create, edit, mark done or dropped) and the weekly
       target per category.
-- [ ] Link an activity to a goal. Goal chip with days left on the now panel.
+- [x] Link an activity to a goal. Goal chip with days left on the now panel.
 - [ ] Pace line on the now panel for the current category.
 
 **Done when:** during a deep work block the now panel shows the goal with days left and
