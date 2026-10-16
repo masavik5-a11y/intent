@@ -251,7 +251,7 @@ by themselves.
 - [x] Compass screen: goals list (create, edit, mark done or dropped) and the weekly
       target per category.
 - [x] Link an activity to a goal. Goal chip with days left on the now panel.
-- [ ] Pace line on the now panel for the current category.
+- [x] Pace line on the now panel for the current category.
 
 **Done when:** during a deep work block the now panel shows the goal with days left and
 "Deep work X of Yh · N days left · ahead/behind by Z", and the numbers match a hand count.

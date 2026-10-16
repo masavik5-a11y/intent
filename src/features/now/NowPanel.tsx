@@ -38,6 +38,7 @@ export function NowPanel({
   onReview,
   mainFocus,
   totals,
+  pace,
 }: {
   view: NowView;
   compact: boolean;
@@ -56,6 +57,11 @@ export function NowPanel({
   mainFocus?: string | undefined;
   /** The day's totals, shown in the full panel; the phone shows them above the grid. */
   totals: DayTotalsData | null;
+  /**
+   * The running block's category's weekly pace, a plain fact (PRD U5): "Deep work
+   * 9h of 15h · 3 days left · behind by 1h 30m". Unset without a target.
+   */
+  pace?: string | undefined;
 }) {
   const [expanded, setExpanded] = useState(false);
   const showAll = !compact || expanded;
@@ -158,6 +164,13 @@ export function NowPanel({
 
       {!compact && totals !== null && (
         <DayTotals totals={totals} variant="panel" />
+      )}
+
+      {showAll && pace !== undefined && (
+        <div className="flex flex-col gap-0.5">
+          <h3 className="text-xs text-muted-foreground">This week</h3>
+          <p className="text-sm">{pace}</p>
+        </div>
       )}
 
       {showAll && next.length > 0 && (

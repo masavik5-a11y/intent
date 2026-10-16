@@ -1184,6 +1184,61 @@ describe("blocks.listForDay", () => {
   });
 });
 
+describe("blocks.listRange", () => {
+  test("returns my blocks dated from `from` to `to`, both included", async () => {
+    const t = newTest();
+    const me = await setUp(t, "me@intent.test");
+    const other = await setUp(t, "other@intent.test");
+    await plan(me.as, me.deepWork, "2026-10-11" as DateKey, "09:00", 60, "Sun");
+    await plan(me.as, me.deepWork, MON, "09:00", 60, "Mon");
+    await plan(me.as, me.deepWork, WED, "09:00", 60, "Wed");
+    await plan(
+      me.as,
+      me.deepWork,
+      "2026-10-19" as DateKey,
+      "09:00",
+      60,
+      "Next",
+    );
+    await plan(other.as, other.deepWork, TUE, "10:00", 60, "Theirs");
+    const blocks = await me.as.query(api.blocks.listRange, {
+      from: MON,
+      to: "2026-10-18" as DateKey,
+    });
+    expect(blocks.map((block) => block.title)).toEqual(["Mon", "Wed"]);
+  });
+
+  test("requires a session, real dates, and at most 62 days", async () => {
+    const t = newTest();
+    const { as } = await setUp(t);
+    await expectAppError(
+      t.query(api.blocks.listRange, { from: MON, to: TUE }),
+      "UNAUTHENTICATED",
+    );
+    await expectAppError(
+      as.query(api.blocks.listRange, { from: "x" as DateKey, to: TUE }),
+      "INVALID_INPUT",
+    );
+    await expectAppError(
+      as.query(api.blocks.listRange, { from: TUE, to: MON }),
+      "INVALID_INPUT",
+    );
+    expect(
+      await as.query(api.blocks.listRange, {
+        from: MON,
+        to: "2026-12-12" as DateKey,
+      }),
+    ).toEqual([]);
+    await expectAppError(
+      as.query(api.blocks.listRange, {
+        from: MON,
+        to: "2026-12-13" as DateKey,
+      }),
+      "INVALID_INPUT",
+    );
+  });
+});
+
 describe("blocks.copyPlan", () => {
   const THU = "2026-10-15" as DateKey;
   const FRI = "2026-10-16" as DateKey;
