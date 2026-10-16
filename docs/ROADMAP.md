@@ -2,14 +2,18 @@
 
 Build order, one milestone at a time. Requirement IDs refer to [PRD.md](PRD.md).
 
-**Current milestones: M5, M6 and M7, built in that order in one pull request
-(2026-10-16), with M4 moved after M7 on Filip's say-so (ARCHITECTURE.md section 16).**
-M3 is merged and live (main at bef936d, deployed 2026-10-16); its "Done when", three
-real days of the whole loop, runs in parallel, as does M2's one real day. The gate
-between milestones is lifted for this work (Filip, 2026-10-16). M0 and M1 met their
-"Done when" on the live app (2026-10-14). One M1 check is still to be seen once: the
-draining bar on a block whose activity has Countdown on. Update this line when a
-milestone is finished.
+**M5, M6 and M7: every slice is built and ticked (2026-10-16, pull request #3), on top
+of M3 (merged and live, main at bef936d, deployed 2026-10-16). What each "Done when"
+still needs, all on the live app after the merge:** M5, a deep work block whose
+activity has a goal and whose category has a target, with the now panel's numbers
+checked against a hand count; M6, one normal day run from the keyboard on the PC and
+with one thumb on the phone, and `npm run e2e` run once on the PC against the dev
+deployment; M7, a wedding three weeks away added from the month view in under twenty
+seconds, then seen in the week view when that week comes. M2's real day and M3's three
+real days of the loop run in parallel. Next is M4, moved after M7 on Filip's say-so
+(ARCHITECTURE.md section 16). M0 and M1 met their "Done when" on the live app
+(2026-10-14); one M1 check is still to be seen once: the draining bar on a block whose
+activity has Countdown on. Update this line when a milestone is finished.
 
 ## How to work
 
@@ -253,6 +257,8 @@ by themselves.
 - [x] Link an activity to a goal. Goal chip with days left on the now panel.
 - [x] Pace line on the now panel for the current category.
 
+*Built 2026-10-16 (pull request #3); the check below waits for the live app.*
+
 **Done when:** during a deep work block the now panel shows the goal with days left and
 "Deep work X of Yh · N days left · ahead/behind by Z", and the numbers match a hand count.
 
@@ -278,6 +284,9 @@ by themselves.
 - [x] Playwright smoke test: sign in, create a block, mark it done, see it in the actual
       lane.
 
+*Built 2026-10-16 (pull request #3); the smoke test has not run against a backend yet
+(`npm run e2e` on the PC), and the day below waits for the live app.*
+
 **Done when:** a normal day can be run from the keyboard alone on the PC, and with one
 thumb on the phone.
 
@@ -293,6 +302,9 @@ thumb on the phone.
 - [x] Month view: non-recurring blocks as labels; click a day to open or add.
 - [x] Inbox: schema, capture from anywhere, schedule onto a day.
 - [x] Replan: shift the rest of today by N minutes; push a block to tomorrow.
+
+*Built 2026-10-16 (pull request #3). In the screenshot harness the wedding took 6 taps
+and three typed words from the month view; the timing waits for the live app.*
 
 **Done when:** a wedding three weeks away can be added from the month view in under
 twenty seconds and is visible when that week comes.
