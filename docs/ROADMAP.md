@@ -269,7 +269,7 @@ by themselves.
       no-overlap rule, with a non-drag alternative. Long-press to drag on phone.
 - [x] Keyboard shortcuts and the `?` overlay.
 - [x] Zoom levels and compressed sleep.
-- [ ] Motion pass: check-off, blocks entering the actual lane, panel changes; reduced
+- [x] Motion pass: check-off, blocks entering the actual lane, panel changes; reduced
       motion respected.
 - [ ] Optimistic updates for quick add and block edits (ARCHITECTURE.md section 8), so
       a new block appears before the server answers.

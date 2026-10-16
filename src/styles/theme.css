@@ -262,3 +262,57 @@
   --radius-xl: calc(var(--radius) * 1.4);
   --radius-2xl: calc(var(--radius) * 1.8);
 }
+
+/* ---------------------------------------------------------------------------
+ * Motion (DESIGN.md section 6): 150 to 200 ms, ease-out, only for a change that
+ * just happened: a check-off settling in, a block entering the actual lane, the
+ * side panel changing mode. With reduced motion each becomes a plain fade.
+ * ------------------------------------------------------------------------- */
+
+@keyframes motion-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes motion-settle {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}
+
+@keyframes motion-enter-lane {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+}
+
+@keyframes motion-panel {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+}
+
+@utility animate-settle {
+  animation: motion-settle 200ms var(--ease-out) both;
+  @media (prefers-reduced-motion: reduce) {
+    animation-name: motion-fade;
+  }
+}
+
+@utility animate-enter-lane {
+  animation: motion-enter-lane 200ms var(--ease-out) both;
+  @media (prefers-reduced-motion: reduce) {
+    animation-name: motion-fade;
+  }
+}
+
+@utility animate-panel {
+  animation: motion-panel 150ms var(--ease-out) both;
+  @media (prefers-reduced-motion: reduce) {
+    animation-name: motion-fade;
+  }
+}

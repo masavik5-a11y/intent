@@ -25,7 +25,12 @@ import {
 import { MINUTES_PER_DAY } from "@shared/time";
 import { cn } from "@/lib/utils";
 import { BlockCard } from "./BlockCard";
-import { hourMarks, type CardState, type GridStretch } from "./dayView";
+import {
+  hourMarks,
+  newKeys,
+  type CardState,
+  type GridStretch,
+} from "./dayView";
 
 /** Room for the hour labels left of the lanes. */
 const GUTTER_PX = 44;
@@ -161,6 +166,22 @@ export function DayGrid({
   const scrollRef = useRef<HTMLDivElement>(null);
   const gesture = useRef<Gesture | null>(null);
   const swallowClick = useRef(false);
+  // Cards that have just entered the actual lane slide in once (DESIGN.md section 6).
+  // Nothing moves until the day has loaded, so opening a day stays still.
+  const actualKeys = actualCards.map((card) => card.key);
+  const [seenActual, setSeenActual] = useState<ReadonlySet<string> | null>(
+    null,
+  );
+  const [entering, setEntering] = useState<ReadonlySet<string>>(new Set());
+  if (settled && seenActual === null) {
+    setSeenActual(new Set(actualKeys));
+  } else {
+    const fresh = newKeys(seenActual, actualKeys);
+    if (fresh.length > 0) {
+      setSeenActual(new Set([...(seenActual ?? []), ...fresh]));
+      setEntering(new Set([...entering, ...fresh]));
+    }
+  }
   const [dragged, setDragged] = useState<{
     key: string;
     span: GridSpan;
@@ -488,6 +509,14 @@ export function DayGrid({
                   scale={scale}
                   onOpenCard={onOpenCard}
                   lane="actual"
+                  entering={entering.has(card.key)}
+                  onEntered={() =>
+                    setEntering((keys) => {
+                      const rest = new Set(keys);
+                      rest.delete(card.key);
+                      return rest;
+                    })
+                  }
                   drag={dragHandlers}
                   dragged={
                     dragged?.key === card.key && card.drag?.lane === "actual"
@@ -503,7 +532,7 @@ export function DayGrid({
         {nowPosition !== null && (
           <div
             data-now-line=""
-            className="pointer-events-none absolute right-0 z-10 h-px bg-foreground"
+            className="pointer-events-none absolute right-0 z-10 h-px bg-foreground transition-[top] duration-200 motion-reduce:transition-none"
             style={{
               top: toPx(nowPosition),
               left: GUTTER_PX - 4,
@@ -524,11 +553,15 @@ function GridBlock({
   scale,
   onOpenCard,
   lane,
+  entering = false,
+  onEntered,
   drag,
   dragged,
 }: {
   card: GridCard;
   lane: "plan" | "actual";
+  entering?: boolean;
+  onEntered?: () => void;
   scale: GridScale;
   onOpenCard: ((key: string) => void) | undefined;
   drag: {
@@ -582,6 +615,8 @@ function GridBlock({
         hasNote={card.hasNote}
         selected={card.selected}
         lifted={dragged !== undefined}
+        entering={entering}
+        onEntered={onEntered}
         cutTop={card.cutTop}
         cutBottom={card.cutBottom}
         onOpen={
