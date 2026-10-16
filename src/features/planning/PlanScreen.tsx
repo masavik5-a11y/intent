@@ -234,7 +234,7 @@ export function PlanScreen({
           <div className="flex-1" />
           <Button
             variant="ghost"
-            className="h-11 px-2.5 sm:h-9"
+            className="h-11 min-w-11 px-2.5 sm:h-9 sm:min-w-0"
             aria-label="Copy from a date"
             onClick={onOpenCopy}
           >

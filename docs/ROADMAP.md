@@ -273,7 +273,7 @@ by themselves.
       motion respected.
 - [x] Optimistic updates for quick add and block edits (ARCHITECTURE.md section 8), so
       a new block appears before the server answers.
-- [ ] Phone pass: collapsible now card, bottom bar, sheets, 44 px targets.
+- [x] Phone pass: collapsible now card, bottom bar, sheets, 44 px targets.
 - [ ] Accessibility pass: focus order, names, contrast in both themes.
 - [ ] Playwright smoke test: sign in, create a block, mark it done, see it in the actual
       lane.

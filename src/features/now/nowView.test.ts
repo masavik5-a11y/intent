@@ -3,6 +3,7 @@ import type { DateKey } from "@shared/time";
 import type { Doc, Id, PlannedBlockDoc } from "@/lib/api";
 import {
   endedText,
+  foldedLine,
   formatLeft,
   freeText,
   inLastTenMinutes,
@@ -312,5 +313,32 @@ describe("the goal chip (PRD U6)", () => {
       ).toBeNull();
     }
     expect(nowView(blocks, [gym], [body], at).current?.goal).toBeNull();
+  });
+});
+
+describe("foldedLine (the phone's card on one line)", () => {
+  test.each([
+    [690, "Gym · 1h left"],
+    [760, "Gym ended at 12:30"],
+  ])("at minute %d: %s", (minute, line) => {
+    expect(
+      foldedLine(nowView(blocks, [gym], [body], { date: TUE, minute })),
+    ).toBe(line);
+  });
+
+  test("between blocks with nothing to mark, the free time", () => {
+    const marked = blocks.map((item) =>
+      item.title === "Gym"
+        ? {
+            ...item,
+            status: "done" as const,
+            actualStartMin: 660,
+            actualDurationMin: 90,
+          }
+        : item,
+    );
+    expect(
+      foldedLine(nowView(marked, [gym], [body], { date: TUE, minute: 760 })),
+    ).toBe("Free until 13:00");
   });
 });

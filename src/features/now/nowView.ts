@@ -198,3 +198,20 @@ export function nextLine(item: NowBlock): string {
   const { block } = item;
   return `${block.title} · ${formatTimeRange(block.plannedStartMin, block.plannedDurationMin)}`;
 }
+
+/**
+ * The phone's now card folded to one line (DESIGN.md section 2): "Edit · 1h 40m
+ * left", "Lunch ended at 13:00", or "Free until 17:00".
+ */
+export function foldedLine(view: NowView): string {
+  if (view.current !== null) {
+    const { block, countdown } = view.current;
+    const left =
+      countdown.minutesLeft > 0
+        ? `${formatLeft(countdown.minutesLeft)} left`
+        : `${formatLeft(countdown.minutesOver)} over`;
+    return `${block.title} · ${left}`;
+  }
+  if (view.toMark !== null) return endedText(view.toMark);
+  return freeText(view.next[0]);
+}

@@ -125,7 +125,7 @@ export function DayHeader({
           aria-label={plan.label}
           className={cn(
             buttonVariants({ variant: "ghost" }),
-            "ml-1 h-11 px-2.5 sm:h-9",
+            "ml-1 h-11 min-w-11 px-2.5 sm:h-9 sm:min-w-0",
           )}
         >
           <CalendarPlus aria-hidden="true" />
@@ -135,7 +135,7 @@ export function DayHeader({
       {onReview !== undefined && (
         <Button
           variant="ghost"
-          className="ml-1 h-11 px-2.5 sm:h-9"
+          className="ml-1 h-11 min-w-11 px-2.5 sm:h-9 sm:min-w-0"
           aria-label="Review the day"
           onClick={onReview}
         >
