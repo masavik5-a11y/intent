@@ -15,6 +15,11 @@ import {
 import { findOverlap, overlapWindow, placeSpans } from "../../shared/lanes";
 import { copyablePlan, shiftedPlan } from "../../shared/planning";
 import { planOccurrences } from "../../shared/recurrence";
+import {
+  pushToTomorrow as pushToTomorrowPlan,
+  shiftRest as shiftRestPlan,
+} from "../../shared/replan";
+import { isSleepCategory } from "../../shared/categories";
 import { DEFAULT_SETTINGS } from "../../shared/settings";
 import {
   cleanName,
@@ -700,4 +705,147 @@ function assertFreeAmong(
       actualLaneOf(others),
     ) !== null;
   if (inPlan || inActual) throw appError("OVERLAP");
+}
+
+// ---------------------------------------------------------------------------
+// Replanning (PRD T11; decided 2026-10-16)
+// ---------------------------------------------------------------------------
+
+const SHIFT_ERRORS: Record<
+  "NOTHING" | "INVALID" | "OUT_OF_DAY" | "IN_THE_WAY",
+  ErrorCode
+> = {
+  NOTHING: "INVALID_INPUT",
+  INVALID: "INVALID_INPUT",
+  OUT_OF_DAY: "INVALID_TIME",
+  IN_THE_WAY: "OVERLAP",
+};
+
+async function gridStartOf(
+  ctx: QueryCtx,
+  userId: Id<"users">,
+): Promise<number> {
+  const settings = await Settings.getForUser(ctx, userId);
+  return settings?.gridStartMin ?? DEFAULT_SETTINGS.gridStartMin;
+}
+
+/**
+ * Shifts the rest of `date` (its grid's blocks still ahead and not marked) by
+ * `minutes`, as shared/replan.ts shiftRest decides: all of them or, when one would
+ * land on a block that stays, none. A repeating occurrence moved is detached.
+ */
+export async function shiftRest(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  date: DateKey,
+  now: LocalMoment,
+  minutes: number,
+): Promise<number> {
+  checkDate(date);
+  checkMoment(now);
+  const gridStartMin = await gridStartOf(ctx, userId);
+  const around = await listBetween(
+    ctx,
+    userId,
+    addDays(date, -1),
+    addDays(date, 2),
+  );
+  // Sleep is kept to the clock; what would run into it is refused.
+  const sleeping = new Set(
+    (await Categories.listForUser(ctx, userId))
+      .filter(isSleepCategory)
+      .map((category) => category._id),
+  );
+  const result = shiftRestPlan(
+    around,
+    date,
+    gridStartMin,
+    now,
+    minutes,
+    (block) => sleeping.has(block.categoryId),
+  );
+  if ("problem" in result) throw appError(SHIFT_ERRORS[result.problem]);
+  for (const { block, to } of result.moves) {
+    const patch: Partial<BlockFields> = {
+      date: to.date,
+      plannedStartMin: to.startMin,
+    };
+    if (block.recurrenceId !== undefined) patch.detached = true;
+    checkShape({ ...fieldsOf(block), ...patch });
+    await ctx.db.patch("blocks", block._id, patch);
+  }
+  return result.moves.length;
+}
+
+/**
+ * "Move to tomorrow", as shared/replan.ts pushToTomorrow decides: a block still ahead
+ * moves to the next day's grid; one that has begun stays, skipped, and a copy of its
+ * plan goes to tomorrow. Says the day it went to.
+ */
+export async function pushToTomorrow(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  blockId: Id<"blocks">,
+  day: DateKey,
+  now: LocalMoment,
+): Promise<DateKey> {
+  const block = await getOwned(ctx, userId, blockId);
+  checkDate(day);
+  checkMoment(now);
+  const gridStartMin = await gridStartOf(ctx, userId);
+  const tomorrow = addDays(day, 1);
+  const around = await listBetween(
+    ctx,
+    userId,
+    addDays(day, -1),
+    addDays(tomorrow, 2),
+  );
+  const result = pushToTomorrowPlan(block, around, day, gridStartMin, now);
+  if ("problem" in result) {
+    throw appError(result.problem === "NO_ROOM" ? "NO_ROOM" : "INVALID_INPUT");
+  }
+  const { to } = result;
+  if (result.kind === "move") {
+    const patch: Partial<BlockFields> = {
+      date: to.date,
+      plannedStartMin: to.startMin,
+    };
+    if (block.recurrenceId !== undefined) patch.detached = true;
+    const next = { ...fieldsOf(block), ...patch };
+    checkShape(next);
+    assertFreeAmong(
+      next,
+      around.filter((other) => other._id !== block._id),
+    );
+    await ctx.db.patch("blocks", block._id, patch);
+    return tomorrow;
+  }
+  // Begun: it stays today as skipped, and its plan is copied to tomorrow.
+  const copy: BlockFields = {
+    date: to.date,
+    title: block.title,
+    categoryId: block.categoryId,
+    plannedStartMin: to.startMin,
+    plannedDurationMin: to.durationMin,
+    status: "planned",
+  };
+  if (block.activityId !== undefined) copy.activityId = block.activityId;
+  if (block.focus !== undefined) copy.focus = block.focus;
+  for (const field of INTENT_FIELDS) {
+    const text = block[field];
+    if (text !== undefined) copy[field] = text;
+  }
+  checkShape(copy);
+  assertFreeAmong(copy, around);
+  const others = around.filter((other) => other._id !== block._id);
+  const skipped = applyStatus(
+    block,
+    { type: "skip" },
+    actualLaneOf(others),
+    now,
+  );
+  if ("problem" in skipped) throw appError(STATUS_ERRORS[skipped.problem]);
+  await ctx.db.patch("blocks", block._id, skipped.fields);
+  await ctx.db.insert("blocks", { userId, ...copy });
+  return tomorrow;
 }

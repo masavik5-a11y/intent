@@ -12,6 +12,7 @@ import { minuteFrom } from "@shared/lanes";
 import { summarizeDay } from "@shared/summary";
 import { DEFAULT_SETTINGS } from "@shared/settings";
 import { weekStart } from "@shared/pace";
+import { restOfDay } from "@shared/replan";
 import { addDays, type DateKey, type LocalMoment } from "@shared/time";
 import { BlockPanel } from "@/features/block-detail/BlockPanel";
 import { weekPaces, weekReadRange } from "@/features/goals/paceView";
@@ -28,7 +29,10 @@ import {
   shortcutTarget,
 } from "./cardFocus";
 import { saveErrorMessage } from "@/lib/errorMessages";
-import { useNow } from "@/lib/now";
+import { errorCodeFrom } from "@/lib/errors";
+import { readNow, useNow } from "@/lib/now";
+import { ShiftDialog } from "@/features/replan/ShiftDialog";
+import { sleepAnchor } from "@/features/replan/replanView";
 import { cn } from "@/lib/utils";
 import { setGridZoom, useGridZoom } from "@/lib/gridZoom";
 import { setNowCardFolded, useNowCardFolded } from "@/lib/nowCard";
@@ -92,6 +96,9 @@ interface DayScreenProps {
   onGoTo: (date: DateKey) => void;
   /** The block's detail was opened with P. */
   partlyOpen: boolean;
+  /** "Shift the rest of today" is open (PRD T11). */
+  shiftOpen: boolean;
+  onOpenShift: () => void;
   /** Closes quick add or the block detail. */
   onCloseOverlay: () => void;
   /** The evening review is open at this step (also in the URL). */
@@ -115,6 +122,8 @@ export function DayScreen({
   onSelectBlock,
   onGoTo,
   partlyOpen,
+  shiftOpen,
+  onOpenShift,
   onCloseOverlay,
   review,
   onOpenReview,
@@ -129,6 +138,8 @@ export function DayScreen({
   const goals = useQuery(api.goals.list);
   // The view reads the day after too (blocks before the grid's start).
   useEnsureMaterialized(addDays(date, 1));
+  const shiftRest = useMutation(api.replan.shiftRest);
+  const pushToTomorrow = useMutation(api.replan.pushToTomorrow);
   const createBlock = useMutation(api.blocks.create).withOptimisticUpdate(
     createLocally,
   );
@@ -274,6 +285,13 @@ export function DayScreen({
       : null;
 
   const feelingTargetId = nowPanel?.feelingTarget?.block._id ?? null;
+  // Something is still ahead today to shift (PRD T11).
+  const canShift =
+    tense === "today" &&
+    blocks !== undefined &&
+    categories !== undefined &&
+    restOfDay(blocks, date, gridStartMin, now, sleepAnchor(categories)).length >
+      0;
 
   // Once another panel has been open, the now panel's return is a mode change and
   // fades in (DESIGN.md section 6).
@@ -515,6 +533,7 @@ export function DayScreen({
               mainFocus={day?.mainFocus}
               totals={null}
               pace={paceLine}
+              onShift={canShift ? onOpenShift : undefined}
               folded={nowCardFolded}
               onFold={setNowCardFolded}
             />
@@ -616,6 +635,7 @@ export function DayScreen({
               mainFocus={day?.mainFocus}
               totals={totals}
               pace={paceLine}
+              onShift={canShift ? onOpenShift : undefined}
             />
           </aside>
         )}
@@ -636,6 +656,22 @@ export function DayScreen({
             onAction={(action) => mark(selected._id, action)}
             partlyOpen={partlyOpen}
             onSaveError={setStatusError}
+            onMoveToTomorrow={
+              tense === "past" || selected.status !== "planned"
+                ? undefined
+                : () =>
+                    pushToTomorrow({
+                      blockId: selected._id,
+                      day: date,
+                      now: readNow(),
+                    }).then(
+                      () => null,
+                      (error: unknown) =>
+                        errorCodeFrom(error) === "NO_ROOM"
+                          ? "Tomorrow has no free time that long from then on. Make room there, or change its times here."
+                          : saveErrorMessage(error),
+                    )
+            }
             dayPlanUnlocked={planUnlocked}
             onClose={onCloseOverlay}
           />
@@ -697,6 +733,27 @@ export function DayScreen({
           categories={logCategories(categories)}
           blocks={blocks}
           onSave={saveEntry}
+        />
+      )}
+      {ready && tense === "today" && (
+        <ShiftDialog
+          open={shiftOpen}
+          isPhone={isPhone}
+          onClose={onCloseOverlay}
+          blocks={blocks}
+          categories={categories}
+          day={date}
+          gridStartMin={gridStartMin}
+          now={now}
+          onShift={(minutes) =>
+            shiftRest({ date, minutes, now: readNow() }).then(
+              () => {
+                onCloseOverlay();
+                return null;
+              },
+              (error: unknown) => saveErrorMessage(error),
+            )
+          }
         />
       )}
       {ready && (

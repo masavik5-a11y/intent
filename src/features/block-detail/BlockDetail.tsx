@@ -74,6 +74,8 @@ interface BlockDetailProps {
   onAction: (action: StatusAction) => void;
   /** Opened with P: Partly's lengths show at once. */
   partlyOpen?: boolean;
+  /** "Move to tomorrow" (PRD T11); resolves to an error message or null. */
+  onMoveToTomorrow?: (() => Promise<string | null>) | undefined;
   /** Why the last of those did not save. */
   statusError: string | null;
   /** "Edit plan" was chosen for the whole (past) day. */
@@ -112,6 +114,7 @@ export function BlockDetail({
   now,
   onAction,
   partlyOpen = false,
+  onMoveToTomorrow,
   statusError,
   dayPlanUnlocked,
   repeat,
@@ -332,6 +335,12 @@ export function BlockDetail({
                 initialPartly={partlyOpen}
                 onAction={onAction}
               />
+              {onMoveToTomorrow !== undefined && (
+                <MoveToTomorrow
+                  started={hasStarted(block, now)}
+                  onMove={onMoveToTomorrow}
+                />
+              )}
             </>
           ) : (
             <StatusSummary block={block} onAction={onAction} />
@@ -641,6 +650,45 @@ function ScopeQuestion({
           This and following
         </Button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * "Move to tomorrow" (PRD T11): a block still ahead goes to the same time tomorrow,
+ * or the first free time after it; one that has begun stays today as skipped and its
+ * plan goes to tomorrow.
+ */
+function MoveToTomorrow({
+  started,
+  onMove,
+}: {
+  started: boolean;
+  onMove: () => Promise<string | null>;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="flex flex-col gap-1">
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => {
+          setBusy(true);
+          void onMove().then((failure) => {
+            setBusy(false);
+            setError(failure);
+          });
+        }}
+        className="flex min-h-11 items-center self-start rounded-sm text-sm text-muted-foreground underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 sm:min-h-8"
+      >
+        {started ? "Skip today, plan it tomorrow" : "Move to tomorrow"}
+      </button>
+      {error !== null && (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

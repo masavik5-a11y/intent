@@ -31,6 +31,7 @@ import type * as model_inbox from "../model/inbox.js";
 import type * as model_recurrences from "../model/recurrences.js";
 import type * as model_settings from "../model/settings.js";
 import type * as recurrences from "../recurrences.js";
+import type * as replan from "../replan.js";
 import type * as settings from "../settings.js";
 import type * as setup from "../setup.js";
 import type * as users from "../users.js";
@@ -65,6 +66,7 @@ declare const fullApi: ApiFromModules<{
   "model/recurrences": typeof model_recurrences;
   "model/settings": typeof model_settings;
   recurrences: typeof recurrences;
+  replan: typeof replan;
   settings: typeof settings;
   setup: typeof setup;
   users: typeof users;
