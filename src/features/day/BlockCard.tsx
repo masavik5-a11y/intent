@@ -40,6 +40,8 @@ interface BlockCardProps {
   lifted?: boolean;
   /** It has just come into the actual lane: it slides in once. */
   entering?: boolean;
+  /** A narrow column (the week): no icon, smaller text, tighter edges. */
+  compact?: boolean;
   onEntered?: () => void;
   /** Cut at the grid's top or bottom edge because it crosses into another day's grid. */
   cutTop: boolean;
@@ -75,6 +77,7 @@ export function BlockCard({
   selected,
   lifted = false,
   entering = false,
+  compact = false,
   onEntered,
   cutTop,
   cutBottom,
@@ -108,7 +111,7 @@ export function BlockCard({
         if (event.target === event.currentTarget) onEntered?.();
       }}
       className={cn(
-        "absolute inset-x-1 overflow-hidden rounded-block px-2 text-left outline-none transition-[background-color,color,border-color,opacity] duration-200 focus-visible:ring-3 focus-visible:ring-ring/50",
+        "absolute overflow-hidden rounded-block text-left outline-none transition-[background-color,color,border-color,opacity] duration-200 focus-visible:ring-3 focus-visible:ring-ring/50",
         solid
           ? "bg-key-solid text-on-solid"
           : skipped
@@ -121,11 +124,23 @@ export function BlockCard({
           "ring-2 ring-foreground ring-offset-1 ring-offset-background",
         lifted && "cursor-grabbing shadow-lg ring-2 ring-key-solid",
         entering && "animate-enter-lane",
+        compact ? "inset-x-px px-1" : "inset-x-1 px-2",
         cutTop && "rounded-t-none",
         cutBottom && "rounded-b-none",
       )}
     >
-      {height >= BAR_ONLY_PX && (
+      {height >= BAR_ONLY_PX && compact && (
+        // A narrow column: the title only, the time and state in the name.
+        <span
+          className={cn(
+            "block truncate py-0.5 text-xs font-medium",
+            skipped && "line-through",
+          )}
+        >
+          {title}
+        </span>
+      )}
+      {height >= BAR_ONLY_PX && !compact && (
         <span className="flex h-full items-start gap-1.5 py-0.5">
           <AppIcon
             name={icon}

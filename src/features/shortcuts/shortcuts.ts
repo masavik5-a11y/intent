@@ -55,6 +55,10 @@ export const SHORTCUT_GROUPS: readonly {
       { keys: ["R"], does: "Review the day" },
     ],
   },
+  {
+    title: "Week and month",
+    rows: [{ keys: ["←", "→"], does: "Previous or next week or month" }],
+  },
 ];
 
 /** The modifier keys and target a shortcut cares about. */

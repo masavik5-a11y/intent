@@ -17,10 +17,11 @@ import { Route as AppCompassRouteImport } from './routes/_app/compass'
 import { Route as AppInsightsRouteImport } from './routes/_app/insights'
 import { Route as AppMonthRouteImport } from './routes/_app/month'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
-import { Route as AppWeekRouteImport } from './routes/_app/week'
 import { Route as AppWelcomeRouteImport } from './routes/_app/welcome'
 import { Route as AppDayDateRouteImport } from './routes/_app/day.$date'
 import { Route as AppPlanDateRouteImport } from './routes/_app/plan.$date'
+import { Route as AppWeekIndexRouteImport } from './routes/_app/week.index'
+import { Route as AppWeekDateRouteImport } from './routes/_app/week.$date'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -61,11 +62,6 @@ const AppSettingsRoute = AppSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AppRoute,
 } as any)
-const AppWeekRoute = AppWeekRouteImport.update({
-  id: '/week',
-  path: '/week',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppWelcomeRoute = AppWelcomeRouteImport.update({
   id: '/welcome',
   path: '/welcome',
@@ -81,6 +77,16 @@ const AppPlanDateRoute = AppPlanDateRouteImport.update({
   path: '/plan/$date',
   getParentRoute: () => AppRoute,
 } as any)
+const AppWeekIndexRoute = AppWeekIndexRouteImport.update({
+  id: '/week/',
+  path: '/week/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppWeekDateRoute = AppWeekDateRouteImport.update({
+  id: '/week/$date',
+  path: '/week/$date',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
@@ -90,10 +96,11 @@ export interface FileRoutesByFullPath {
   '/insights': typeof AppInsightsRoute
   '/month': typeof AppMonthRoute
   '/settings': typeof AppSettingsRoute
-  '/week': typeof AppWeekRoute
   '/welcome': typeof AppWelcomeRoute
   '/day/$date': typeof AppDayDateRoute
   '/plan/$date': typeof AppPlanDateRoute
+  '/week/$date': typeof AppWeekDateRoute
+  '/week/': typeof AppWeekIndexRoute
 }
 export interface FileRoutesByTo {
   '/signin': typeof SigninRoute
@@ -102,11 +109,12 @@ export interface FileRoutesByTo {
   '/insights': typeof AppInsightsRoute
   '/month': typeof AppMonthRoute
   '/settings': typeof AppSettingsRoute
-  '/week': typeof AppWeekRoute
   '/welcome': typeof AppWelcomeRoute
   '/': typeof AppIndexRoute
   '/day/$date': typeof AppDayDateRoute
   '/plan/$date': typeof AppPlanDateRoute
+  '/week/$date': typeof AppWeekDateRoute
+  '/week': typeof AppWeekIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -117,11 +125,12 @@ export interface FileRoutesById {
   '/_app/insights': typeof AppInsightsRoute
   '/_app/month': typeof AppMonthRoute
   '/_app/settings': typeof AppSettingsRoute
-  '/_app/week': typeof AppWeekRoute
   '/_app/welcome': typeof AppWelcomeRoute
   '/_app/': typeof AppIndexRoute
   '/_app/day/$date': typeof AppDayDateRoute
   '/_app/plan/$date': typeof AppPlanDateRoute
+  '/_app/week/$date': typeof AppWeekDateRoute
+  '/_app/week/': typeof AppWeekIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -133,10 +142,11 @@ export interface FileRouteTypes {
     | '/insights'
     | '/month'
     | '/settings'
-    | '/week'
     | '/welcome'
     | '/day/$date'
     | '/plan/$date'
+    | '/week/$date'
+    | '/week/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/signin'
@@ -145,11 +155,12 @@ export interface FileRouteTypes {
     | '/insights'
     | '/month'
     | '/settings'
-    | '/week'
     | '/welcome'
     | '/'
     | '/day/$date'
     | '/plan/$date'
+    | '/week/$date'
+    | '/week'
   id:
     | '__root__'
     | '/_app'
@@ -159,11 +170,12 @@ export interface FileRouteTypes {
     | '/_app/insights'
     | '/_app/month'
     | '/_app/settings'
-    | '/_app/week'
     | '/_app/welcome'
     | '/_app/'
     | '/_app/day/$date'
     | '/_app/plan/$date'
+    | '/_app/week/$date'
+    | '/_app/week/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -229,13 +241,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/week': {
-      id: '/_app/week'
-      path: '/week'
-      fullPath: '/week'
-      preLoaderRoute: typeof AppWeekRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/welcome': {
       id: '/_app/welcome'
       path: '/welcome'
@@ -257,6 +262,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPlanDateRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/week/': {
+      id: '/_app/week/'
+      path: '/week'
+      fullPath: '/week/'
+      preLoaderRoute: typeof AppWeekIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/week/$date': {
+      id: '/_app/week/$date'
+      path: '/week/$date'
+      fullPath: '/week/$date'
+      preLoaderRoute: typeof AppWeekDateRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -266,11 +285,12 @@ interface AppRouteChildren {
   AppInsightsRoute: typeof AppInsightsRoute
   AppMonthRoute: typeof AppMonthRoute
   AppSettingsRoute: typeof AppSettingsRoute
-  AppWeekRoute: typeof AppWeekRoute
   AppWelcomeRoute: typeof AppWelcomeRoute
   AppIndexRoute: typeof AppIndexRoute
   AppDayDateRoute: typeof AppDayDateRoute
   AppPlanDateRoute: typeof AppPlanDateRoute
+  AppWeekDateRoute: typeof AppWeekDateRoute
+  AppWeekIndexRoute: typeof AppWeekIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -279,11 +299,12 @@ const AppRouteChildren: AppRouteChildren = {
   AppInsightsRoute: AppInsightsRoute,
   AppMonthRoute: AppMonthRoute,
   AppSettingsRoute: AppSettingsRoute,
-  AppWeekRoute: AppWeekRoute,
   AppWelcomeRoute: AppWelcomeRoute,
   AppIndexRoute: AppIndexRoute,
   AppDayDateRoute: AppDayDateRoute,
   AppPlanDateRoute: AppPlanDateRoute,
+  AppWeekDateRoute: AppWeekDateRoute,
+  AppWeekIndexRoute: AppWeekIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

@@ -10,7 +10,7 @@ const FORBIDDEN =
 
 const sources = import.meta.glob<string>(
   [
-    "/src/features/{day,now,review,planning,block-detail,recurrence,goals}/*.{ts,tsx}",
+    "/src/features/{day,now,review,planning,block-detail,recurrence,goals,week,month,inbox,replan}/*.{ts,tsx}",
     "!**/*.test.*",
   ],
   { query: "?raw", import: "default", eager: true },
@@ -39,6 +39,7 @@ describe("the screens speak plainly and never judge (DESIGN.md section 9)", () =
         "/src/features/planning/PlanScreen.tsx",
         "/src/features/block-detail/RepeatSection.tsx",
         "/src/features/goals/GoalList.tsx",
+        "/src/features/week/WeekScreen.tsx",
       ]),
     );
   });

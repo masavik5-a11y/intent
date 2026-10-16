@@ -1,5 +1,8 @@
 import { describe, expect, test } from "vitest";
 import {
+  formatDateRange,
+  formatMonthLabel,
+  weekdayLabel,
   utcDateKey,
   addDays,
   dateKeyParts,
@@ -402,5 +405,20 @@ describe("utcDateKey", () => {
     ["2028-02-29T12:00:00Z", "2028-02-29"],
   ])("%s is %s", (iso, expected) => {
     expect(utcDateKey(Date.parse(iso))).toBe(expected);
+  });
+});
+
+describe("formatDateRange, formatMonthLabel, weekdayLabel", () => {
+  test.each([
+    ["2026-10-12", "2026-10-18", "12–18 Oct"],
+    ["2026-09-28", "2026-10-04", "28 Sep – 4 Oct"],
+    ["2026-12-28", "2027-01-03", "28 Dec 2026 – 3 Jan 2027"],
+  ])("%s to %s: %s", (first, last, label) => {
+    expect(formatDateRange(key(first), key(last))).toBe(label);
+  });
+
+  test("months and weekdays", () => {
+    expect(formatMonthLabel(key("2026-10-16"))).toBe("October 2026");
+    expect(weekdayLabel(key("2026-10-16"))).toBe("Fri");
   });
 });

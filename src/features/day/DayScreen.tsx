@@ -49,18 +49,13 @@ import {
   type ReviewStep,
 } from "@/features/review/reviewView";
 import {
-  actualCardName,
-  actualCardState,
-  actualCardTime,
-  actualLane,
   dayNotes,
   dayTense,
-  entryTitle,
   sleepStretches,
   planLane,
   untrackedStretches,
 } from "./dayView";
-import { cardLooks, planCards } from "./gridCards";
+import { actualCards, planCards } from "./gridCards";
 import { DayNotes } from "./DayNotes";
 import { DayReview } from "./DayReview";
 import { WelcomeBack } from "./WelcomeBack";
@@ -184,8 +179,6 @@ export function DayScreen({
 
   const items =
     blocks === undefined ? [] : planLane(blocks, date, gridStartMin);
-  const happened =
-    blocks === undefined ? [] : actualLane(blocks, date, gridStartMin, now);
   const categoryOf = indexById(categories);
   const activityOf = indexById(activities);
   // Untracked time and the totals, live to the minute (PRD T8, U4).
@@ -228,24 +221,16 @@ export function DayScreen({
           }),
           "plan",
         );
-  const actualCards: GridCard[] = blockDrag.withDrag(
-    happened.map((item) => ({
-      ...cardLooks(
-        item.block,
-        categories ?? [],
-        activities ?? [],
-        selectedBlockId,
-      ),
-      title: entryTitle(item.block, categoryOf.get(item.block.categoryId)),
-      time: actualCardTime(item),
-      name: actualCardName(item),
-      top: item.segment.top,
-      height: item.segment.height,
-      state: actualCardState(item),
-      cutTop: item.segment.startsBefore,
-      cutBottom: item.segment.endsAfter,
-      openable: true,
-    })),
+  const actualLaneCards: GridCard[] = blockDrag.withDrag(
+    actualCards({
+      blocks: blocks ?? [],
+      date,
+      gridStartMin,
+      now,
+      categories: categories ?? [],
+      activities: activities ?? [],
+      selectedId: selectedBlockId,
+    }),
     "actual",
   );
 
@@ -579,7 +564,7 @@ export function DayScreen({
           sleepMin={sleepMin}
           isPhone={isPhone}
           cards={cards}
-          actualCards={actualCards}
+          actualCards={actualLaneCards}
           untracked={untracked}
           nowPosition={nowPosition}
           futureFrom={
