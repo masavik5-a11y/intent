@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { Ellipsis, Plus } from "lucide-react";
+import { Ellipsis, PenLine, Plus } from "lucide-react";
 import { SheetCloseButton } from "@/components/SheetCloseButton";
 import {
   Sheet,
@@ -10,6 +10,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { openCapture } from "@/lib/capture";
 import { cn } from "@/lib/utils";
 import { BAR_ITEMS, MORE_ITEMS, type NavItem } from "./navItems";
 
@@ -99,6 +100,22 @@ export function BottomBar({ className }: { className?: string }) {
             </SheetDescription>
           </SheetHeader>
           <ul className="flex flex-col px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+            <li>
+              <button
+                type="button"
+                onClick={() => {
+                  setMoreOpen(false);
+                  openCapture();
+                }}
+                className="flex min-h-11 w-full items-center gap-3 rounded-block px-3 text-base outline-none focus-visible:bg-accent"
+              >
+                <PenLine
+                  className="size-5 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                Capture for later
+              </button>
+            </li>
             {MORE_ITEMS.map((item) => {
               const Icon = item.icon;
               const active = item.matches(pathname);

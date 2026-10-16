@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { CaptureDialog } from "@/features/inbox/CaptureDialog";
 import { ShortcutsHelp } from "@/features/shortcuts/ShortcutsHelp";
 import { BottomBar } from "./BottomBar";
 import { NavRail } from "./NavRail";
@@ -14,6 +15,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main className="min-h-0 min-w-0 flex-1 overflow-auto">{children}</main>
       <BottomBar className="flex sm:hidden" />
       <ShortcutsHelp />
+      <CaptureDialog />
     </div>
   );
 }

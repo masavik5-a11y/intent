@@ -34,6 +34,7 @@ export const SHORTCUT_GROUPS: readonly {
     title: "Anywhere",
     rows: [
       { keys: ["T"], does: "Go to today" },
+      { keys: ["I"], does: "Capture something for later" },
       { keys: ["?"], does: "Show these shortcuts" },
       { keys: ["Esc"], does: "Close a panel or sheet" },
     ],

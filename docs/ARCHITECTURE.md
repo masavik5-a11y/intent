@@ -330,7 +330,13 @@ export default defineSchema({
     sortOrder: v.number(),
   }).index("by_userId", ["userId"]),
 
-  // M7: inboxItems. Designed when that milestone starts.
+  // M7: things captured without a date (PRD P8), until scheduled or let go.
+  inboxItems: defineTable({
+    userId: v.id("users"),
+    title: v.string(), // 1–80 characters
+    note: v.optional(v.string()), // up to 200
+    activityId: v.optional(v.id("activities")), // when the capture names one
+  }).index("by_userId", ["userId"]),
 });
 ```
 
@@ -761,6 +767,7 @@ Things assumed here that must be confirmed in the milestone that depends on them
 | 2026-10-16 | The Playwright smoke test runs on the PC as `npm run e2e` against the Convex dev deployment, outside `npm run check` and CI. `@playwright/test` is pinned at 1.63.0, the newest release more than two weeks old (1.64.0 and 1.64.1 came out in the last ten days). It did not run against a real backend in the cloud session that wrote it (no Convex access, and no Convex CLI there); its steps were run against the screenshot harness's fixture backend, sign-in left out. | A cloud session and CI have no backend; the smoke path needs a real one. A release with two weeks behind it is the safer pin. |
 | 2026-10-16 | Week view (PRD P6): `/week/<date>` shows the week holding that date; `/week` opens this week. One time axis with seven columns at Fit scale (no sleep folds: each day's sleep differs and the columns must share one axis); days that have begun split into plan (3/5) and actual (2/5), days to come plan only. Cards are compact (title only; times and state in the accessible name). Opening a block or adding goes to the day view, which has the detail and quick add; the week has no editing of its own. The header has every category's pace for that week (completed days 0 for a week to come, 7 for one that is over). | PRD P6 and DESIGN.md section 7. Keeping editing in the day view keeps one place for the edit rules; the week is for seeing. |
 | 2026-10-16 | Month view (PRD P7): always six weeks from the week holding the 1st (42 days, one `blocks.listRange`), so a date three weeks ahead is usually on this month's calendar. Labels are the planned blocks no rule made, by start time; repeating blocks are only counted in the day's panel, unplanned entries not shown. Pressing a day opens a panel (`?day=`) with "Add block" (quick add for that day, `&add=true`, staying on the month) and "Open day". A wedding three weeks away: 6 taps and three typed words (the day, Add block, Events, Start, Length, Add block; "Wedding", "1400", "8h"). | "Click a day to open or add" (roadmap) in the fewest steps; a fixed six-week grid never jumps between months. |
+| 2026-10-16 | Inbox (PRD P8): `inboxItems` holds a title (1–80), an optional note and an optional activity (set when the capture is an activity's name), oldest first, at most 200. Capture from anywhere is one dialog mounted in the app shell, opened by `I` on any screen, the Inbox screen's Capture and "Capture for later" in the phone's More sheet. Scheduling picks a day, then reuses quick add for it with the title filled in; `inbox.schedule` makes the block through the blocks model (same checks, so never an overlap) and deletes the item in the same transaction, so a refused schedule leaves it in the inbox. "Let go" deletes it. Inbox joins the rail after Month and the phone's More sheet. | The roadmap left the schema to this milestone. Reusing quick add keeps one way to place a block; one transaction means an item is never lost or doubled. |
 
 ## 17. Implementation notes
 

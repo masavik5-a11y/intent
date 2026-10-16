@@ -14,6 +14,7 @@ import { Route as SigninRouteImport } from './routes/signin'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppActivitiesRouteImport } from './routes/_app/activities'
 import { Route as AppCompassRouteImport } from './routes/_app/compass'
+import { Route as AppInboxRouteImport } from './routes/_app/inbox'
 import { Route as AppInsightsRouteImport } from './routes/_app/insights'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppWelcomeRouteImport } from './routes/_app/welcome'
@@ -46,6 +47,11 @@ const AppActivitiesRoute = AppActivitiesRouteImport.update({
 const AppCompassRoute = AppCompassRouteImport.update({
   id: '/compass',
   path: '/compass',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppInboxRoute = AppInboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
   getParentRoute: () => AppRoute,
 } as any)
 const AppInsightsRoute = AppInsightsRouteImport.update({
@@ -99,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/signin': typeof SigninRoute
   '/activities': typeof AppActivitiesRoute
   '/compass': typeof AppCompassRoute
+  '/inbox': typeof AppInboxRoute
   '/insights': typeof AppInsightsRoute
   '/settings': typeof AppSettingsRoute
   '/welcome': typeof AppWelcomeRoute
@@ -113,6 +120,7 @@ export interface FileRoutesByTo {
   '/signin': typeof SigninRoute
   '/activities': typeof AppActivitiesRoute
   '/compass': typeof AppCompassRoute
+  '/inbox': typeof AppInboxRoute
   '/insights': typeof AppInsightsRoute
   '/settings': typeof AppSettingsRoute
   '/welcome': typeof AppWelcomeRoute
@@ -130,6 +138,7 @@ export interface FileRoutesById {
   '/signin': typeof SigninRoute
   '/_app/activities': typeof AppActivitiesRoute
   '/_app/compass': typeof AppCompassRoute
+  '/_app/inbox': typeof AppInboxRoute
   '/_app/insights': typeof AppInsightsRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/welcome': typeof AppWelcomeRoute
@@ -148,6 +157,7 @@ export interface FileRouteTypes {
     | '/signin'
     | '/activities'
     | '/compass'
+    | '/inbox'
     | '/insights'
     | '/settings'
     | '/welcome'
@@ -162,6 +172,7 @@ export interface FileRouteTypes {
     | '/signin'
     | '/activities'
     | '/compass'
+    | '/inbox'
     | '/insights'
     | '/settings'
     | '/welcome'
@@ -178,6 +189,7 @@ export interface FileRouteTypes {
     | '/signin'
     | '/_app/activities'
     | '/_app/compass'
+    | '/_app/inbox'
     | '/_app/insights'
     | '/_app/settings'
     | '/_app/welcome'
@@ -230,6 +242,13 @@ declare module '@tanstack/react-router' {
       path: '/compass'
       fullPath: '/compass'
       preLoaderRoute: typeof AppCompassRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/inbox': {
+      id: '/_app/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof AppInboxRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/insights': {
@@ -301,6 +320,7 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppActivitiesRoute: typeof AppActivitiesRoute
   AppCompassRoute: typeof AppCompassRoute
+  AppInboxRoute: typeof AppInboxRoute
   AppInsightsRoute: typeof AppInsightsRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppWelcomeRoute: typeof AppWelcomeRoute
@@ -316,6 +336,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppActivitiesRoute: AppActivitiesRoute,
   AppCompassRoute: AppCompassRoute,
+  AppInboxRoute: AppInboxRoute,
   AppInsightsRoute: AppInsightsRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppWelcomeRoute: AppWelcomeRoute,

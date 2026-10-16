@@ -219,4 +219,15 @@ export default defineSchema({
     ),
     sortOrder: v.number(),
   }).index("by_userId", ["userId"]),
+
+  // Things captured without a date, to be scheduled later (PRD P8).
+  inboxItems: defineTable({
+    userId: v.id("users"),
+    /** What it is, 1 to 80 characters. */
+    title: v.string(),
+    /** A line more, if any. */
+    note: v.optional(v.string()),
+    /** Set when the capture names an activity; scheduling starts from it. */
+    activityId: v.optional(v.id("activities")),
+  }).index("by_userId", ["userId"]),
 });
