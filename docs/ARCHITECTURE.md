@@ -748,6 +748,9 @@ Things assumed here that must be confirmed in the milestone that depends on them
 | 2026-10-16 | Compass, below the two texts: goals (soonest due first, undated after; Edit, Mark done, Drop; done and dropped folded under "Done and dropped" with Reopen; the form is a dialog, a bottom sheet on the phone) and weekly targets per category, typed in hours ("15", "7.5", or "7h 30m"), saved on leaving the field or Enter, empty clears. Drift and archived categories take no target. | DESIGN.md section 7 lists what each goal shows; a target for drift would turn drift into something to reach. Hours are how Filip thinks of a week ("Deep work 15h"). |
 | 2026-10-16 | An activity's goal is chosen in its form as chips ("No goal" and each open goal; a closed goal it already points at stays offered). The now panel's goal chip (a flag, "Launch the course · 36 days left") sits under the why, also on the phone's folded card, only for an open goal, with days counted from the app's today (the grid day). | The chip is the deadline beside the why (DESIGN.md section 4a, item 5); a done or dropped goal has no finish line left to push against. |
 | 2026-10-16 | The pace line sits in the now panel under the day totals, headed "This week", for the running block's category when it has a target; on the phone it is behind "More". The week's blocks come from `blocks.listRange` (any range up to 62 days, the day before the week to the day after), computed on the device so the running block counts to the minute. | DESIGN.md section 4a, item 9; the phone's folded card keeps to the block itself. One bounded range query serves pace now and the week and month views in M7. |
+| 2026-10-16 | Dragging (PRD T9; `shared/drag.ts`, `src/features/day/blockDrag.ts`): a plan card moves or resizes (bottom edge) while its block is still ahead on today or a day to come, or on a past day after "Edit plan"; on today it starts no earlier than now. A block that has started does not move in the plan lane; its actual card does (done, partly done, unplanned entries), ending no later than now and never over the running block's growing bar. The running bar and cards cut at the grid's edge (sleep across 05:00) do not drag; block detail changes them. A plan with recorded actual times keeps its calendar day. A drop that would collide slides back toward where it came from until it fits (it may jump past a block into free time beyond); nothing else ever moves. | PRD section 7, rules 4 and 6: the future is edited as plan, what has started as what happened, and nothing overlaps. Sliding back instead of refusing keeps the drop useful. |
+| 2026-10-16 | A drag on a repeating occurrence changes that one only and detaches it ("This one"), without asking; "This and following" stays in block detail. | A drag is a direct change to one block on one day; asking after every drop would cost the speed drag is for. |
+| 2026-10-16 | Drag on the phone starts with a 450 ms long press on a card; a touch that moves 8 px before that is a scroll. A mouse drags after 4 px; less is a click that opens the block. Esc cancels a drag. A drop shows at once (optimistic `blocks.update`, `src/lib/blockUpdate.ts`) and a refusal is said above the grid or in the open panel. | DESIGN.md section 11 keeps the time fields in block detail as the non-drag way; the long press keeps scrolling the phone's grid as it was. |
 
 ## 17. Implementation notes
 
@@ -881,6 +884,13 @@ one; delete an entry when it stops being true.
   and `virtual:pwa-register` to small mocks (a `useQuery` that answers by function
   name, read from `Symbol.for("functionName")` on the reference). Playwright's
   `page.clock.setFixedTime` and `timezoneId` pin the app's "now".
+
+- Dragging on a touch screen: once a long press has turned into a drag, the grid's
+  scroller cancels `touchmove` through a listener added with `{ passive: false }`
+  (React's are passive), or the page scrolls under the finger and Chrome sends
+  `pointercancel`. In the screenshot harness, Playwright's touchscreen only taps; real
+  touch drags go through CDP, `Input.dispatchTouchEvent` (touchStart, touchMove,
+  touchEnd), which Chrome turns into pointer events.
 
 - In a cloud session, `pkill -f "<pattern>"` also matches the shell that runs it (its
   command line holds the pattern) and kills the tool call. Write the pattern so it

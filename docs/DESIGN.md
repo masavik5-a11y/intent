@@ -92,6 +92,7 @@ those four unreachable on a phone. Change it here if daily use suggests another 
 | Sleep | Long sleep blocks are drawn compressed (fixed 40 px) so they do not eat the screen. |
 | Lanes | Plan and Actual, equal width on desktop. A thin gutter between them. |
 | Snap | 5 minutes when dragging, 15 minutes when clicking an empty slot. |
+| Drag (M6) | A card moves when dragged and resizes from its bottom edge; on the phone a long press picks it up. The plan lane takes blocks still ahead (on today not before now; a past day's plan after "Edit plan"); the actual lane takes what was recorded, not after now. A drop that would land on another block slides back until it fits, so nothing else moves. While dragged, the card lifts and shows its new times; Esc puts it back. |
 | Now line | 1 px line with a dot, across both lanes, today only. Moves every minute. |
 | Untracked | Before now, empty actual-lane time is shown as a faint diagonal hatch. |
 | Future | The actual lane after now is empty and slightly dimmed. |

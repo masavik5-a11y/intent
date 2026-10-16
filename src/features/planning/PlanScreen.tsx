@@ -19,6 +19,7 @@ import type { AddRequest } from "@/features/day/DayScreen";
 import { DayGrid } from "@/features/day/DayGrid";
 import { dayTense } from "@/features/day/dayView";
 import { planCards } from "@/features/day/gridCards";
+import { useBlockDrag } from "@/features/day/useBlockDrag";
 import { QuickAdd } from "@/features/day/QuickAdd";
 import {
   DEFAULT_DURATION_MIN,
@@ -108,18 +109,31 @@ export function PlanScreen({
     activities !== undefined &&
     categories !== undefined;
 
+  // Planning ahead: blocks still ahead move by dragging, like on the day (PRD T9).
+  const blockDrag = useBlockDrag({
+    blocks,
+    day: date,
+    gridStartMin,
+    now,
+    tense: isToday ? "today" : "future",
+    planUnlocked: false,
+    onError: setStatusError,
+  });
   const cards =
     blocks === undefined
       ? []
-      : planCards({
-          blocks,
-          date,
-          gridStartMin,
-          now,
-          categories: categories ?? [],
-          activities: activities ?? [],
-          selectedId: selectedBlockId,
-        });
+      : blockDrag.withDrag(
+          planCards({
+            blocks,
+            date,
+            gridStartMin,
+            now,
+            categories: categories ?? [],
+            activities: activities ?? [],
+            selectedId: selectedBlockId,
+          }),
+          "plan",
+        );
 
   const saveFocus = useCallback(
     (text: string) =>
@@ -260,6 +274,11 @@ export function PlanScreen({
               {copyResult}
             </p>
           )}
+          {statusError !== null && selected === undefined && (
+            <p role="alert" className="text-sm text-destructive">
+              {statusError}
+            </p>
+          )}
           {blocks !== undefined && cards.length === 0 && (
             <p className="text-sm text-muted-foreground">
               Nothing planned yet. Start with one block, or copy a day.
@@ -282,6 +301,7 @@ export function PlanScreen({
           }
           settled={ready && day !== undefined}
           onOpenCard={(key) => onSelectBlock(key as Id<"blocks">)}
+          onDrag={blockDrag.onDrag}
           planOnly
         />
       </div>

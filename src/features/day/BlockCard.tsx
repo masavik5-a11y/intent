@@ -32,6 +32,8 @@ interface BlockCardProps {
   hasNote: boolean;
   /** Its detail is open. */
   selected: boolean;
+  /** It is being dragged: lifted above the others. */
+  lifted?: boolean;
   /** Cut at the grid's top or bottom edge because it crosses into another day's grid. */
   cutTop: boolean;
   cutBottom: boolean;
@@ -62,6 +64,7 @@ export function BlockCard({
   state,
   hasNote,
   selected,
+  lifted = false,
   cutTop,
   cutBottom,
   onOpen,
@@ -90,6 +93,7 @@ export function BlockCard({
         state === "done" && "opacity-75",
         selected &&
           "ring-2 ring-foreground ring-offset-1 ring-offset-background",
+        lifted && "cursor-grabbing shadow-lg ring-2 ring-key-solid",
         cutTop && "rounded-t-none",
         cutBottom && "rounded-b-none",
       )}

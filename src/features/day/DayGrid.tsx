@@ -1,4 +1,11 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
+import type { DragMode, GridSpan } from "@shared/drag";
 import {
   fitPxPerMin,
   PHONE_PX_PER_MIN,
@@ -36,6 +43,45 @@ export interface GridCard {
   openable: boolean;
   /** The block has a note (PRD A5): a small mark beside the title. */
   hasNote: boolean;
+  /** It can be dragged in its lane (PRD T9); unset, it stays put. */
+  drag?: { lane: "plan" | "actual" } | undefined;
+}
+
+/** What the grid asks while a card is dragged, and tells when it is dropped. */
+export interface GridDrag {
+  /** Where the card would land and the time it would show; null to stop. */
+  preview: (
+    key: string,
+    lane: "plan" | "actual",
+    mode: DragMode,
+    deltaMin: number,
+  ) => { span: GridSpan; time: string } | null;
+  drop: (
+    key: string,
+    lane: "plan" | "actual",
+    mode: DragMode,
+    deltaMin: number,
+  ) => void;
+}
+
+/** A touch must rest this long on a card before it drags, so a swipe still scrolls. */
+const LONG_PRESS_MS = 450;
+/** A touch that moves this far before the long press is a scroll. */
+const TOUCH_SLOP_PX = 8;
+/** A mouse drag starts after this much movement; less is a click. */
+const MOUSE_SLOP_PX = 4;
+
+interface Gesture {
+  key: string;
+  lane: "plan" | "actual";
+  mode: DragMode;
+  pointerId: number;
+  startY: number;
+  touch: boolean;
+  active: boolean;
+  deltaMin: number;
+  timer: ReturnType<typeof setTimeout> | undefined;
+  element: HTMLElement;
 }
 
 interface DayGridProps {
@@ -70,6 +116,8 @@ interface DayGridProps {
    * tomorrow"). Default: both lanes.
    */
   planOnly?: boolean;
+  /** Dragging cards that carry `drag` (PRD T9). */
+  onDrag?: GridDrag;
 }
 
 /** The two-lane hour grid (DESIGN.md section 3). Plan on the left, actual on the right. */
@@ -89,8 +137,16 @@ export function DayGrid({
   onEmptySlot,
   onEmptyActualSlot,
   planOnly = false,
+  onDrag,
 }: DayGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const gesture = useRef<Gesture | null>(null);
+  const swallowClick = useRef(false);
+  const [dragged, setDragged] = useState<{
+    key: string;
+    span: GridSpan;
+    time: string;
+  } | null>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const [viewportPx, setViewportPx] = useState(0);
   const scrolledFor = useRef<string | null>(null);
@@ -112,6 +168,126 @@ export function DayGrid({
   const pxPerMin = isPhone
     ? PHONE_PX_PER_MIN
     : fitPxPerMin(Math.max(viewportPx - 2 * EDGE_PX, 0), wakeMin, sleepMin);
+
+  // Dragging (PRD T9). A mouse drags once it moves a few pixels; a touch drags after
+  // resting on a card, so a swipe over the grid still scrolls. Esc puts it back.
+  function stopGesture() {
+    const current = gesture.current;
+    if (current !== null) {
+      clearTimeout(current.timer);
+      if (current.element.hasPointerCapture(current.pointerId)) {
+        current.element.releasePointerCapture(current.pointerId);
+      }
+    }
+    gesture.current = null;
+    setDragged(null);
+  }
+
+  function showDrag(current: Gesture) {
+    const preview = onDrag?.preview(
+      current.key,
+      current.lane,
+      current.mode,
+      current.deltaMin,
+    );
+    if (preview === null || preview === undefined) {
+      stopGesture();
+      return;
+    }
+    setDragged({ key: current.key, ...preview });
+  }
+
+  function activate(current: Gesture) {
+    current.active = true;
+    current.element.setPointerCapture(current.pointerId);
+    showDrag(current);
+  }
+
+  function onCardPointerDown(event: ReactPointerEvent, card: GridCard) {
+    if (onDrag === undefined || card.drag === undefined) return;
+    if (event.button !== 0 || gesture.current !== null) return;
+    const target = event.target as HTMLElement;
+    const element = event.currentTarget as HTMLElement;
+    const current: Gesture = {
+      key: card.key,
+      lane: card.drag.lane,
+      mode: target.closest("[data-resize]") === null ? "move" : "resize",
+      pointerId: event.pointerId,
+      startY: event.clientY,
+      touch: event.pointerType === "touch",
+      active: false,
+      deltaMin: 0,
+      timer: undefined,
+      element,
+    };
+    gesture.current = current;
+    if (current.touch) {
+      current.timer = setTimeout(() => {
+        if (gesture.current === current) activate(current);
+      }, LONG_PRESS_MS);
+    }
+  }
+
+  function onCardPointerMove(event: ReactPointerEvent) {
+    const current = gesture.current;
+    if (current === null || current.pointerId !== event.pointerId) return;
+    const movedPx = event.clientY - current.startY;
+    if (!current.active) {
+      if (current.touch) {
+        if (Math.abs(movedPx) > TOUCH_SLOP_PX) stopGesture();
+        return;
+      }
+      if (Math.abs(movedPx) < MOUSE_SLOP_PX) return;
+      activate(current);
+    }
+    current.deltaMin = pxToMinutes(movedPx, pxPerMin);
+    showDrag(current);
+  }
+
+  function onCardPointerUp(event: ReactPointerEvent) {
+    const current = gesture.current;
+    if (current === null || current.pointerId !== event.pointerId) return;
+    if (current.active) {
+      swallowClick.current = true;
+      onDrag?.drop(current.key, current.lane, current.mode, current.deltaMin);
+    }
+    stopGesture();
+  }
+
+  // While a touch drags, the page must not scroll under it; and Esc cancels a drag.
+  useEffect(() => {
+    const scroller = scrollRef.current;
+    if (scroller === null) return;
+    const onTouchMove = (event: TouchEvent) => {
+      if (gesture.current?.active === true) event.preventDefault();
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && gesture.current !== null) {
+        event.preventDefault();
+        event.stopPropagation();
+        stopGesture();
+      }
+    };
+    scroller.addEventListener("touchmove", onTouchMove, { passive: false });
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => {
+      scroller.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("keydown", onKeyDown, true);
+    };
+  }, []);
+
+  const dragHandlers = {
+    onPointerDown: onCardPointerDown,
+    onPointerMove: onCardPointerMove,
+    onPointerUp: onCardPointerUp,
+    onPointerCancel: () => stopGesture(),
+    /** True once for the click that ends a drag, which must not open the block. */
+    consumeClick: () => {
+      const swallow = swallowClick.current;
+      swallowClick.current = false;
+      return swallow;
+    },
+  };
 
   // Open at the wake time, or wherever now is when that is out of view (PRD T2).
   // Once per day shown, so the minute ticking never yanks the view.
@@ -210,6 +386,12 @@ export function DayGrid({
                 card={card}
                 pxPerMin={pxPerMin}
                 onOpenCard={onOpenCard}
+                drag={dragHandlers}
+                dragged={
+                  dragged?.key === card.key && card.drag?.lane === "plan"
+                    ? dragged
+                    : undefined
+                }
               />
             ))}
           </div>
@@ -257,6 +439,12 @@ export function DayGrid({
                   card={card}
                   pxPerMin={pxPerMin}
                   onOpenCard={onOpenCard}
+                  drag={dragHandlers}
+                  dragged={
+                    dragged?.key === card.key && card.drag?.lane === "actual"
+                      ? dragged
+                      : undefined
+                  }
                 />
               ))}
             </div>
@@ -285,26 +473,61 @@ function GridBlock({
   card,
   pxPerMin,
   onOpenCard,
+  drag,
+  dragged,
 }: {
   card: GridCard;
   pxPerMin: number;
   onOpenCard: ((key: string) => void) | undefined;
+  drag: {
+    onPointerDown: (event: ReactPointerEvent, card: GridCard) => void;
+    onPointerMove: (event: ReactPointerEvent) => void;
+    onPointerUp: (event: ReactPointerEvent) => void;
+    onPointerCancel: () => void;
+    consumeClick: () => boolean;
+  };
+  /** Where it is while being dragged. */
+  dragged: { span: GridSpan; time: string } | undefined;
 }) {
-  const box = pxBox(card.top, card.height, pxPerMin);
+  const box = pxBox(
+    dragged?.span.top ?? card.top,
+    dragged?.span.height ?? card.height,
+    pxPerMin,
+  );
+  const draggable = card.drag !== undefined;
   return (
-    <div role="listitem">
+    <div
+      role="listitem"
+      className={cn(
+        draggable &&
+          "touch-manipulation select-none [-webkit-touch-callout:none]",
+        dragged !== undefined && "relative z-30",
+      )}
+      onPointerDown={(event) => drag.onPointerDown(event, card)}
+      onPointerMove={drag.onPointerMove}
+      onPointerUp={drag.onPointerUp}
+      onPointerCancel={drag.onPointerCancel}
+      onContextMenu={(event) => {
+        if (draggable) event.preventDefault();
+      }}
+      onClickCapture={(event) => {
+        // The click that ends a drag does not open the block.
+        if (drag.consumeClick()) event.stopPropagation();
+      }}
+    >
       <BlockCard
         title={card.title}
         focus={card.focus}
         icon={card.icon}
         colorKey={card.colorKey}
-        time={card.time}
+        time={dragged?.time ?? card.time}
         name={card.name}
         top={box.top}
         height={box.height}
         state={card.state}
         hasNote={card.hasNote}
         selected={card.selected}
+        lifted={dragged !== undefined}
         cutTop={card.cutTop}
         cutBottom={card.cutBottom}
         onOpen={
@@ -313,6 +536,15 @@ function GridBlock({
             : () => onOpenCard(card.key)
         }
       />
+      {draggable && (
+        // The bottom edge resizes. Drawn over the card's last pixels.
+        <div
+          data-resize=""
+          aria-hidden="true"
+          className="absolute inset-x-3 z-10 h-2 cursor-ns-resize"
+          style={{ top: box.top + box.height - 6 }}
+        />
+      )}
     </div>
   );
 }
