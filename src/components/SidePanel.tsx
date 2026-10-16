@@ -50,7 +50,7 @@ export function SidePanel({
     return (
       <aside
         aria-labelledby="side-panel-title"
-        className="flex w-[340px] shrink-0 flex-col border-l"
+        className="flex w-[340px] shrink-0 animate-panel flex-col border-l"
       >
         <header className="flex items-start gap-2 px-4 pt-3 pb-2 sm:px-5">
           <div className="flex min-w-0 flex-1 flex-col">

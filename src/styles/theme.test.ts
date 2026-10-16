@@ -93,3 +93,29 @@ describe("colour key wiring", () => {
     }
   });
 });
+
+describe("motion (DESIGN.md section 6)", () => {
+  const utilities = [
+    ...css.matchAll(/@utility (animate-[\w-]+) \{([\s\S]*?)\n\}/g),
+  ];
+
+  test("there are the three motions", () => {
+    expect(utilities.map((match) => match[1])).toEqual([
+      "animate-settle",
+      "animate-enter-lane",
+      "animate-panel",
+    ]);
+  });
+
+  test.each(utilities.map((match) => [match[1], match[2] ?? ""]))(
+    "%s lasts 150 to 200 ms and is a plain fade with reduced motion",
+    (_, body) => {
+      const duration = Number(/ (\d+)ms /.exec(body)?.[1]);
+      expect(duration).toBeGreaterThanOrEqual(150);
+      expect(duration).toBeLessThanOrEqual(200);
+      expect(body).toMatch(
+        /@media \(prefers-reduced-motion: reduce\) \{\s*animation-name: motion-fade;/,
+      );
+    },
+  );
+});

@@ -13,6 +13,7 @@ import {
   dayTitle,
   entryTitle,
   hourMarks,
+  newKeys,
   planCardState,
   planLane,
   sleepStretches,
@@ -453,5 +454,15 @@ describe("sleepStretches (DESIGN.md section 3)", () => {
     expect(
       sleepStretches([block("Tonight", TUE, 1380, 480)], [life], TUE, 300),
     ).toEqual([]);
+  });
+});
+
+describe("newKeys (DESIGN.md section 6)", () => {
+  test("nothing is new before the day has settled", () => {
+    expect(newKeys(null, ["a", "b"])).toEqual([]);
+  });
+  test("a card not seen before is new", () => {
+    expect(newKeys(new Set(["a"]), ["a", "b"])).toEqual(["b"]);
+    expect(newKeys(new Set(["a", "b"]), ["b"])).toEqual([]);
   });
 });

@@ -359,3 +359,16 @@ export function sleepStretches(
     .filter((item) => sleeping.has(item.block.categoryId))
     .map(({ segment }) => ({ top: segment.top, height: segment.height }));
 }
+
+/**
+ * Which actual-lane cards have just come in (DESIGN.md section 6): those not among
+ * the keys seen before. Before the day has settled nothing is new, so opening a day
+ * moves nothing.
+ */
+export function newKeys(
+  seen: ReadonlySet<string> | null,
+  current: readonly string[],
+): string[] {
+  if (seen === null) return [];
+  return current.filter((key) => !seen.has(key));
+}

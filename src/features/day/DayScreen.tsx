@@ -28,6 +28,7 @@ import {
 } from "./cardFocus";
 import { saveErrorMessage } from "@/lib/errorMessages";
 import { useNow } from "@/lib/now";
+import { cn } from "@/lib/utils";
 import { setGridZoom, useGridZoom } from "@/lib/gridZoom";
 import { dismissWelcome, welcomeDismissedOn } from "@/lib/welcomeDismissal";
 import { useIsPhone, useMediaQuery } from "@/lib/useMediaQuery";
@@ -282,6 +283,16 @@ export function DayScreen({
       : null;
 
   const feelingTargetId = nowPanel?.feelingTarget?.block._id ?? null;
+
+  // Once another panel has been open, the now panel's return is a mode change and
+  // fades in (DESIGN.md section 6).
+  const [panelChanged, setPanelChanged] = useState(false);
+  if (
+    !panelChanged &&
+    (selectedBlockId !== undefined || review !== undefined)
+  ) {
+    setPanelChanged(true);
+  }
 
   // The running block's category's pace this week, if it has a target (PRD U5).
   const paceLine =
@@ -593,7 +604,13 @@ export function DayScreen({
         feelingBlock === undefined &&
         !reviewOpen &&
         nowPanel !== null && (
-          <aside className="w-[340px] shrink-0 overflow-y-auto border-l">
+          <aside
+            className={cn(
+              "w-[340px] shrink-0 overflow-y-auto border-l",
+              // Coming back from another panel; opening the day moves nothing.
+              panelChanged && "animate-panel",
+            )}
+          >
             <NowPanel
               view={nowPanel}
               compact={false}
