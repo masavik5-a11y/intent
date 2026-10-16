@@ -29,6 +29,7 @@ export type NewActivity = { [F in IntentField]?: string } & {
   defaultDurationMin: number;
   notify: boolean;
   pressure: boolean;
+  goalId?: Id<"goals">;
 };
 
 /** Fields left out stay as they are; null clears an optional field. */
@@ -39,6 +40,8 @@ export type ActivityChanges = { [F in IntentField]?: string | null } & {
   defaultDurationMin?: number;
   notify?: boolean;
   pressure?: boolean;
+  /** The goal its blocks work toward; null unlinks it (PRD U6). */
+  goalId?: Id<"goals"> | null;
 };
 
 /** The user's activity, or NOT_FOUND when it is missing or someone else's. */
@@ -83,6 +86,9 @@ export async function create(
     archived: false,
   };
   if (input.icon !== undefined) fields.icon = checkIcon(input.icon);
+  if (input.goalId !== undefined) {
+    fields.goalId = await ownedGoal(ctx, userId, input.goalId);
+  }
   for (const field of INTENT_FIELDS) {
     const text = optionalText(input[field]);
     if (text !== undefined) fields[field] = text;
@@ -117,6 +123,12 @@ export async function update(
   }
   if (changes.notify !== undefined) patch.notify = changes.notify;
   if (changes.pressure !== undefined) patch.pressure = changes.pressure;
+  if (changes.goalId !== undefined) {
+    patch.goalId =
+      changes.goalId === null
+        ? undefined
+        : await ownedGoal(ctx, userId, changes.goalId);
+  }
   for (const field of INTENT_FIELDS) {
     const change = changes[field];
     if (change !== undefined) {
@@ -138,6 +150,17 @@ export async function setArchived(
 ): Promise<void> {
   const activity = await getOwned(ctx, userId, activityId);
   await ctx.db.patch("activities", activity._id, { archived });
+}
+
+/** A goal of the user's to link to, or NOT_FOUND. */
+async function ownedGoal(
+  ctx: QueryCtx,
+  userId: Id<"users">,
+  goalId: Id<"goals">,
+): Promise<Id<"goals">> {
+  const goal = await ctx.db.get("goals", goalId);
+  if (goal === null || goal.userId !== userId) throw appError("NOT_FOUND");
+  return goal._id;
 }
 
 function requiredName(name: string): string {

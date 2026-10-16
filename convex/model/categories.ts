@@ -1,6 +1,7 @@
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { DEFAULT_CATEGORIES } from "../../shared/categories";
+import { isValidWeeklyTarget } from "../../shared/goals";
 import { appError } from "../lib/errors";
 
 // The only module that writes the categories table (CLAUDE.md, rule 4).
@@ -53,4 +54,20 @@ export async function seedDefaults(
       archived: false,
     });
   }
+}
+
+/** Sets a category's weekly target in minutes (PRD U5), or clears it with null. */
+export async function setWeeklyTarget(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  categoryId: Id<"categories">,
+  minutes: number | null,
+): Promise<void> {
+  const category = await getOwned(ctx, userId, categoryId);
+  if (minutes !== null && !isValidWeeklyTarget(minutes)) {
+    throw appError("INVALID_TIME");
+  }
+  await ctx.db.patch("categories", category._id, {
+    weeklyTargetMin: minutes ?? undefined,
+  });
 }

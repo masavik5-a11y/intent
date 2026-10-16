@@ -134,6 +134,26 @@ describe("schema", () => {
         recurrenceId,
         detached: true,
       });
+
+      // M5: a goal, an activity pointing at it, and a category with a target.
+      const goalId = await ctx.db.insert("goals", {
+        userId,
+        title: "Launch the course",
+        why: "People asked for it.",
+        dueDate: "2026-11-21" as DateKey,
+        createdOn: "2026-10-16" as DateKey,
+        status: "active",
+        sortOrder: 0,
+      });
+      await ctx.db.insert("goals", {
+        userId,
+        title: "Read more",
+        createdOn: "2026-10-16" as DateKey,
+        status: "dropped",
+        sortOrder: 1,
+      });
+      await ctx.db.patch("activities", activityId, { goalId });
+      await ctx.db.patch("categories", categoryId, { weeklyTargetMin: 900 });
     });
   });
 });
