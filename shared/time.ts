@@ -294,3 +294,44 @@ export function formatDuration(minutes: number): string {
   if (rest === 0) return `${hours}h`;
   return `${hours}h ${rest}m`;
 }
+
+/**
+ * A run of days from `first` to `last`: "12–18 Oct", "28 Sep – 4 Oct", and with the
+ * years when it crosses one, "28 Dec 2026 – 3 Jan 2027".
+ */
+export function formatDateRange(first: DateKey, last: DateKey): string {
+  const a = dateKeyParts(first);
+  const b = dateKeyParts(last);
+  const month = (parts: CalendarDate) => MONTH_NAMES[parts.month - 1];
+  if (a.year !== b.year) {
+    return `${a.day} ${month(a)} ${a.year} – ${b.day} ${month(b)} ${b.year}`;
+  }
+  if (a.month !== b.month) return `${a.day} ${month(a)} – ${b.day} ${month(b)}`;
+  return `${a.day}–${b.day} ${month(b)}`;
+}
+
+/** "October 2026". */
+export function formatMonthLabel(date: DateKey): string {
+  const { year, month } = dateKeyParts(date);
+  return `${FULL_MONTH_NAMES[month - 1]} ${year}`;
+}
+
+const FULL_MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+] as const;
+
+/** The short weekday name: "Mon". */
+export function weekdayLabel(date: DateKey): string {
+  return WEEKDAY_NAMES[weekdayOf(date)];
+}

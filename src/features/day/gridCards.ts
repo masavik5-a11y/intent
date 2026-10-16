@@ -1,7 +1,17 @@
 import type { DateKey, LocalMoment } from "@shared/time";
 import type { Doc } from "@/lib/api";
 import type { GridCard } from "./DayGrid";
-import { cardName, cardTime, planCardState, planLane } from "./dayView";
+import {
+  actualCardName,
+  actualCardState,
+  actualCardTime,
+  actualLane,
+  cardName,
+  cardTime,
+  entryTitle,
+  planCardState,
+  planLane,
+} from "./dayView";
 
 // The cards a day grid draws, from the blocks and what they belong to. Shared by the
 // day view and the plan screen.
@@ -59,6 +69,41 @@ export function planCards({
     state: planCardState(block, now),
     cutTop: segment.startsBefore,
     cutBottom: segment.endsAfter,
+    openable: true,
+  }));
+}
+
+/** The actual lane's cards for `date`'s grid at `now`, the running block's bar too. */
+export function actualCards({
+  blocks,
+  date,
+  gridStartMin,
+  now,
+  categories,
+  activities,
+  selectedId,
+}: {
+  blocks: readonly Doc<"blocks">[];
+  date: DateKey;
+  gridStartMin: number;
+  now: LocalMoment;
+  categories: readonly Doc<"categories">[];
+  activities: readonly Doc<"activities">[];
+  selectedId: string | undefined;
+}): GridCard[] {
+  return actualLane(blocks, date, gridStartMin, now).map((item) => ({
+    ...cardLooks(item.block, categories, activities, selectedId),
+    title: entryTitle(
+      item.block,
+      categories.find((category) => category._id === item.block.categoryId),
+    ),
+    time: actualCardTime(item),
+    name: actualCardName(item),
+    top: item.segment.top,
+    height: item.segment.height,
+    state: actualCardState(item),
+    cutTop: item.segment.startsBefore,
+    cutBottom: item.segment.endsAfter,
     openable: true,
   }));
 }
