@@ -379,8 +379,11 @@ All in `shared/`, all pure, all unit-tested. Rules are in PRD.md section 7.
 | `applyStatus(block, action, lane, now)` | The field changes for Done, Partly, Skip, Undo, or why it cannot be done. |
 | `partlyChoices(plannedMin, soFarMin)` | Quick lengths for Partly. |
 | `countdown(block, now)` | Minutes left, fraction remaining, minutes over. Drives the draining bar. |
-| `weeklyPace(targetMin, actualMin, completedDays, daysLeft)` | Progress, ahead or behind against expected, minutes per remaining day (PRD "Pace rules"). |
-| `daysLeft(dueDate, today)` | Calendar days to a goal's due date; negative when over. |
+| `weekStart(date, weekStartsOn)`, `weekDays` | The week holding a day, from the configured first weekday. |
+| `completedDays(today, weekStartsOn, todayReviewed)` | Days of the week that count as completed: those before today, and today once its review is closed (pace rule 2). |
+| `weekProgress(blocks, first, gridStart, now)` | Actual minutes per category in the week's seven grids, with the running block up to now (pace rule 1). |
+| `weeklyPace(targetMin, progressMin, completedDays)` | Expected so far, days left (7 − completed), ahead, behind or on pace, minutes a day still needed when behind (PRD "Pace rules"). `paceText` words it. |
+| `daysLeft(dueDate, today)` | Calendar days to a goal's due date; negative when over. `daysLeftText` words it. |
 
 The client uses these for optimistic updates and for rendering; the server uses the same
 functions to validate and to apply. One implementation, two callers.
@@ -741,6 +744,7 @@ Things assumed here that must be confirmed in the milestone that depends on them
 | 2026-10-16 | M4 (notifications and offline) moves after M7, before M8 (Filip's choice). M5, M6 and M7 are built in one pull request with the milestone gate lifted; M2's and M3's real days run in parallel. Nothing in M5–M7 depends on M4: the notification side of the V4 guard, the offline snapshot and M4's "Verify first" rows stay with M4. | Filip wants pace, speed and the wider views before notifications. |
 | 2026-10-16 | Hours invested in a goal = actual minutes recorded on the blocks of the activities linked to it, dated from the goal's `createdOn` (the device's day it was made) on. Read per linked activity through a new blocks index `by_activityId_and_date`, at most 4,000 blocks per goal (`capped` says when the read stopped). Unmarked running time is not counted (a query does not read the clock). Unlinking an activity takes its hours with it. | Bounded and indexed without a stored counter (pace and hours are computed, never stored). Counting from the goal's own day keeps years of an activity's past out of a new goal. 4,000 blocks is years of daily blocks for one person. |
 | 2026-10-16 | Goals are never deleted: they are marked done or dropped, and can be reopened. Their activities stay linked. | PRD U6 and the roadmap ask for done or dropped; with no delete there is never a dangling `goalId`. |
+| 2026-10-16 | Pace (`shared/pace.ts`): the week is seven day grids from the first weekday's grid start, so a night's sleep counts in the week its grid belongs to. Days left = 7 − completed days, so today counts as left until its review is closed. The difference from expected is rounded to 5 minutes and within that reads "on pace"; at or over the target it reads "target reached" instead of ahead; when behind it adds the minutes a day still needed, rounded up to 5 ("2h 40m a day"); a reviewed last day reads "week closed". Progress is written `9h 20m of 15h`, not `9 of 15h`. | PRD pace rules 1 to 3, with the grid as the day everywhere else in the app. Rounding keeps a 2-minute wobble from flipping ahead and behind; minutes in the progress make the line match a hand count. |
 
 ## 17. Implementation notes
 
