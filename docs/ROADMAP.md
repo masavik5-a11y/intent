@@ -271,7 +271,7 @@ by themselves.
 - [x] Zoom levels and compressed sleep.
 - [x] Motion pass: check-off, blocks entering the actual lane, panel changes; reduced
       motion respected.
-- [ ] Optimistic updates for quick add and block edits (ARCHITECTURE.md section 8), so
+- [x] Optimistic updates for quick add and block edits (ARCHITECTURE.md section 8), so
       a new block appears before the server answers.
 - [ ] Phone pass: collapsible now card, bottom bar, sheets, 44 px targets.
 - [ ] Accessibility pass: focus order, names, contrast in both themes.

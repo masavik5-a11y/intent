@@ -18,6 +18,7 @@ import { weekPaces, weekReadRange } from "@/features/goals/paceView";
 import { useEnsureMaterialized } from "@/features/recurrence/useEnsureMaterialized";
 import { api, type Doc, type Id } from "@/lib/api";
 import { useSetStatus } from "@/lib/blockStatus";
+import { createLocally, logLocally } from "@/lib/blockUpdate";
 import { useBlockDrag } from "./useBlockDrag";
 import { dayCommand, shortcutsPaused } from "@/features/shortcuts/shortcuts";
 import {
@@ -132,8 +133,12 @@ export function DayScreen({
   const goals = useQuery(api.goals.list);
   // The view reads the day after too (blocks before the grid's start).
   useEnsureMaterialized(addDays(date, 1));
-  const createBlock = useMutation(api.blocks.create);
-  const logEntry = useMutation(api.blocks.logEntry);
+  const createBlock = useMutation(api.blocks.create).withOptimisticUpdate(
+    createLocally,
+  );
+  const logEntry = useMutation(api.blocks.logEntry).withOptimisticUpdate(
+    logLocally,
+  );
   const setStatus = useSetStatus();
   const now = useNow();
   const zoom = useGridZoom();
@@ -242,20 +247,19 @@ export function DayScreen({
     "actual",
   );
 
-  /** Runs a change and closes the open panel; a failure becomes its message. */
-  async function attempt(
-    change: () => Promise<unknown>,
-  ): Promise<string | null> {
-    try {
-      await change();
-      onCloseOverlay();
-      return null;
-    } catch (error) {
-      return saveErrorMessage(error);
-    }
+  /**
+   * Closes the open panel and saves; the new block shows at once (optimistic), and if
+   * the server refuses, it goes again and the screen says why (ARCHITECTURE.md
+   * section 8).
+   */
+  function saveAtOnce(change: () => Promise<unknown>): Promise<null> {
+    setStatusError(null);
+    onCloseOverlay();
+    change().catch((error: unknown) => setStatusError(saveErrorMessage(error)));
+    return Promise.resolve(null);
   }
-  const saveBlock = (args: NewBlockArgs) => attempt(() => createBlock(args));
-  const saveEntry = (args: NewEntryArgs) => attempt(() => logEntry(args));
+  const saveBlock = (args: NewBlockArgs) => saveAtOnce(() => createBlock(args));
+  const saveEntry = (args: NewEntryArgs) => saveAtOnce(() => logEntry(args));
 
   /** Done, Partly, Skip or Undo. The screen changes at once; a refusal is shown. */
   function mark(blockId: Id<"blocks">, action: StatusAction) {
@@ -642,6 +646,7 @@ export function DayScreen({
             statusError={statusError}
             onAction={(action) => mark(selected._id, action)}
             partlyOpen={partlyOpen}
+            onSaveError={setStatusError}
             dayPlanUnlocked={planUnlocked}
             onClose={onCloseOverlay}
           />

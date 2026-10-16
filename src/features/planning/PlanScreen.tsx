@@ -20,6 +20,7 @@ import { DayGrid } from "@/features/day/DayGrid";
 import { dayTense, sleepStretches } from "@/features/day/dayView";
 import { planCards } from "@/features/day/gridCards";
 import { useBlockDrag } from "@/features/day/useBlockDrag";
+import { createLocally } from "@/lib/blockUpdate";
 import { dayCommand, shortcutsPaused } from "@/features/shortcuts/shortcuts";
 import { QuickAdd } from "@/features/day/QuickAdd";
 import {
@@ -86,7 +87,9 @@ export function PlanScreen({
   const day = useQuery(api.days.get, { date });
   // The view reads the day after too (blocks before the grid's start).
   useEnsureMaterialized(addDays(date, 1));
-  const createBlock = useMutation(api.blocks.create);
+  const createBlock = useMutation(api.blocks.create).withOptimisticUpdate(
+    createLocally,
+  );
   const setMainFocus = useMutation(api.days.setMainFocus);
   const copyPlan = useMutation(api.blocks.copyPlan);
   const setStatus = useSetStatus();
@@ -147,14 +150,14 @@ export function PlanScreen({
     [setMainFocus, date],
   );
 
-  async function saveBlock(args: NewBlockArgs): Promise<string | null> {
-    try {
-      await createBlock(args);
-      onCloseOverlay();
-      return null;
-    } catch (error) {
-      return saveErrorMessage(error);
-    }
+  /** Closes quick add at once; the block shows before the server answers. */
+  function saveBlock(args: NewBlockArgs): Promise<null> {
+    setStatusError(null);
+    onCloseOverlay();
+    createBlock(args).catch((error: unknown) =>
+      setStatusError(saveErrorMessage(error)),
+    );
+    return Promise.resolve(null);
   }
 
   async function copy() {
@@ -320,6 +323,7 @@ export function PlanScreen({
             gridStartMin={gridStartMin}
             now={now}
             statusError={statusError}
+            onSaveError={setStatusError}
             onAction={(action) => mark(selected._id, action)}
             dayPlanUnlocked={false}
             onClose={onCloseOverlay}

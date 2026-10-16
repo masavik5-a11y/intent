@@ -9,6 +9,7 @@ import {
   type LocalMoment,
 } from "@shared/time";
 import { SidePanel } from "@/components/SidePanel";
+import { logLocally } from "@/lib/blockUpdate";
 import { Button } from "@/components/ui/button";
 import { api, type Doc, type Id } from "@/lib/api";
 import { saveErrorMessage } from "@/lib/errorMessages";
@@ -87,7 +88,9 @@ export function EveningReview({
   onAction,
   statusError,
 }: EveningReviewProps) {
-  const logEntry = useMutation(api.blocks.logEntry);
+  const logEntry = useMutation(api.blocks.logEntry).withOptimisticUpdate(
+    logLocally,
+  );
   const saveReflection = useMutation(api.days.saveReflection);
   const closeReview = useMutation(api.days.closeReview);
   const next = addDays(date, 1);
