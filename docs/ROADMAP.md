@@ -268,7 +268,7 @@ by themselves.
 - [x] Drag to move and resize, snapping to 5 minutes, obeying the edit rule and the
       no-overlap rule, with a non-drag alternative. Long-press to drag on phone.
 - [x] Keyboard shortcuts and the `?` overlay.
-- [ ] Zoom levels and compressed sleep.
+- [x] Zoom levels and compressed sleep.
 - [ ] Motion pass: check-off, blocks entering the actual lane, panel changes; reduced
       motion respected.
 - [ ] Optimistic updates for quick add and block edits (ARCHITECTURE.md section 8), so

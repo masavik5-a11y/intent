@@ -88,8 +88,8 @@ those four unreachable on a phone. Change it here if daily use suggests another 
 | Aspect | Spec |
 | --- | --- |
 | Range | From `gridStartMin` (default 05:00) for 24 hours, so a normal day reads top to bottom and sleep sits at the bottom. Between midnight and that start, "Today" is still the day that is ending, so the now line stays on screen. |
-| Zoom | Desktop default is **Fit**: the waking part of the day fits the viewport without scrolling. Also Comfortable (1.25 px/min) and Detailed (2 px/min). Phone uses 1.5 px/min and scrolls. |
-| Sleep | Long sleep blocks are drawn compressed (fixed 40 px) so they do not eat the screen. |
+| Zoom | Desktop default is **Fit**: the waking part of the day fits the viewport without scrolling. Also Comfortable (1.25 px/min) and Detailed (2 px/min), chosen at the right end of the lane header and remembered per device (M6). Phone uses 1.5 px/min and scrolls. |
+| Sleep | Long sleep blocks are drawn compressed (fixed 40 px) so they do not eat the screen: plan-lane blocks of the "Sleep" category, 3 hours or longer, fold that stretch of the time axis in both lanes; its hour labels are not drawn (M6). |
 | Lanes | Plan and Actual, equal width on desktop. A thin gutter between them. |
 | Snap | 5 minutes when dragging, 15 minutes when clicking an empty slot. |
 | Drag (M6) | A card moves when dragged and resizes from its bottom edge; on the phone a long press picks it up. The plan lane takes blocks still ahead (on today not before now; a past day's plan after "Edit plan"); the actual lane takes what was recorded, not after now. A drop that would land on another block slides back until it fits, so nothing else moves. While dragged, the card lifts and shows its new times; Esc puts it back. |

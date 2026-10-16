@@ -2,18 +2,28 @@ import { describe, expect, test } from "vitest";
 import {
   fitPxPerMin,
   gridDayOf,
+  gridHeightPx,
   gridPosition,
   gridSegment,
   MAX_FIT_PX_PER_MIN,
   MIN_FIT_PX_PER_MIN,
   momentAt,
+  insideFold,
+  minuteToPx,
   momentOnGrid,
   pxBox,
+  pxToMinute,
   pxToMinutes,
+  scaledBox,
+  SLEEP_FOLD_MIN_MIN,
+  SLEEP_FOLD_PX,
+  sleepFolds,
   slotStart,
   snapMinutes,
   wakePosition,
   wakingMinutes,
+  ZOOM_LEVELS,
+  ZOOM_PX_PER_MIN,
 } from "./grid";
 import { parseDateKey, type DateKey } from "./time";
 
@@ -232,5 +242,71 @@ describe("momentOnGrid", () => {
 
   test("with a midnight grid start every time is the day itself", () => {
     expect(momentOnGrid(TUE, 0, 60)).toEqual({ date: TUE, minute: 60 });
+  });
+});
+
+describe("zoom and compressed sleep", () => {
+  // Sleep 23:00–07:00 on a grid from 05:00: positions 1080 to 1440 here, and the
+  // last night's tail from 0 to 120.
+  const night = { top: 1080, height: 480 };
+  const tail = { top: -360, height: 480 };
+  const scale = { pxPerMin: 1.5, folds: sleepFolds([night, tail], 1.5) };
+
+  test("sleepFolds cuts to the grid, keeps the long ones, merges what touches", () => {
+    // The tail from last night is only two hours here: under SLEEP_FOLD_MIN_MIN.
+    expect(SLEEP_FOLD_MIN_MIN).toBe(180);
+    expect(scale.folds).toEqual([{ top: 1080, height: 360 }]);
+    expect(
+      sleepFolds(
+        [
+          { top: 600, height: 120 },
+          { top: 720, height: 90 },
+        ],
+        2,
+      ),
+    ).toEqual([{ top: 600, height: 210 }]);
+    // A nap is not folded; nor a long stretch that would be shorter drawn plainly.
+    expect(sleepFolds([{ top: 600, height: 60 }], 2)).toEqual([]);
+    expect(sleepFolds([{ top: 600, height: 200 }], 0.1)).toEqual([]);
+  });
+
+  test.each([
+    [0, 0],
+    [600, 900],
+    [1080, 1620],
+    [1260, 1620 + SLEEP_FOLD_PX / 2],
+    [1440, 1620 + SLEEP_FOLD_PX],
+  ])("minute %d is at %d px, and back", (position, px) => {
+    expect(minuteToPx(scale, position)).toBe(px);
+    expect(pxToMinute(scale, px)).toBeCloseTo(position);
+  });
+
+  test("without folds it is the plain scale", () => {
+    const plain = { pxPerMin: 2, folds: [] };
+    expect(minuteToPx(plain, 300)).toBe(600);
+    expect(pxToMinute(plain, 600)).toBe(300);
+    expect(gridHeightPx(plain)).toBe(2880);
+  });
+
+  test("the grid's height counts each fold at its fixed height", () => {
+    expect(gridHeightPx(scale)).toBe(1080 * 1.5 + SLEEP_FOLD_PX);
+  });
+
+  test("blocks that touch across a fold's edge touch on screen", () => {
+    const before = scaledBox(scale, 1020, 60); // 22:00–23:00
+    const sleep = scaledBox(scale, 1080, 360);
+    expect(before.top + before.height).toBe(sleep.top);
+    expect(sleep.height).toBe(SLEEP_FOLD_PX);
+  });
+
+  test("hour marks inside a fold are hidden, its edges are not", () => {
+    expect(insideFold(scale, 1200)).toBe(true);
+    expect(insideFold(scale, 1080)).toBe(false);
+    expect(insideFold(scale, 600)).toBe(false);
+  });
+
+  test("the zoom levels", () => {
+    expect(ZOOM_LEVELS).toEqual(["fit", "comfortable", "detailed"]);
+    expect(ZOOM_PX_PER_MIN).toEqual({ comfortable: 1.25, detailed: 2 });
   });
 });

@@ -7,6 +7,7 @@ import {
 } from "@shared/blocks";
 import { gridSegment, type GridSegment } from "@shared/grid";
 import { minuteFrom, untrackedGaps, type LaneSpan } from "@shared/lanes";
+import { isSleepCategory } from "@shared/categories";
 import type { DayTotals } from "@shared/summary";
 import {
   addDays,
@@ -338,4 +339,23 @@ export function cardName(
     parts.push(`continues into ${formatDayLabel(addDays(day, 1))}`);
   }
   return parts.filter((part) => part !== undefined && part !== "").join(", ");
+}
+
+/**
+ * The stretches of `date`'s grid that long sleep fills, for the grid to draw
+ * compressed (DESIGN.md section 3): the plan lane's blocks in a sleep category.
+ * The grid folds those long enough (shared/grid.ts, sleepFolds).
+ */
+export function sleepStretches(
+  blocks: readonly Doc<"blocks">[],
+  categories: readonly Doc<"categories">[],
+  date: DateKey,
+  gridStartMin: number,
+): GridStretch[] {
+  const sleeping = new Set(
+    categories.filter(isSleepCategory).map((category) => category._id),
+  );
+  return planLane(blocks, date, gridStartMin)
+    .filter((item) => sleeping.has(item.block.categoryId))
+    .map(({ segment }) => ({ top: segment.top, height: segment.height }));
 }

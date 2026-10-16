@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import {
+  isSleepCategory,
   COLOR_KEYS,
   DEFAULT_CATEGORIES,
   isColorKey,
@@ -64,5 +65,19 @@ describe("pressureByDefault", () => {
 
   test("no category: off", () => {
     expect(pressureByDefault(undefined)).toBe(false);
+  });
+});
+
+describe("isSleepCategory", () => {
+  test.each([
+    ["Sleep", true],
+    [" sleep ", true],
+    ["Sleep and rest", false],
+    ["Life", false],
+  ])("%j: %s", (name, sleep) => {
+    expect(isSleepCategory({ name })).toBe(sleep);
+  });
+  test("no category is not sleep", () => {
+    expect(isSleepCategory(undefined)).toBe(false);
   });
 });
