@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { ChevronDown, Flag } from "lucide-react";
+import { ChevronDown, ChevronUp, Flag } from "lucide-react";
 import type { StatusAction } from "@shared/blocks";
 import { AppIcon } from "@/components/AppIcon";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { DayTotals } from "@/features/day/DayTotals";
 import type { DayTotals as DayTotalsData } from "@shared/summary";
 import {
   endedText,
+  foldedLine,
   freeText,
   inLastTenMinutes,
   nextLine,
@@ -39,6 +40,8 @@ export function NowPanel({
   mainFocus,
   totals,
   pace,
+  folded = false,
+  onFold,
 }: {
   view: NowView;
   compact: boolean;
@@ -62,10 +65,53 @@ export function NowPanel({
    * 9h of 15h · 3 days left · behind by 1h 30m". Unset without a target.
    */
   pace?: string | undefined;
+  /** The phone's card is folded to one line (DESIGN.md section 2). */
+  folded?: boolean;
+  /** Folds or unfolds the phone's card; unset, it cannot fold. */
+  onFold?: ((folded: boolean) => void) | undefined;
 }) {
   const [expanded, setExpanded] = useState(false);
   const showAll = !compact || expanded;
   const { current, toMark, next } = view;
+
+  if (compact && folded && onFold !== undefined) {
+    // One line, and Done still one tap away for the block that runs or just ended.
+    const markable = current?.block ?? toMark?.block ?? null;
+    return (
+      <section
+        aria-label="Now"
+        data-color={current?.category?.colorKey}
+        className="flex items-center gap-2 px-4 py-1"
+      >
+        <button
+          type="button"
+          aria-expanded={false}
+          onClick={() => onFold(false)}
+          className="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-sm text-left text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          <span
+            aria-hidden="true"
+            className={cn(
+              "size-2 shrink-0 rounded-full",
+              current === null ? "border" : "bg-key-solid",
+            )}
+          />
+          <span className="truncate">{foldedLine(view)}</span>
+          <ChevronDown aria-hidden="true" className="size-4 shrink-0" />
+          <span className="sr-only">Show the now card</span>
+        </button>
+        {markable !== null && (
+          <Button
+            type="button"
+            className="h-11 shrink-0"
+            onClick={() => onAction(markable._id, { type: "done" })}
+          >
+            Done
+          </Button>
+        )}
+      </section>
+    );
+  }
 
   return (
     <section
@@ -194,21 +240,33 @@ export function NowPanel({
       )}
 
       {compact && (
-        <button
-          type="button"
-          aria-expanded={expanded}
-          onClick={() => setExpanded((open) => !open)}
-          className="flex min-h-11 items-center gap-1 self-start rounded-sm text-sm text-muted-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-        >
-          {expanded ? "Less" : "More"}
-          <ChevronDown
-            aria-hidden="true"
-            className={cn(
-              "size-4 transition-transform",
-              expanded && "rotate-180",
-            )}
-          />
-        </button>
+        <div className="flex items-center justify-between gap-2">
+          <button
+            type="button"
+            aria-expanded={expanded}
+            onClick={() => setExpanded((open) => !open)}
+            className="flex min-h-11 items-center gap-1 rounded-sm text-sm text-muted-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          >
+            {expanded ? "Less" : "More"}
+            <ChevronDown
+              aria-hidden="true"
+              className={cn(
+                "size-4 transition-transform",
+                expanded && "rotate-180",
+              )}
+            />
+          </button>
+          {onFold !== undefined && (
+            <button
+              type="button"
+              onClick={() => onFold(true)}
+              className="flex min-h-11 items-center gap-1 rounded-sm text-sm text-muted-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              One line
+              <ChevronUp aria-hidden="true" className="size-4" />
+            </button>
+          )}
+        </div>
       )}
     </section>
   );

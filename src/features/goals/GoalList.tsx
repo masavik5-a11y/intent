@@ -118,7 +118,7 @@ function QuietButton({
     <Button
       type="button"
       variant="ghost"
-      className="h-11 px-2 text-muted-foreground sm:h-8"
+      className="h-11 min-w-11 px-2 text-muted-foreground sm:h-8 sm:min-w-0"
       onClick={onClick}
     >
       {children}

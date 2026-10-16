@@ -77,6 +77,8 @@ so it never covers the plan (decided 2026-10-14 while building it).
 ```
 
 Block detail and the review open as full-height sheets. Tap targets are at least 44 px.
+"One line" under the now card folds it to its status and title with Done beside them;
+tapping the line opens it again. The choice stays on the device (M6).
 
 The bottom bar holds Today, Week, quick add (from M1) and Insights, plus **More**, which
 opens a bottom sheet with the screens that have no room on the bar: Month, Activities,

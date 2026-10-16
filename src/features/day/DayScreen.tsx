@@ -31,6 +31,7 @@ import { saveErrorMessage } from "@/lib/errorMessages";
 import { useNow } from "@/lib/now";
 import { cn } from "@/lib/utils";
 import { setGridZoom, useGridZoom } from "@/lib/gridZoom";
+import { setNowCardFolded, useNowCardFolded } from "@/lib/nowCard";
 import { dismissWelcome, welcomeDismissedOn } from "@/lib/welcomeDismissal";
 import { useIsPhone, useMediaQuery } from "@/lib/useMediaQuery";
 import { DayGrid, type GridCard } from "./DayGrid";
@@ -142,6 +143,7 @@ export function DayScreen({
   const setStatus = useSetStatus();
   const now = useNow();
   const zoom = useGridZoom();
+  const nowCardFolded = useNowCardFolded();
   const [marked, setMarked] = useState<{
     id: Id<"blocks">;
     at: LocalMoment;
@@ -528,6 +530,8 @@ export function DayScreen({
               mainFocus={day?.mainFocus}
               totals={null}
               pace={paceLine}
+              folded={nowCardFolded}
+              onFold={setNowCardFolded}
             />
           </div>
         )}
