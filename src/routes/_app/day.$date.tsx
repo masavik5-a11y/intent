@@ -23,6 +23,8 @@ interface DaySearch {
   log?: "now" | number;
   /** "Not feeling it" is open for this block (PRD V2). */
   notFeeling?: string;
+  /** "Shift the rest of today" is open (PRD T11). */
+  shift?: true;
   /**
    * The evening review is open at this step (PRD R1). It stays while a block, quick
    * add or logging is opened from it, so closing those returns to the review.
@@ -44,6 +46,7 @@ export const Route = createFileRoute("/_app/day/$date")({
       return partly === true ? { ...base, block, partly } : { ...base, block };
     }
     if (typeof notFeeling === "string") return { notFeeling };
+    if (search.shift === true) return { shift: true };
     if (add === "now") return { ...base, add };
     if (typeof add === "number" && add >= 0 && add < MINUTES_PER_DAY) {
       return { ...base, add };
@@ -67,7 +70,8 @@ function positionRequest(
 
 function DayRoute() {
   const { date } = Route.useRouteContext();
-  const { add, block, log, notFeeling, partly, review } = Route.useSearch();
+  const { add, block, log, notFeeling, partly, review, shift } =
+    Route.useSearch();
   const navigate = Route.useNavigate();
   const router = useRouter();
   const canGoBack = useCanGoBack();
@@ -115,6 +119,11 @@ function DayRoute() {
     [navigate],
   );
 
+  const openShift = useCallback(
+    () => void navigate({ search: { shift: true } }),
+    [navigate],
+  );
+
   const openReview = useCallback(
     () => void navigate({ search: { review: "resolve" } }),
     [navigate],
@@ -159,6 +168,8 @@ function DayRoute() {
       onSelectBlock={openBlock}
       onGoTo={goTo}
       partlyOpen={partly === true}
+      shiftOpen={shift === true}
+      onOpenShift={openShift}
       onCloseOverlay={closeOverlay}
       review={review}
       onOpenReview={openReview}

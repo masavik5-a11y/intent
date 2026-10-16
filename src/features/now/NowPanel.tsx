@@ -42,6 +42,7 @@ export function NowPanel({
   pace,
   folded = false,
   onFold,
+  onShift,
 }: {
   view: NowView;
   compact: boolean;
@@ -69,6 +70,8 @@ export function NowPanel({
   folded?: boolean;
   /** Folds or unfolds the phone's card; unset, it cannot fold. */
   onFold?: ((folded: boolean) => void) | undefined;
+  /** "Shift the rest of today", while something is still ahead (PRD T11). */
+  onShift?: (() => void) | undefined;
 }) {
   const [expanded, setExpanded] = useState(false);
   const showAll = !compact || expanded;
@@ -227,6 +230,15 @@ export function NowPanel({
               <UpNextItem key={item.block._id} item={item} />
             ))}
           </ul>
+          {onShift !== undefined && (
+            <button
+              type="button"
+              onClick={onShift}
+              className="flex min-h-11 items-center self-start rounded-sm text-sm text-muted-foreground underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 sm:min-h-8"
+            >
+              Shift the rest of today
+            </button>
+          )}
           {current === null && view.feelingTarget !== null && (
             <NotFeelingLink
               onClick={() => {

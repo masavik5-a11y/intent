@@ -37,6 +37,8 @@ interface BlockPanelProps {
   onClose: () => void;
   /** Why a change saved at once was refused after all, for the screen to say. */
   onSaveError: (message: string) => void;
+  /** "Move to tomorrow" (PRD T11), on a block not marked on today or later. */
+  onMoveToTomorrow?: (() => Promise<string | null>) | undefined;
 }
 
 /**
@@ -58,6 +60,7 @@ export function BlockPanel({
   dayPlanUnlocked,
   onClose,
   onSaveError,
+  onMoveToTomorrow,
 }: BlockPanelProps) {
   const updateBlock = useMutation(api.blocks.update).withOptimisticUpdate(
     updateLocally,
@@ -181,6 +184,15 @@ export function BlockPanel({
           statusError={statusError}
           onAction={onAction}
           partlyOpen={partlyOpen}
+          onMoveToTomorrow={
+            onMoveToTomorrow === undefined
+              ? undefined
+              : () =>
+                  onMoveToTomorrow().then((failure) => {
+                    if (failure === null) onClose();
+                    return failure;
+                  })
+          }
           dayPlanUnlocked={dayPlanUnlocked}
           repeat={{
             rule,
