@@ -28,6 +28,8 @@ interface BlockPanelProps {
   now: LocalMoment;
   /** Done, Partly, Skip, Undo: saved at once, apart from the form. */
   onAction: (action: StatusAction) => void;
+  /** Opened with P: Partly's lengths show at once. */
+  partlyOpen?: boolean;
   statusError: string | null;
   /** "Edit plan" was chosen for the whole (past) day. */
   dayPlanUnlocked: boolean;
@@ -48,6 +50,7 @@ export function BlockPanel({
   gridStartMin,
   now,
   onAction,
+  partlyOpen,
   statusError,
   dayPlanUnlocked,
   onClose,
@@ -160,6 +163,7 @@ export function BlockPanel({
           now={now}
           statusError={statusError}
           onAction={onAction}
+          partlyOpen={partlyOpen}
           dayPlanUnlocked={dayPlanUnlocked}
           repeat={{
             rule,

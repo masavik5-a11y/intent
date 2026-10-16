@@ -14,6 +14,8 @@ interface DaySearch {
   add?: "now" | number;
   /** The block whose detail is open. */
   block?: string;
+  /** Its detail was opened with P: Partly's lengths show at once. */
+  partly?: true;
   /**
    * Logging an unplanned entry is open: "now" for "from the last entry until now", or
    * the clicked grid position in the actual lane.
@@ -36,9 +38,11 @@ export const Route = createFileRoute("/_app/day/$date")({
     return { date };
   },
   validateSearch: (search: Record<string, unknown>): DaySearch => {
-    const { add, block, log, notFeeling, review } = search;
+    const { add, block, log, notFeeling, partly, review } = search;
     const base: DaySearch = isReviewStep(review) ? { review } : {};
-    if (typeof block === "string") return { ...base, block };
+    if (typeof block === "string") {
+      return partly === true ? { ...base, block, partly } : { ...base, block };
+    }
     if (typeof notFeeling === "string") return { notFeeling };
     if (add === "now") return { ...base, add };
     if (typeof add === "number" && add >= 0 && add < MINUTES_PER_DAY) {
@@ -63,7 +67,7 @@ function positionRequest(
 
 function DayRoute() {
   const { date } = Route.useRouteContext();
-  const { add, block, log, notFeeling, review } = Route.useSearch();
+  const { add, block, log, notFeeling, partly, review } = Route.useSearch();
   const navigate = Route.useNavigate();
   const router = useRouter();
   const canGoBack = useCanGoBack();
@@ -92,12 +96,23 @@ function DayRoute() {
   // Choosing another block while one is open replaces it, so closing goes straight
   // back to the plain day.
   const openBlock = useCallback(
-    (blockId: string) =>
+    (blockId: string, options?: { partly?: boolean }) =>
       void navigate({
-        search: (prev) => ({ review: prev.review, block: blockId }),
+        search: (prev) => ({
+          review: prev.review,
+          block: blockId,
+          ...(options?.partly === true ? { partly: true as const } : {}),
+        }),
         replace: block !== undefined,
       }),
     [navigate, block],
+  );
+
+  // ← and → (DESIGN.md section 8): the day before or after, as the header's arrows.
+  const goTo = useCallback(
+    (day: DateKey) =>
+      void navigate({ to: "/day/$date", params: { date: day } }),
+    [navigate],
   );
 
   const openReview = useCallback(
@@ -142,6 +157,8 @@ function DayRoute() {
       onOpenNotFeeling={openNotFeeling}
       selectedBlockId={block}
       onSelectBlock={openBlock}
+      onGoTo={goTo}
+      partlyOpen={partly === true}
       onCloseOverlay={closeOverlay}
       review={review}
       onOpenReview={openReview}

@@ -15,6 +15,9 @@ const TIME_LINE_PX = 40;
 const FOCUS_LINE_PX = 58;
 
 interface BlockCardProps {
+  /** Its block's id, read by the arrow-key selection (DESIGN.md section 8). */
+  blockKey: string;
+  lane: "plan" | "actual";
   title: string;
   focus: string | undefined;
   icon: string | undefined;
@@ -53,6 +56,8 @@ const STATE_MARKS: Partial<Record<CardState, LucideIcon>> = {
  * done (DESIGN.md section 4). Every state has a mark or a word, never colour alone.
  */
 export function BlockCard({
+  blockKey,
+  lane,
   title,
   focus,
   icon,
@@ -79,6 +84,8 @@ export function BlockCard({
     <button
       type="button"
       data-color={colorKey}
+      data-block-key={blockKey}
+      data-lane={lane}
       aria-label={name}
       title={height < BAR_ONLY_PX ? `${title} · ${time}` : undefined}
       onClick={onOpen}

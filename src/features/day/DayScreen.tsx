@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { hasPlan, type StatusAction } from "@shared/blocks";
 import {
@@ -19,6 +19,13 @@ import { useEnsureMaterialized } from "@/features/recurrence/useEnsureMaterializ
 import { api, type Doc, type Id } from "@/lib/api";
 import { useSetStatus } from "@/lib/blockStatus";
 import { useBlockDrag } from "./useBlockDrag";
+import { dayCommand, shortcutsPaused } from "@/features/shortcuts/shortcuts";
+import {
+  focusedBlockKey,
+  moveCardFocus,
+  shortcutApplies,
+  shortcutTarget,
+} from "./cardFocus";
 import { saveErrorMessage } from "@/lib/errorMessages";
 import { useNow } from "@/lib/now";
 import { dismissWelcome, welcomeDismissedOn } from "@/lib/welcomeDismissal";
@@ -76,7 +83,15 @@ interface DayScreenProps {
   onOpenNotFeeling: (blockId: Id<"blocks">) => void;
   /** The block whose detail is open, also from the URL. */
   selectedBlockId: string | undefined;
-  onSelectBlock: (blockId: Id<"blocks">) => void;
+  /** Opens a block's detail; with `partly`, Partly's lengths show at once (P). */
+  onSelectBlock: (
+    blockId: Id<"blocks">,
+    options?: { partly?: boolean },
+  ) => void;
+  /** Goes to another day (← and →). */
+  onGoTo: (date: DateKey) => void;
+  /** The block's detail was opened with P. */
+  partlyOpen: boolean;
   /** Closes quick add or the block detail. */
   onCloseOverlay: () => void;
   /** The evening review is open at this step (also in the URL). */
@@ -98,6 +113,8 @@ export function DayScreen({
   onOpenNotFeeling,
   selectedBlockId,
   onSelectBlock,
+  onGoTo,
+  partlyOpen,
   onCloseOverlay,
   review,
   onOpenReview,
@@ -304,38 +321,115 @@ export function DayScreen({
             (block) => block._id === notFeelingId && block.status === "planned",
           );
 
-  // N opens quick add, L logs what happened and X opens "Not feeling it" (DESIGN.md
-  // section 8), except while typing or in a dialog.
+  // The day's keys (DESIGN.md section 8), except while typing or in a dialog. ↑ and ↓
+  // move the keyboard focus between cards; D, P, S and U act on the focused card's
+  // block, else on the current one.
+  const keys = {
+    canLog,
+    planFrozen,
+    canReview,
+    reviewOpen,
+    feelingTargetId,
+    current: nowPanel?.current?.block._id ?? null,
+    toMark: nowPanel?.toMark?.block._id ?? null,
+    lastMarked: lastMarked?._id ?? null,
+    date,
+    blocks: blocks ?? [],
+  };
+  const keysRef = useRef(keys);
+  useEffect(() => {
+    keysRef.current = keys;
+  });
+  const markRef = useRef(mark);
+  useEffect(() => {
+    markRef.current = mark;
+  });
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      const key = event.key.toLowerCase();
-      if (key !== "n" && key !== "l" && key !== "x" && key !== "r") return;
-      if (event.ctrlKey || event.metaKey || event.altKey) return;
-      if (isTyping(event.target) || document.querySelector("[role=dialog]")) {
-        return;
-      }
-      if (key === "l" && !canLog) return;
-      if (key === "n" && planFrozen) return;
-      if (key === "x" && feelingTargetId === null) return;
-      if (key === "r" && (!canReview || reviewOpen)) return;
-      event.preventDefault();
-      if (key === "r") onOpenReview();
-      else if (key === "n") onOpenAdd(null);
-      else if (key === "l") onOpenLog(null);
-      else if (feelingTargetId !== null) onOpenNotFeeling(feelingTargetId);
+      if (event.defaultPrevented || shortcutsPaused(event.target)) return;
+      const command = dayCommand(event);
+      if (command === null) return;
+      const state = keysRef.current;
+      const act = (): boolean => {
+        switch (command) {
+          case "previousDay":
+          case "nextDay":
+            onGoTo(addDays(state.date, command === "nextDay" ? 1 : -1));
+            return true;
+          case "add":
+            if (state.planFrozen) return false;
+            onOpenAdd(null);
+            return true;
+          case "log":
+            if (!state.canLog) return false;
+            onOpenLog(null);
+            return true;
+          case "notFeeling":
+            if (state.feelingTargetId === null) return false;
+            onOpenNotFeeling(state.feelingTargetId);
+            return true;
+          case "review":
+            if (!state.canReview || state.reviewOpen) return false;
+            onOpenReview();
+            return true;
+          case "previousBlock":
+          case "nextBlock":
+            moveCardFocus(command === "nextBlock" ? 1 : -1);
+            return true;
+          case "open": {
+            // Enter on a focused button or link is its own click.
+            const active = document.activeElement;
+            if (active instanceof HTMLElement && active !== document.body) {
+              return false;
+            }
+            if (state.current === null) return false;
+            onSelectBlock(state.current);
+            return true;
+          }
+          case "done":
+          case "partly":
+          case "skip":
+          case "undo": {
+            const target = shortcutTarget({
+              command,
+              focused: focusedBlockKey() as Id<"blocks"> | null,
+              current: state.current,
+              toMark: state.toMark,
+              lastMarked: state.lastMarked,
+            });
+            const block = state.blocks.find((item) => item._id === target);
+            if (
+              target === null ||
+              block === undefined ||
+              !shortcutApplies(command, block)
+            ) {
+              return false;
+            }
+            if (command === "partly") onSelectBlock(target, { partly: true });
+            else
+              markRef.current(target, {
+                type:
+                  command === "done"
+                    ? "done"
+                    : command === "skip"
+                      ? "skip"
+                      : "undo",
+              });
+            return true;
+          }
+        }
+      };
+      if (act()) event.preventDefault();
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [
+    onGoTo,
     onOpenAdd,
     onOpenLog,
     onOpenNotFeeling,
     onOpenReview,
-    canLog,
-    canReview,
-    reviewOpen,
-    planFrozen,
-    feelingTargetId,
+    onSelectBlock,
   ]);
 
   const ready =
@@ -520,6 +614,7 @@ export function DayScreen({
             now={now}
             statusError={statusError}
             onAction={(action) => mark(selected._id, action)}
+            partlyOpen={partlyOpen}
             dayPlanUnlocked={planUnlocked}
             onClose={onCloseOverlay}
           />
@@ -599,14 +694,6 @@ export function DayScreen({
         />
       )}
     </div>
-  );
-}
-
-function isTyping(target: EventTarget | null): boolean {
-  return (
-    target instanceof HTMLElement &&
-    (target.isContentEditable ||
-      ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))
   );
 }
 

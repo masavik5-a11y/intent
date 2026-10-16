@@ -72,6 +72,8 @@ interface BlockDetailProps {
   now: LocalMoment;
   /** Done, Partly, Skip, Undo: saved at once, apart from the form. */
   onAction: (action: StatusAction) => void;
+  /** Opened with P: Partly's lengths show at once. */
+  partlyOpen?: boolean;
   /** Why the last of those did not save. */
   statusError: string | null;
   /** "Edit plan" was chosen for the whole (past) day. */
@@ -109,6 +111,7 @@ export function BlockDetail({
   onCancel,
   now,
   onAction,
+  partlyOpen = false,
   statusError,
   dayPlanUnlocked,
   repeat,
@@ -326,6 +329,7 @@ export function BlockDetail({
               <StatusActions
                 plannedDurationMin={block.plannedDurationMin}
                 started={hasStarted(block, now)}
+                initialPartly={partlyOpen}
                 onAction={onAction}
               />
             </>

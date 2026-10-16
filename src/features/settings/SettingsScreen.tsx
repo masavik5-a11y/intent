@@ -27,6 +27,15 @@ export function SettingsScreen() {
     <div className="flex max-w-md flex-col gap-8 p-4 sm:p-6">
       <h1 className="text-xl font-medium">Settings</h1>
       <AppearanceSection />
+      <section className="hidden flex-col gap-1 sm:flex">
+        <h2 className="text-lg font-medium">Keyboard</h2>
+        <p className="text-sm text-muted-foreground">
+          Press{" "}
+          <kbd className="rounded-sm border bg-muted px-1.5 text-xs">?</kbd>{" "}
+          anywhere to see the shortcuts. A normal day runs from the keyboard
+          alone.
+        </p>
+      </section>
       <AccountSection
         email={viewer?.email ?? null}
         onSignOut={() => void handleSignOut()}
