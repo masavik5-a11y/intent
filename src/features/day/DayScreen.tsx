@@ -28,6 +28,7 @@ import {
 } from "./cardFocus";
 import { saveErrorMessage } from "@/lib/errorMessages";
 import { useNow } from "@/lib/now";
+import { setGridZoom, useGridZoom } from "@/lib/gridZoom";
 import { dismissWelcome, welcomeDismissedOn } from "@/lib/welcomeDismissal";
 import { useIsPhone, useMediaQuery } from "@/lib/useMediaQuery";
 import { DayGrid, type GridCard } from "./DayGrid";
@@ -52,6 +53,7 @@ import {
   dayNotes,
   dayTense,
   entryTitle,
+  sleepStretches,
   planLane,
   untrackedStretches,
 } from "./dayView";
@@ -133,6 +135,7 @@ export function DayScreen({
   const logEntry = useMutation(api.blocks.logEntry);
   const setStatus = useSetStatus();
   const now = useNow();
+  const zoom = useGridZoom();
   const [marked, setMarked] = useState<{
     id: Id<"blocks">;
     at: LocalMoment;
@@ -576,6 +579,13 @@ export function DayScreen({
           settled={ready && day !== undefined}
           onOpenCard={(key) => onSelectBlock(key as Id<"blocks">)}
           onDrag={blockDrag.onDrag}
+          zoom={zoom}
+          onZoom={setGridZoom}
+          sleep={
+            blocks === undefined || categories === undefined
+              ? []
+              : sleepStretches(blocks, categories, date, gridStartMin)
+          }
         />
       </div>
       {isWide &&

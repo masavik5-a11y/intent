@@ -160,3 +160,127 @@ export function snapMinutes(minutes: number, step: number): number {
 export function slotStart(minutes: number, step: number): number {
   return Math.floor(minutes / step) * step;
 }
+
+// ---------------------------------------------------------------------------
+// Zoom and compressed sleep (DESIGN.md section 3)
+// ---------------------------------------------------------------------------
+
+/** The desktop zoom levels: Fit fills the view with the waking day. */
+export const ZOOM_LEVELS = ["fit", "comfortable", "detailed"] as const;
+export type ZoomLevel = (typeof ZOOM_LEVELS)[number];
+
+/** Pixels per minute of the fixed zoom levels. */
+export const ZOOM_PX_PER_MIN: Record<Exclude<ZoomLevel, "fit">, number> = {
+  comfortable: 1.25,
+  detailed: 2,
+};
+
+/** A long sleep block is drawn this tall, whatever its length. */
+export const SLEEP_FOLD_PX = 40;
+
+/** A sleep block this long or longer is compressed; a nap is not. */
+export const SLEEP_FOLD_MIN_MIN = 180;
+
+/**
+ * How grid minutes become pixels: `pxPerMin` everywhere except the folds, stretches
+ * of the grid (long sleep) drawn SLEEP_FOLD_PX tall each. Folds are sorted, apart,
+ * and inside the grid.
+ */
+export interface GridScale {
+  pxPerMin: number;
+  folds: readonly { top: number; height: number }[];
+}
+
+/**
+ * The folds for some sleep stretches in grid minutes: each cut to the grid, those
+ * that touch or overlap merged, and only those that drawing at SLEEP_FOLD_PX makes
+ * shorter (at least SLEEP_FOLD_MIN_MIN long).
+ */
+export function sleepFolds(
+  stretches: readonly { top: number; height: number }[],
+  pxPerMin: number,
+): GridScale["folds"] {
+  const cut = stretches
+    .map(({ top, height }) => {
+      const start = Math.max(top, 0);
+      const end = Math.min(top + height, MINUTES_PER_DAY);
+      return { start, end };
+    })
+    .filter(({ start, end }) => end > start)
+    .sort((a, b) => a.start - b.start);
+  const merged: { start: number; end: number }[] = [];
+  for (const stretch of cut) {
+    const last = merged[merged.length - 1];
+    if (last !== undefined && stretch.start <= last.end) {
+      last.end = Math.max(last.end, stretch.end);
+    } else {
+      merged.push({ ...stretch });
+    }
+  }
+  return merged
+    .filter(
+      ({ start, end }) =>
+        end - start >= SLEEP_FOLD_MIN_MIN &&
+        (end - start) * pxPerMin > SLEEP_FOLD_PX,
+    )
+    .map(({ start, end }) => ({ top: start, height: end - start }));
+}
+
+/** The pixel offset of a grid position (minutes from the grid's start). */
+export function minuteToPx(scale: GridScale, position: number): number {
+  let px = 0;
+  let cursor = 0;
+  for (const fold of scale.folds) {
+    if (position <= fold.top) break;
+    px += (fold.top - cursor) * scale.pxPerMin;
+    const end = fold.top + fold.height;
+    if (position <= end) {
+      return px + ((position - fold.top) / fold.height) * SLEEP_FOLD_PX;
+    }
+    px += SLEEP_FOLD_PX;
+    cursor = end;
+  }
+  return px + (position - cursor) * scale.pxPerMin;
+}
+
+/** The grid position at a pixel offset: the inverse of minuteToPx. */
+export function pxToMinute(scale: GridScale, px: number): number {
+  let atPx = 0;
+  let cursor = 0;
+  for (const fold of scale.folds) {
+    const foldPx = atPx + (fold.top - cursor) * scale.pxPerMin;
+    if (px <= foldPx) break;
+    if (px <= foldPx + SLEEP_FOLD_PX) {
+      return fold.top + ((px - foldPx) / SLEEP_FOLD_PX) * fold.height;
+    }
+    atPx = foldPx + SLEEP_FOLD_PX;
+    cursor = fold.top + fold.height;
+  }
+  return cursor + (px - atPx) / scale.pxPerMin;
+}
+
+/** The whole grid's height in pixels. */
+export function gridHeightPx(scale: GridScale): number {
+  return minuteToPx(scale, MINUTES_PER_DAY);
+}
+
+/**
+ * Pixel box of a stretch of grid minutes. Both edges are rounded from minutes, so
+ * blocks that touch in time touch on screen, folds included.
+ */
+export function scaledBox(
+  scale: GridScale,
+  top: number,
+  height: number,
+): { top: number; height: number } {
+  const topPx = Math.round(minuteToPx(scale, top));
+  const bottomPx = Math.round(minuteToPx(scale, top + height));
+  return { top: topPx, height: bottomPx - topPx };
+}
+
+/** Whether a grid position lies inside a fold (its hour mark is not drawn). */
+export function insideFold(scale: GridScale, position: number): boolean {
+  return scale.folds.some(
+    (fold) => position > fold.top && position < fold.top + fold.height,
+  );
+}

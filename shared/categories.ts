@@ -69,3 +69,14 @@ export function pressureByDefault(
 ): boolean {
   return category?.name.trim().toLowerCase() === "deep work";
 }
+
+/**
+ * Whether a category holds sleep, whose long blocks the grid draws compressed
+ * (DESIGN.md section 3). Found by its name, as the seeded "Sleep" is called; renaming
+ * it turns the compression off (decided 2026-10-16).
+ */
+export function isSleepCategory(
+  category: { name: string } | undefined,
+): boolean {
+  return category?.name.trim().toLowerCase() === "sleep";
+}

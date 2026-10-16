@@ -15,6 +15,7 @@ import {
   hourMarks,
   planCardState,
   planLane,
+  sleepStretches,
   totalsItems,
   untrackedStretches,
 } from "./dayView";
@@ -416,5 +417,41 @@ describe("dayNotes (PRD A5, R3)", () => {
     expect(cardName(item.block, item.segment, TUE)).toBe(
       "Write, 13:00 to 14:00, note: Slow start, good finish.",
     );
+  });
+});
+
+describe("sleepStretches (DESIGN.md section 3)", () => {
+  const category = (id: string, name: string): Doc<"categories"> => ({
+    _id: id as Id<"categories">,
+    _creationTime: 0,
+    userId: "u" as Id<"users">,
+    name,
+    kind: "maintenance",
+    colorKey: "slate",
+    icon: "moon",
+    sortOrder: 0,
+    archived: false,
+  });
+  const sleep = category("c-sleep", "Sleep");
+  const life = category("c", "Life");
+
+  test("the plan lane's sleep blocks, as the grid shows them", () => {
+    const blocks = [
+      block("Last night", MON, 1380, 480, { categoryId: sleep._id }),
+      block("Tonight", TUE, 1380, 480, { categoryId: sleep._id }),
+      block("Lunch", TUE, 720, 60),
+      block("Nap", TUE, 840, 30, { categoryId: sleep._id }),
+    ];
+    expect(sleepStretches(blocks, [sleep, life], TUE, 300)).toEqual([
+      { top: 0, height: 120 }, // until 07:00
+      { top: 540, height: 30 }, // the nap: too short to fold, the grid decides
+      { top: 1080, height: 360 }, // 23:00 to the grid's end
+    ]);
+  });
+
+  test("without a sleep category, nothing", () => {
+    expect(
+      sleepStretches([block("Tonight", TUE, 1380, 480)], [life], TUE, 300),
+    ).toEqual([]);
   });
 });

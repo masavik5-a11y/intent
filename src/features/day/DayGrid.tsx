@@ -1,6 +1,7 @@
 import {
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
@@ -8,9 +9,17 @@ import {
 import type { DragMode, GridSpan } from "@shared/drag";
 import {
   fitPxPerMin,
+  gridHeightPx,
+  insideFold,
+  minuteToPx,
   PHONE_PX_PER_MIN,
-  pxBox,
-  pxToMinutes,
+  pxToMinute,
+  scaledBox,
+  sleepFolds,
+  ZOOM_LEVELS,
+  ZOOM_PX_PER_MIN,
+  type GridScale,
+  type ZoomLevel,
   wakePosition,
 } from "@shared/grid";
 import { MINUTES_PER_DAY } from "@shared/time";
@@ -77,6 +86,8 @@ interface Gesture {
   mode: DragMode;
   pointerId: number;
   startY: number;
+  /** The lane's top on screen when the drag began: pixels from it are grid minutes. */
+  laneTop: number;
   touch: boolean;
   active: boolean;
   deltaMin: number;
@@ -118,6 +129,11 @@ interface DayGridProps {
   planOnly?: boolean;
   /** Dragging cards that carry `drag` (PRD T9). */
   onDrag?: GridDrag;
+  /** The desktop zoom (DESIGN.md section 3); the phone always scrolls at its own scale. */
+  zoom?: ZoomLevel;
+  onZoom?: (level: ZoomLevel) => void;
+  /** Stretches of long sleep, drawn compressed (sleepStretches in dayView.ts). */
+  sleep?: readonly GridStretch[];
 }
 
 /** The two-lane hour grid (DESIGN.md section 3). Plan on the left, actual on the right. */
@@ -138,6 +154,9 @@ export function DayGrid({
   onEmptyActualSlot,
   planOnly = false,
   onDrag,
+  zoom = "fit",
+  onZoom,
+  sleep = [],
 }: DayGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const gesture = useRef<Gesture | null>(null);
@@ -167,7 +186,20 @@ export function DayGrid({
 
   const pxPerMin = isPhone
     ? PHONE_PX_PER_MIN
-    : fitPxPerMin(Math.max(viewportPx - 2 * EDGE_PX, 0), wakeMin, sleepMin);
+    : zoom === "fit"
+      ? fitPxPerMin(Math.max(viewportPx - 2 * EDGE_PX, 0), wakeMin, sleepMin)
+      : ZOOM_PX_PER_MIN[zoom];
+  // Long sleep is drawn compressed; every minute-to-pixel step goes through this.
+  // Kept the same object while the folds are, so effects that use it do not rerun.
+  const foldsKey = JSON.stringify(sleepFolds(sleep, pxPerMin));
+  const scale = useMemo<GridScale>(
+    () => ({
+      pxPerMin,
+      folds: JSON.parse(foldsKey) as GridScale["folds"],
+    }),
+    [pxPerMin, foldsKey],
+  );
+  const toPx = (position: number) => Math.round(minuteToPx(scale, position));
 
   // Dragging (PRD T9). A mouse drags once it moves a few pixels; a touch drags after
   // resting on a card, so a swipe over the grid still scrolls. Esc puts it back.
@@ -214,6 +246,7 @@ export function DayGrid({
       mode: target.closest("[data-resize]") === null ? "move" : "resize",
       pointerId: event.pointerId,
       startY: event.clientY,
+      laneTop: element.closest("[role=list]")?.getBoundingClientRect().top ?? 0,
       touch: event.pointerType === "touch",
       active: false,
       deltaMin: 0,
@@ -240,7 +273,9 @@ export function DayGrid({
       if (Math.abs(movedPx) < MOUSE_SLOP_PX) return;
       activate(current);
     }
-    current.deltaMin = pxToMinutes(movedPx, pxPerMin);
+    current.deltaMin =
+      pxToMinute(scale, event.clientY - current.laneTop) -
+      pxToMinute(scale, current.startY - current.laneTop);
     showDrag(current);
   }
 
@@ -294,31 +329,34 @@ export function DayGrid({
   useLayoutEffect(() => {
     const scroller = scrollRef.current;
     if (scroller === null || viewportPx <= 0 || !settled) return;
-    if (scrolledFor.current === dayKey) return;
-    scrolledFor.current = dayKey;
+    // Again after a zoom change, so now stays in view at the new scale.
+    const view = `${dayKey}:${zoom}`;
+    if (scrolledFor.current === view) return;
+    scrolledFor.current = view;
     // Measured now rather than taken from state: whatever appeared above the grid
     // in this render has already shrunk it.
     const height =
       scroller.clientHeight - (headerRef.current?.offsetHeight ?? 0);
-    const wakeTop = wakePosition(gridStartMin, wakeMin) * pxPerMin;
+    const wakeTop = minuteToPx(scale, wakePosition(gridStartMin, wakeMin));
     let top = wakeTop;
     if (nowPosition !== null) {
-      const nowTop = nowPosition * pxPerMin;
+      const nowTop = minuteToPx(scale, nowPosition);
       const visible = nowTop >= wakeTop && nowTop <= wakeTop + height - 48;
       if (!visible) top = nowTop - height / 3;
     }
     scroller.scrollTop = Math.max(top, 0);
   }, [
     dayKey,
+    zoom,
     settled,
     viewportPx,
-    pxPerMin,
+    scale,
     gridStartMin,
     wakeMin,
     nowPosition,
   ]);
 
-  const gridPx = MINUTES_PER_DAY * pxPerMin;
+  const gridPx = gridHeightPx(scale);
   const laneClass = isPhone && !planOnly ? "" : "flex-1";
   const planWidth = isPhone && !planOnly ? { width: "60%" } : undefined;
 
@@ -339,33 +377,38 @@ export function DayGrid({
           </div>
           {!planOnly && <div className="flex-1 px-2 py-1.5">Actual</div>}
         </div>
+        {!isPhone && onZoom !== undefined && (
+          <ZoomSwitch zoom={zoom} onZoom={onZoom} />
+        )}
       </div>
 
       <div
         className="relative"
         style={{ height: gridPx, marginTop: EDGE_PX, marginBottom: EDGE_PX }}
       >
-        {hourMarks(gridStartMin, isPhone ? 2 : 1).map((mark) => {
-          const y = Math.round(mark.position * pxPerMin);
-          return (
-            <div
-              key={mark.position}
-              className="pointer-events-none absolute inset-x-0"
-              style={{ top: y }}
-            >
-              <span
-                className="absolute -translate-y-1/2 pr-2 text-right text-xs text-muted-foreground tabular-nums"
-                style={{ width: GUTTER_PX }}
-              >
-                {mark.label}
-              </span>
+        {hourMarks(gridStartMin, isPhone ? 2 : 1)
+          .filter((mark) => !insideFold(scale, mark.position))
+          .map((mark) => {
+            const y = toPx(mark.position);
+            return (
               <div
-                className="border-t border-border/70"
-                style={{ marginLeft: GUTTER_PX }}
-              />
-            </div>
-          );
-        })}
+                key={mark.position}
+                className="pointer-events-none absolute inset-x-0"
+                style={{ top: y }}
+              >
+                <span
+                  className="absolute -translate-y-1/2 pr-2 text-right text-xs text-muted-foreground tabular-nums"
+                  style={{ width: GUTTER_PX }}
+                >
+                  {mark.label}
+                </span>
+                <div
+                  className="border-t border-border/70"
+                  style={{ marginLeft: GUTTER_PX }}
+                />
+              </div>
+            );
+          })}
 
         <div
           className="absolute inset-y-0 right-0 flex gap-1"
@@ -381,14 +424,14 @@ export function DayGrid({
             onClick={(event) => {
               if (event.target !== event.currentTarget) return;
               const top = event.currentTarget.getBoundingClientRect().top;
-              onEmptySlot?.(pxToMinutes(event.clientY - top, pxPerMin));
+              onEmptySlot?.(pxToMinute(scale, event.clientY - top));
             }}
           >
             {cards.map((card) => (
               <GridBlock
                 key={card.key}
                 card={card}
-                pxPerMin={pxPerMin}
+                scale={scale}
                 onOpenCard={onOpenCard}
                 lane="plan"
                 drag={dragHandlers}
@@ -414,7 +457,7 @@ export function DayGrid({
               onClick={(event) => {
                 if (event.target !== event.currentTarget) return;
                 const top = event.currentTarget.getBoundingClientRect().top;
-                onEmptyActualSlot?.(pxToMinutes(event.clientY - top, pxPerMin));
+                onEmptyActualSlot?.(pxToMinute(scale, event.clientY - top));
               }}
             >
               {futureFrom !== null && futureFrom < MINUTES_PER_DAY && (
@@ -422,12 +465,12 @@ export function DayGrid({
                   aria-hidden="true"
                   className="absolute inset-x-0 bottom-0 rounded-t-block bg-muted/50"
                   style={{
-                    top: Math.round(Math.max(futureFrom, 0) * pxPerMin),
+                    top: toPx(Math.max(futureFrom, 0)),
                   }}
                 />
               )}
               {untracked.map((stretch) => {
-                const box = pxBox(stretch.top, stretch.height, pxPerMin);
+                const box = scaledBox(scale, stretch.top, stretch.height);
                 // Clicks pass through to the lane, which logs an entry there.
                 return (
                   <div
@@ -442,7 +485,7 @@ export function DayGrid({
                 <GridBlock
                   key={card.key}
                   card={card}
-                  pxPerMin={pxPerMin}
+                  scale={scale}
                   onOpenCard={onOpenCard}
                   lane="actual"
                   drag={dragHandlers}
@@ -462,7 +505,7 @@ export function DayGrid({
             data-now-line=""
             className="pointer-events-none absolute right-0 z-10 h-px bg-foreground"
             style={{
-              top: Math.round(nowPosition * pxPerMin),
+              top: toPx(nowPosition),
               left: GUTTER_PX - 4,
             }}
             aria-hidden="true"
@@ -478,7 +521,7 @@ export function DayGrid({
 /** One card placed in a lane, in pixels. */
 function GridBlock({
   card,
-  pxPerMin,
+  scale,
   onOpenCard,
   lane,
   drag,
@@ -486,7 +529,7 @@ function GridBlock({
 }: {
   card: GridCard;
   lane: "plan" | "actual";
-  pxPerMin: number;
+  scale: GridScale;
   onOpenCard: ((key: string) => void) | undefined;
   drag: {
     onPointerDown: (event: ReactPointerEvent, card: GridCard) => void;
@@ -498,10 +541,10 @@ function GridBlock({
   /** Where it is while being dragged. */
   dragged: { span: GridSpan; time: string } | undefined;
 }) {
-  const box = pxBox(
+  const box = scaledBox(
+    scale,
     dragged?.span.top ?? card.top,
     dragged?.span.height ?? card.height,
-    pxPerMin,
   );
   const draggable = card.drag !== undefined;
   return (
@@ -556,6 +599,47 @@ function GridBlock({
           style={{ top: box.top + box.height - 6 }}
         />
       )}
+    </div>
+  );
+}
+
+const ZOOM_LABELS: Record<ZoomLevel, string> = {
+  fit: "Fit",
+  comfortable: "Comfortable",
+  detailed: "Detailed",
+};
+
+/** The desktop zoom, at the end of the lane header (DESIGN.md section 3). */
+function ZoomSwitch({
+  zoom,
+  onZoom,
+}: {
+  zoom: ZoomLevel;
+  onZoom: (level: ZoomLevel) => void;
+}) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label="Zoom"
+      className="absolute inset-y-0 right-2 flex items-center gap-0.5"
+    >
+      {ZOOM_LEVELS.map((level) => (
+        <button
+          key={level}
+          type="button"
+          role="radio"
+          aria-checked={level === zoom}
+          onClick={() => onZoom(level)}
+          className={cn(
+            "rounded-sm px-1.5 py-0.5 outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
+            level === zoom
+              ? "bg-muted text-foreground"
+              : "hover:text-foreground",
+          )}
+        >
+          {ZOOM_LABELS[level]}
+        </button>
+      ))}
     </div>
   );
 }

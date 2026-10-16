@@ -17,7 +17,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { BlockPanel } from "@/features/block-detail/BlockPanel";
 import type { AddRequest } from "@/features/day/DayScreen";
 import { DayGrid } from "@/features/day/DayGrid";
-import { dayTense } from "@/features/day/dayView";
+import { dayTense, sleepStretches } from "@/features/day/dayView";
 import { planCards } from "@/features/day/gridCards";
 import { useBlockDrag } from "@/features/day/useBlockDrag";
 import { dayCommand, shortcutsPaused } from "@/features/shortcuts/shortcuts";
@@ -32,6 +32,7 @@ import { api, type Id } from "@/lib/api";
 import { useSetStatus } from "@/lib/blockStatus";
 import { saveErrorMessage } from "@/lib/errorMessages";
 import { useNow } from "@/lib/now";
+import { setGridZoom, useGridZoom } from "@/lib/gridZoom";
 import { useIsPhone, useMediaQuery } from "@/lib/useMediaQuery";
 import { cn } from "@/lib/utils";
 import { CopyFromDate } from "./CopyFromDate";
@@ -90,6 +91,7 @@ export function PlanScreen({
   const copyPlan = useMutation(api.blocks.copyPlan);
   const setStatus = useSetStatus();
   const now = useNow();
+  const zoom = useGridZoom();
   const isPhone = useIsPhone();
   const isWide = useMediaQuery("(min-width: 1024px)");
   const [statusError, setStatusError] = useState<string | null>(null);
@@ -294,6 +296,13 @@ export function PlanScreen({
           settled={ready && day !== undefined}
           onOpenCard={(key) => onSelectBlock(key as Id<"blocks">)}
           onDrag={blockDrag.onDrag}
+          zoom={zoom}
+          onZoom={setGridZoom}
+          sleep={
+            blocks === undefined || categories === undefined
+              ? []
+              : sleepStretches(blocks, categories, date, gridStartMin)
+          }
           planOnly
         />
       </div>
