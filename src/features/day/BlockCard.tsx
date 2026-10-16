@@ -113,8 +113,10 @@ export function BlockCard({
           ? "bg-key-solid text-on-solid"
           : skipped
             ? "border border-dashed border-key-solid/70 bg-transparent text-key-ink"
-            : "bg-key-tint text-key-ink",
-        state === "done" && "opacity-75",
+            : state === "done"
+              ? // Muted by a lighter fill, not faded text, so the text keeps AA.
+                "bg-key-tint/60 text-key-ink"
+              : "bg-key-tint text-key-ink",
         selected &&
           "ring-2 ring-foreground ring-offset-1 ring-offset-background",
         lifted && "cursor-grabbing shadow-lg ring-2 ring-key-solid",
@@ -158,13 +160,17 @@ export function BlockCard({
                 />
               )}
               {height < TIME_LINE_PX && (
-                <span className="truncate font-normal opacity-80">
+                <span
+                  className={cn("truncate font-normal", !solid && "opacity-80")}
+                >
                   · {time}
                 </span>
               )}
             </span>
             {height >= TIME_LINE_PX && (
-              <span className="truncate text-xs opacity-80">{time}</span>
+              <span className={cn("truncate text-xs", !solid && "opacity-80")}>
+                {time}
+              </span>
             )}
             {height >= FOCUS_LINE_PX && focus !== undefined && (
               <span className="truncate text-xs">{focus}</span>

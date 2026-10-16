@@ -654,7 +654,7 @@ function ZoomSwitch({
 }) {
   return (
     <div
-      role="radiogroup"
+      role="group"
       aria-label="Zoom"
       className="absolute inset-y-0 right-2 flex items-center gap-0.5"
     >
@@ -662,8 +662,7 @@ function ZoomSwitch({
         <button
           key={level}
           type="button"
-          role="radio"
-          aria-checked={level === zoom}
+          aria-pressed={level === zoom}
           onClick={() => onZoom(level)}
           className={cn(
             "rounded-sm px-1.5 py-0.5 outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",

@@ -757,6 +757,7 @@ Things assumed here that must be confirmed in the milestone that depends on them
 | 2026-10-16 | Motion (DESIGN.md section 6) only answers a change made while the screen is open: the check of a block just marked done or partly settles in, a card new to the actual lane slides in, the side panel slides in when it opens and the now panel when it comes back, the now line glides to the next minute, cards cross-fade colour. Nothing moves when a day opens. Three keyframes in `src/styles/theme.css` (`animate-settle`, `animate-enter-lane`, `animate-panel`, 150–200 ms, ease-out); with reduced motion each is a plain fade and the now line jumps. | Design goal 5: calm, with the now line, the countdown and untracked time the only things that move on their own; an animation on every load would be noise. |
 | 2026-10-16 | Quick add, logging an entry, block detail's Save and Delete, and drops close at once and show the change optimistically; a refusal (rare: overlaps are named before saving) rolls the change back and is said above the grid or in the now panel. "This and following", "Repeat" and "Copy from a date" still wait for the server, which reports the dates or blocks it left out. | ARCHITECTURE.md section 8: what the user feels responds at once. The waiting flows have an answer to show, so they keep their panel open for it. |
 | 2026-10-16 | The phone's now card folds to one line ("One line" under the card; DESIGN.md section 2): a dot, "Edit · 1h 40m left" (or "Lunch ended at 13:00", "Free until 17:00"), and Done for the running or just-ended block, so marking stays one tap. Tapping the line unfolds it. Kept per device in `localStorage` (`intent-now-card`). Tap targets under 44 px found by an audit of the phone screens (header icon links 38 px wide, the goal list's Edit) are now 44 px. | With the card open the grid had about a quarter of the phone's height; folded, it gets most of it, and the why is one tap away. |
+| 2026-10-16 | Accessibility pass (DESIGN.md section 11), checked with axe-core in the screenshot harness on every main screen, dialog, sheet and review step, light and dark: a done block is muted by a lighter fill (`bg-key-tint/60`) instead of fading the whole card, which had pulled its text under AA; a running block's time is no longer faded on the solid fill; quick add's activity options are the pressed element themselves (a button inside a `role=option` was a control inside a control); the zoom is a group of pressed-state buttons. Tab order: nav rail, header, zoom, plan lane, actual lane, now panel, each with a visible ring. | Text on cards must stay AA in both themes; axe found these and nothing else. |
 
 ## 17. Implementation notes
 
@@ -902,6 +903,11 @@ one; delete an entry when it stops being true.
   `pointercancel`. In the screenshot harness, Playwright's touchscreen only taps; real
   touch drags go through CDP, `Input.dispatchTouchEvent` (touchStart, touchMove,
   touchEnd), which Chrome turns into pointer events.
+
+- Accessibility in the screenshot harness: `npm install axe-core` into a folder in the
+  scratchpad (not the repository), inject `axe.min.js` with `page.addScriptTag` and
+  run `axe.run(document)`; it reads contrast against the real themes. Opacity on a
+  card's text is what fails it most: mute the fill instead.
 
 - In a cloud session, `pkill -f "<pattern>"` also matches the shell that runs it (its
   command line holds the pattern) and kills the tool call. Write the pattern so it
