@@ -8,6 +8,7 @@ import { SidePanel } from "@/components/SidePanel";
 import { entryTitle } from "@/features/day/dayView";
 import { statusLine } from "@/features/status/statusLabels";
 import { api, type BlockUpdate, type Doc } from "@/lib/api";
+import { removeLocally, updateLocally } from "@/lib/blockUpdate";
 import { saveErrorMessage } from "@/lib/errorMessages";
 import { BlockDetail } from "./BlockDetail";
 import { EntryDetail } from "./EntryDetail";
@@ -34,6 +35,8 @@ interface BlockPanelProps {
   /** "Edit plan" was chosen for the whole (past) day. */
   dayPlanUnlocked: boolean;
   onClose: () => void;
+  /** Why a change saved at once was refused after all, for the screen to say. */
+  onSaveError: (message: string) => void;
 }
 
 /**
@@ -54,9 +57,14 @@ export function BlockPanel({
   statusError,
   dayPlanUnlocked,
   onClose,
+  onSaveError,
 }: BlockPanelProps) {
-  const updateBlock = useMutation(api.blocks.update);
-  const removeBlock = useMutation(api.blocks.remove);
+  const updateBlock = useMutation(api.blocks.update).withOptimisticUpdate(
+    updateLocally,
+  );
+  const removeBlock = useMutation(api.blocks.remove).withOptimisticUpdate(
+    removeLocally,
+  );
   const repeatBlock = useMutation(api.recurrences.repeat);
   const changeFrom = useMutation(api.recurrences.changeFrom);
   const endFrom = useMutation(api.recurrences.endFrom);
@@ -89,8 +97,17 @@ export function BlockPanel({
       return saveErrorMessage(error);
     }
   }
-  const save = (changes: BlockUpdate) => attempt(() => updateBlock(changes));
-  const remove = () => attempt(() => removeBlock({ blockId: block._id }));
+  /**
+   * Edits and deletion close the panel at once: the change shows before the server
+   * answers (ARCHITECTURE.md section 8), and a refusal is said by the screen.
+   */
+  function atOnce(change: () => Promise<unknown>): Promise<null> {
+    onClose();
+    change().catch((error: unknown) => onSaveError(saveErrorMessage(error)));
+    return Promise.resolve(null);
+  }
+  const save = (changes: BlockUpdate) => atOnce(() => updateBlock(changes));
+  const remove = () => atOnce(() => removeBlock({ blockId: block._id }));
 
   /** "This and following": the plan to the rule, the rest to this block. */
   async function saveFollowing(

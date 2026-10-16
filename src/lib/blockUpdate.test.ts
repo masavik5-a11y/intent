@@ -3,7 +3,13 @@ import type { OptimisticLocalStore } from "convex/browser";
 import { getFunctionName } from "convex/server";
 import type { DateKey } from "@shared/time";
 import { api, type Doc, type Id } from "./api";
-import { updateLocally, withUpdate } from "./blockUpdate";
+import {
+  createdBlock,
+  loggedEntry,
+  removeLocally,
+  updateLocally,
+  withUpdate,
+} from "./blockUpdate";
 
 const THU = "2026-10-15" as DateKey;
 const FRI = "2026-10-16" as DateKey;
@@ -109,5 +115,107 @@ describe("updateLocally", () => {
     ]);
     updateLocally(local, { blockId: "x" as Id<"blocks">, plannedStartMin: 30 });
     expect(all[0]?.value).toEqual([]);
+  });
+});
+
+describe("the new block shows before the server answers (ARCHITECTURE.md section 8)", () => {
+  const gym = {
+    _id: "a-gym" as Id<"activities">,
+    _creationTime: 0,
+    userId: "u" as Id<"users">,
+    name: "Gym",
+    categoryId: "c-body" as Id<"categories">,
+    defaultDurationMin: 90,
+    notify: true,
+    pressure: false,
+    archived: false,
+  } satisfies Doc<"activities">;
+
+  test("from an activity, it takes the activity's name and category", () => {
+    expect(
+      createdBlock(
+        {
+          date: FRI,
+          activityId: gym._id,
+          plannedStartMin: 1020,
+          plannedDurationMin: 90,
+          focus: " Push day ",
+          doneWhen: "  ",
+        },
+        gym,
+        "pending-1" as Id<"blocks">,
+      ),
+    ).toEqual({
+      _id: "pending-1",
+      _creationTime: 0,
+      userId: "u",
+      date: FRI,
+      title: "Gym",
+      categoryId: "c-body",
+      activityId: "a-gym",
+      focus: "Push day",
+      plannedStartMin: 1020,
+      plannedDurationMin: 90,
+      status: "planned",
+    });
+  });
+
+  test("without a title or a category to show, nothing is shown early", () => {
+    expect(
+      createdBlock(
+        { date: FRI, plannedStartMin: 600, plannedDurationMin: 30 },
+        undefined,
+        "pending-2" as Id<"blocks">,
+      ),
+    ).toBeNull();
+  });
+
+  test("a logged entry is titled by what was typed, else the activity, else the category", () => {
+    const drift = {
+      _id: "c-drift" as Id<"categories">,
+      _creationTime: 0,
+      userId: "u" as Id<"users">,
+      name: "Drift",
+      kind: "drift",
+      colorKey: "red",
+      icon: "cloud",
+      sortOrder: 7,
+      archived: false,
+    } satisfies Doc<"categories">;
+    const args = {
+      date: FRI,
+      categoryId: drift._id,
+      actualStartMin: 780,
+      actualDurationMin: 30,
+    };
+    const id = "pending-3" as Id<"blocks">;
+    expect(loggedEntry(args, undefined, drift, id)).toMatchObject({
+      title: "Drift",
+      status: "done",
+      actualStartMin: 780,
+      actualDurationMin: 30,
+    });
+    expect(
+      loggedEntry({ ...args, title: " phone " }, undefined, drift, id)?.title,
+    ).toBe("phone");
+    expect(loggedEntry(args, gym, drift, id)?.title).toBe("Gym");
+  });
+
+  test("a deleted block leaves every loaded list", () => {
+    const gymBlock = block("Gym", FRI);
+    const { local, all } = store([
+      {
+        name: getFunctionName(api.blocks.listForDay),
+        args: { date: FRI },
+        value: [gymBlock],
+      },
+      {
+        name: getFunctionName(api.blocks.listRange),
+        args: { from: THU, to: SUN },
+        value: [gymBlock],
+      },
+    ]);
+    removeLocally(local, { blockId: gymBlock._id });
+    expect(all.map((query) => query.value)).toEqual([[], []]);
   });
 });
