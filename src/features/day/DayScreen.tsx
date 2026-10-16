@@ -18,6 +18,7 @@ import { weekPaces, weekReadRange } from "@/features/goals/paceView";
 import { useEnsureMaterialized } from "@/features/recurrence/useEnsureMaterialized";
 import { api, type Doc, type Id } from "@/lib/api";
 import { useSetStatus } from "@/lib/blockStatus";
+import { useBlockDrag } from "./useBlockDrag";
 import { saveErrorMessage } from "@/lib/errorMessages";
 import { useNow } from "@/lib/now";
 import { dismissWelcome, welcomeDismissedOn } from "@/lib/welcomeDismissal";
@@ -175,35 +176,50 @@ export function DayScreen({
           now,
         );
 
+  const blockDrag = useBlockDrag({
+    blocks,
+    day: date,
+    gridStartMin,
+    now,
+    tense,
+    planUnlocked,
+    onError: setStatusError,
+  });
   const cards: GridCard[] =
     blocks === undefined
       ? []
-      : planCards({
-          blocks,
-          date,
-          gridStartMin,
-          now,
-          categories: categories ?? [],
-          activities: activities ?? [],
-          selectedId: selectedBlockId,
-        });
-  const actualCards: GridCard[] = happened.map((item) => ({
-    ...cardLooks(
-      item.block,
-      categories ?? [],
-      activities ?? [],
-      selectedBlockId,
-    ),
-    title: entryTitle(item.block, categoryOf.get(item.block.categoryId)),
-    time: actualCardTime(item),
-    name: actualCardName(item),
-    top: item.segment.top,
-    height: item.segment.height,
-    state: actualCardState(item),
-    cutTop: item.segment.startsBefore,
-    cutBottom: item.segment.endsAfter,
-    openable: true,
-  }));
+      : blockDrag.withDrag(
+          planCards({
+            blocks,
+            date,
+            gridStartMin,
+            now,
+            categories: categories ?? [],
+            activities: activities ?? [],
+            selectedId: selectedBlockId,
+          }),
+          "plan",
+        );
+  const actualCards: GridCard[] = blockDrag.withDrag(
+    happened.map((item) => ({
+      ...cardLooks(
+        item.block,
+        categories ?? [],
+        activities ?? [],
+        selectedBlockId,
+      ),
+      title: entryTitle(item.block, categoryOf.get(item.block.categoryId)),
+      time: actualCardTime(item),
+      name: actualCardName(item),
+      top: item.segment.top,
+      height: item.segment.height,
+      state: actualCardState(item),
+      cutTop: item.segment.startsBefore,
+      cutBottom: item.segment.endsAfter,
+      openable: true,
+    })),
+    "actual",
+  );
 
   /** Runs a change and closes the open panel; a failure becomes its message. */
   async function attempt(
@@ -422,6 +438,17 @@ export function DayScreen({
             )}
           </div>
         )}
+        {statusError !== null &&
+          nowPanel === null &&
+          selected === undefined && (
+            // A drop the server refused, where no panel is there to say so.
+            <p
+              role="alert"
+              className="border-b px-4 py-2 text-sm text-destructive"
+            >
+              {statusError}
+            </p>
+          )}
         {blocks !== undefined && items.length === 0 && (
           <p className="border-b px-4 py-2 text-sm text-muted-foreground">
             {tense === "past"
@@ -454,6 +481,7 @@ export function DayScreen({
           }
           settled={ready && day !== undefined}
           onOpenCard={(key) => onSelectBlock(key as Id<"blocks">)}
+          onDrag={blockDrag.onDrag}
         />
       </div>
       {isWide &&
